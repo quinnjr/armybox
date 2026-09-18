@@ -259,4 +259,4 @@ at your option.
 
 ---
 
-**Made with ❤️ by [Pegasus Heavy Industries](https://github.com/pegasusheavy)**
+**Made with ❤️ by [Joseph R. Quinn](https://github.com/quinnjr)**

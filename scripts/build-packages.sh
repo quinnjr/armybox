@@ -52,7 +52,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: amd64
-Maintainer: Pegasus Heavy Industries <contact@pegasusheavy.industries>
+Maintainer: Joseph R. Quinn <quinn.josephr@protonmail.com>
 Description: BusyBox/Toybox clone written in Rust
  armybox is a modern implementation of common Unix utilities
  in a single multi-call binary, similar to BusyBox and Toybox.

@@ -7,7 +7,7 @@
       "Bash(./target/release/armybox getopt:*)",
       "Bash(./target/release/armybox iconv:*)",
       "Bash(./target/release/armybox:*)",
-      "Bash(/home/joseph/Projects/PegasusHeavyIndustries/armybox/target/release/armybox:*)",
+      "Bash(/home/joseph/Projects/armybox/target/release/armybox:*)",
       "Bash(pushd:*)",
       "Bash(popd:*)",
       "Bash(cargo test:*)",

@@ -200,7 +200,7 @@ For container deployments, see [DOCKER.md](DOCKER.md).
 
 ```bash
 # Use pre-built image
-docker pull ghcr.io/pegasusheavyindustries/armybox:alpine
+docker pull ghcr.io/quinnjr/armybox:alpine
 
 # Build locally
 docker build --target alpine -t armybox:alpine .
@@ -245,7 +245,7 @@ See [packaging/ios/README.md](packaging/ios/README.md) for detailed instructions
 
 ### Cydia/Sileo Repository
 
-1. Add repo: `https://pegasusheavyindustries.github.io/repo/`
+1. Add repo: `https://quinnjr.github.io/repo/`
 2. Search and install "armybox"
 
 ### Manual .deb Install

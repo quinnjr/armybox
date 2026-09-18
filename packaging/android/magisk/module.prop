@@ -2,5 +2,5 @@ id=armybox
 name=Armybox
 version=v0.1.0
 versionCode=1
-author=Pegasus Heavy Industries
+author=Joseph R. Quinn
 description=BusyBox/Toybox clone in Rust - 303 Unix utilities

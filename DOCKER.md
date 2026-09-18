@@ -8,20 +8,20 @@ armybox provides Docker images for easy deployment and as a minimal container ba
 
 ```bash
 # Minimal scratch-based image (~6MB)
-docker pull ghcr.io/pegasusheavyindustries/armybox:latest
+docker pull ghcr.io/quinnjr/armybox:latest
 
 # Alpine-based with symlinks installed
-docker pull ghcr.io/pegasusheavyindustries/armybox:alpine
+docker pull ghcr.io/quinnjr/armybox:alpine
 ```
 
 ### Run Interactive Shell
 
 ```bash
 # Start armybox shell
-docker run -it ghcr.io/pegasusheavyindustries/armybox:alpine
+docker run -it ghcr.io/quinnjr/armybox:alpine
 
 # Run a specific command
-docker run ghcr.io/pegasusheavyindustries/armybox:alpine ls -la /
+docker run ghcr.io/quinnjr/armybox:alpine ls -la /
 ```
 
 ## Building Locally
@@ -62,7 +62,7 @@ docker compose run --rm bench
 - **Use case**: Minimal container base, security-focused deployments
 
 ```dockerfile
-FROM ghcr.io/pegasusheavyindustries/armybox:latest
+FROM ghcr.io/quinnjr/armybox:latest
 # Binary is at /bin/armybox
 ENTRYPOINT ["/bin/armybox", "sh"]
 ```
@@ -75,7 +75,7 @@ ENTRYPOINT ["/bin/armybox", "sh"]
 - **Use case**: Drop-in BusyBox replacement, easier debugging
 
 ```dockerfile
-FROM ghcr.io/pegasusheavyindustries/armybox:alpine
+FROM ghcr.io/quinnjr/armybox:alpine
 # All applets available as commands
 RUN ls -la && cat /etc/os-release
 ```
@@ -85,7 +85,7 @@ RUN ls -la && cat /etc/os-release
 ### Minimal Application Container
 
 ```dockerfile
-FROM ghcr.io/pegasusheavyindustries/armybox:latest AS base
+FROM ghcr.io/quinnjr/armybox:latest AS base
 
 # Copy your application
 COPY --from=builder /app/myapp /app/myapp
@@ -97,7 +97,7 @@ ENTRYPOINT ["/app/myapp"]
 ### Init System Container
 
 ```dockerfile
-FROM ghcr.io/pegasusheavyindustries/armybox:alpine
+FROM ghcr.io/quinnjr/armybox:alpine
 
 # armybox can run as PID 1
 COPY inittab /etc/inittab
@@ -114,7 +114,7 @@ COPY . .
 RUN cargo build --release
 
 # Runtime stage with armybox
-FROM ghcr.io/pegasusheavyindustries/armybox:latest
+FROM ghcr.io/quinnjr/armybox:latest
 COPY --from=builder /app/target/release/myapp /app/myapp
 CMD ["/app/myapp"]
 ```
@@ -164,7 +164,7 @@ Run `armybox --list` to see all available applets.
 ### Running as Non-root
 
 ```dockerfile
-FROM ghcr.io/pegasusheavyindustries/armybox:alpine
+FROM ghcr.io/quinnjr/armybox:alpine
 RUN adduser -D -u 1000 appuser
 USER appuser
 ```
@@ -210,7 +210,7 @@ docker buildx create --use
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --target alpine \
-  -t ghcr.io/pegasusheavyindustries/armybox:alpine \
+  -t ghcr.io/quinnjr/armybox:alpine \
   --push .
 ```
 

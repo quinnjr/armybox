@@ -78,7 +78,7 @@ mod common;
     return applet_names
 
 def main():
-    base_dir = Path("/home/joseph/PegasusHeavyIndustries/armybox/src/applets")
+    base_dir = Path("/home/joseph/Projects/armybox/src/applets")
 
     categories = ['text', 'file', 'system', 'network', 'misc', 'archive', 'init', 'editors', 'shell', 'package']
 

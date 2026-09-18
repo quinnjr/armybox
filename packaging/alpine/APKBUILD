@@ -1,4 +1,4 @@
-# Maintainer: Pegasus Heavy Industries <contact@pegasusheavy.industries>
+# Maintainer: Joseph R. Quinn <quinn.josephr@protonmail.com>
 pkgname=armybox
 pkgver=0.4.0
 pkgrel=0
@@ -8,7 +8,7 @@ arch="x86_64 aarch64"
 license="MIT AND Apache-2.0"
 makedepends="cargo rust"
 subpackages="$pkgname-doc"
-source="$pkgname-$pkgver.tar.gz::https://github.com/PegasusHeavyIndustries/$pkgname/archive/v$pkgver.tar.gz"
+source="$pkgname-$pkgver.tar.gz::https://github.com/quinnjr/$pkgname/archive/v$pkgver.tar.gz"
 
 build() {
 	cargo build --release --locked

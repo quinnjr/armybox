@@ -18,7 +18,7 @@ We take security seriously. If you discover a security vulnerability in Armybox,
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email us at: **security@pegasusheavy.industries**
+Instead, please email us at: **quinn.josephr@protonmail.com**
 
 Include the following information:
 

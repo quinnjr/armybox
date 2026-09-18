@@ -47,7 +47,7 @@ echo "Run 'armybox-install-symlinks' to create symlinks for all applets."
 %{_bindir}/armybox-install-symlinks
 
 %changelog
-* Thu Jan 02 2026 Pegasus Heavy Industries <contact@pegasusheavy.industries> - 0.1.0-1
+* Thu Jan 02 2026 Joseph R. Quinn <quinn.josephr@protonmail.com> - 0.1.0-1
 - Initial package
 - 303 applets including coreutils, compression, networking
 - ash-compatible shell

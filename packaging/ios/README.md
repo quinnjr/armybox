@@ -18,7 +18,7 @@ armybox can be installed on jailbroken iOS devices via Cydia, Sileo, or Zebra.
 
 1. Open your package manager
 2. Go to Sources/Repos → Add
-3. Enter: `https://pegasusheavyindustries.github.io/repo/`
+3. Enter: `https://quinnjr.github.io/repo/`
 4. Search for "armybox" and install
 
 ## Method 2: Download .deb Manually
@@ -166,5 +166,5 @@ armybox --install --remove /usr/local/bin
 rm /usr/bin/armybox
 
 # Remove package metadata
-rm -rf /var/lib/dpkg/info/com.pegasusheavy.armybox.*
+rm -rf /var/lib/dpkg/info/dev.quinnjr.armybox.*
 ```

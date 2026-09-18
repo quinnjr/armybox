@@ -1,4 +1,4 @@
-# Maintainer: Pegasus Heavy Industries <contact@pegasusheavy.industries>
+# Maintainer: Joseph R. Quinn <quinn.josephr@protonmail.com>
 pkgname=armybox
 pkgver=0.4.0
 pkgrel=1
@@ -10,7 +10,7 @@ depends=()
 makedepends=('cargo' 'rust')
 provides=('busybox')
 optdepends=()
-source=("$pkgname-$pkgver.tar.gz::https://github.com/PegasusHeavyIndustries/$pkgname/archive/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/quinnjr/$pkgname/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {

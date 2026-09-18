@@ -163,7 +163,7 @@ def process_file(base_dir, source_name):
     return applet_names
 
 def main():
-    base_dir = Path("/home/joseph/PegasusHeavyIndustries/armybox/src/applets")
+    base_dir = Path("/home/joseph/Projects/armybox/src/applets")
 
     # Process all category files
     categories = ['text', 'file', 'system', 'network', 'misc', 'archive', 'init', 'editors', 'shell', 'package']

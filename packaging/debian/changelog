@@ -2,7 +2,7 @@ armybox (0.3.0-1) unstable; urgency=medium
 
   * Release 0.3.0
 
- -- Pegasus Heavy Industries <contact@pegasusheavy.industries>  Tue, 12 Aug 2026 12:00:00 +0000
+ -- Joseph R. Quinn <quinn.josephr@protonmail.com>  Tue, 12 Aug 2026 12:00:00 +0000
 
 armybox (0.1.0-1) unstable; urgency=medium
 
@@ -12,4 +12,4 @@ armybox (0.1.0-1) unstable; urgency=medium
   * PID 1 init system
   * Cross-compilation support for musl targets
 
- -- Pegasus Heavy Industries <contact@pegasusheavy.industries>  Thu, 02 Jan 2026 12:00:00 +0000
+ -- Joseph R. Quinn <quinn.josephr@protonmail.com>  Thu, 02 Jan 2026 12:00:00 +0000
