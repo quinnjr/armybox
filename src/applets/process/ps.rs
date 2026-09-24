@@ -651,10 +651,9 @@ fn pcpu(p: &Proc, ctx: &Ctx, out: &mut [u8]) -> usize {
     let elapsed = ctx.now.saturating_sub(p.started_at(ctx));
     let cputime = (p.utime + p.stime) / ctx.hz;
     // Tenths of a percent, capped so the column cannot grow without bound.
-    let tenths = if elapsed == 0 {
-        0
-    } else {
-        (1000 * cputime / elapsed).min(9999)
+    let tenths = match (1000 * cputime).checked_div(elapsed) {
+        Some(v) => v.min(9999),
+        None => 0,
     };
     let whole = sys::format_u64(tenths / 10, out);
     let n = whole.len();
@@ -841,7 +840,7 @@ fn start_time(start: u64, now: u64, out: &mut [u8]) -> usize {
 }
 
 pub(super) fn user_name(uid: u32) -> &'static [u8] {
-    static UNKNOWN: [u8; 1] = [b'?'];
+    static UNKNOWN: [u8; 1] = *b"?";
     let pwd = unsafe { libc::getpwuid(uid) };
     if !pwd.is_null() {
         let name = unsafe { io::cstr_to_slice((*pwd).pw_name as *const u8) };
@@ -853,7 +852,7 @@ pub(super) fn user_name(uid: u32) -> &'static [u8] {
 }
 
 fn group_name(gid: u32) -> &'static [u8] {
-    static UNKNOWN: [u8; 1] = [b'?'];
+    static UNKNOWN: [u8; 1] = *b"?";
     let grp = unsafe { libc::getgrgid(gid) };
     if !grp.is_null() {
         let name = unsafe { io::cstr_to_slice((*grp).gr_name as *const u8) };
