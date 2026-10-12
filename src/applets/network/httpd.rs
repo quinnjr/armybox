@@ -90,7 +90,7 @@ pub fn httpd(argc: i32, argv: *const *const u8) -> i32 {
     unsafe {
         libc::setsockopt(listen_fd, libc::SOL_SOCKET, libc::SO_REUSEADDR,
                          &opt as *const _ as *const libc::c_void,
-                         core::mem::size_of::<i32>() as u32);
+                         core::mem::size_of::<i32>() as libc::socklen_t);
     }
 
     // Bind
@@ -100,7 +100,7 @@ pub fn httpd(argc: i32, argv: *const *const u8) -> i32 {
     addr.sin_addr.s_addr = 0; // INADDR_ANY
 
     if unsafe { libc::bind(listen_fd, &addr as *const _ as *const libc::sockaddr,
-                           core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                           core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
         io::write_str(2, b"httpd: bind failed (port ");
         let mut buf = [0u8; 16];
         io::write_all(2, sys::format_u64(port as u64, &mut buf));
@@ -157,7 +157,7 @@ pub fn httpd(argc: i32, argv: *const *const u8) -> i32 {
     // Accept loop
     loop {
         let mut client_addr: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-        let mut addr_len = core::mem::size_of::<libc::sockaddr_in>() as u32;
+        let mut addr_len = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
         let client_fd = unsafe {
             libc::accept(listen_fd, &mut client_addr as *mut _ as *mut libc::sockaddr, &mut addr_len)

@@ -175,7 +175,7 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     unsafe {
         libc::setsockopt(server_fd, libc::SOL_SOCKET, libc::SO_REUSEADDR,
                         &optval as *const _ as *const libc::c_void,
-                        core::mem::size_of::<i32>() as u32);
+                        core::mem::size_of::<i32>() as libc::socklen_t);
     }
 
     // Bind
@@ -185,7 +185,7 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     addr.sin_addr.s_addr = 0; // INADDR_ANY
 
     if unsafe { libc::bind(server_fd, &addr as *const _ as *const libc::sockaddr,
-                          core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                          core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
         io::write_str(2, b"nbd-server: bind failed\n");
         io::close(server_fd);
         return 1;
@@ -229,7 +229,7 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     // Accept loop
     loop {
         let mut client_addr: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-        let mut addr_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as u32;
+        let mut addr_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
         let client_fd = unsafe {
             libc::accept(server_fd, &mut client_addr as *mut _ as *mut libc::sockaddr, &mut addr_len)
@@ -420,7 +420,7 @@ fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_writ
         match cmd_type as u32 {
             NBD_CMD_READ => {
                 // Seek to offset
-                if unsafe { libc::lseek(file_fd, offset as i64, libc::SEEK_SET) } < 0 {
+                if io::lseek(file_fd, offset as i64, libc::SEEK_SET) < 0 {
                     send_reply(fd, NBD_EIO, handle, &[]);
                     continue;
                 }
@@ -462,7 +462,7 @@ fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_writ
                 }
 
                 // Seek and write
-                if unsafe { libc::lseek(file_fd, offset as i64, libc::SEEK_SET) } < 0 {
+                if io::lseek(file_fd, offset as i64, libc::SEEK_SET) < 0 {
                     send_reply(fd, NBD_EIO, handle, &[]);
                     continue;
                 }
