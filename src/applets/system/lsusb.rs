@@ -244,8 +244,16 @@ mod tests {
         let output = Command::new(&armybox).args(["lsusb"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        // Should produce some output
-        let stdout = std::string::String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.is_empty());
+        // Output is expected only when the host has USB devices (names like
+        // 1-1); CI runners and containers often have none
+        let has_devices = std::fs::read_dir("/sys/bus/usb/devices")
+            .map(|d| {
+                d.flatten()
+                    .any(|e| e.file_name().to_string_lossy().contains('-'))
+            })
+            .unwrap_or(false);
+        if has_devices {
+            assert!(!output.stdout.is_empty());
+        }
     }
 }

@@ -324,7 +324,10 @@ fn show(bridge: Option<&[u8]>) -> i32 {
 
         let mut offset = 0;
         while offset < n as usize {
-            let entry = unsafe { &*(buf.as_ptr().add(offset) as *const LinuxDirent64) };
+            let entry = unsafe {
+                // buf is a byte array (alignment 1), so copy the header out
+                core::ptr::read_unaligned(buf.as_ptr().add(offset) as *const LinuxDirent64)
+            };
             let name_len = entry.d_reclen as usize - 19; // header size
             let name = &buf[offset + 19..offset + 19 + name_len];
 
@@ -440,7 +443,10 @@ fn show_bridge_info(name: &[u8]) {
             let mut offset = 0;
             let mut first = true;
             while offset < n as usize {
-                let entry = unsafe { &*(buf.as_ptr().add(offset) as *const LinuxDirent64) };
+                let entry = unsafe {
+                    // buf is a byte array (alignment 1), so copy the header out
+                    core::ptr::read_unaligned(buf.as_ptr().add(offset) as *const LinuxDirent64)
+                };
                 let if_name = &buf[offset + 19..];
                 let if_name_end = if_name.iter().position(|&c| c == 0).unwrap_or(0);
                 let if_name = &if_name[..if_name_end];
