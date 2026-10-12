@@ -10,13 +10,14 @@ use crate::applets::{get_arg, has_opt};
 ///
 /// # Synopsis
 /// ```text
-/// truncate -s SIZE file...
+/// truncate [-c] -s SIZE file...
 /// ```
 ///
 /// # Description
 /// Shrink or extend the size of each FILE to the specified size.
 ///
 /// # Options
+/// - `-c`, `--no-create`: Do not create files that don't exist
 /// - `-s SIZE`: Set or adjust the file size
 ///
 /// # Exit Status
@@ -26,6 +27,7 @@ pub fn truncate(argc: i32, argv: *const *const u8) -> i32 {
     let mut size: i64 = 0;
     let mut size_set = false;
     let mut size_parse_failed = false;
+    let mut no_create = false;
     let mut exit_code = 0;
 
     // First pass: find size option
@@ -33,6 +35,9 @@ pub fn truncate(argc: i32, argv: *const *const u8) -> i32 {
     while i < argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
+                if arg == b"--no-create" || (arg.get(1) != Some(&b'-') && has_opt(arg, b'c')) {
+                    no_create = true;
+                }
                 if has_opt(arg, b's') && i + 1 < argc {
                     if let Some(s) = unsafe { get_arg(argv, i + 1) } {
                         match sys::parse_u64(s) {
@@ -82,6 +87,17 @@ pub fn truncate(argc: i32, argv: *const *const u8) -> i32 {
                     if prev.len() >= 2 && prev[0] == b'-' && has_opt(prev, b's') {
                         continue; // This is the size argument, skip it
                     }
+                }
+            }
+            // Like GNU truncate: create missing files unless -c, which skips them
+            if no_create {
+                if io::access(arg, libc::F_OK) != 0 {
+                    continue;
+                }
+            } else {
+                let fd = io::open(arg, libc::O_WRONLY | libc::O_CREAT, 0o666);
+                if fd >= 0 {
+                    io::close(fd);
                 }
             }
 
@@ -200,5 +216,46 @@ mod tests {
             .unwrap();
 
         assert_ne!(output.status.code(), Some(0));
+    }
+
+    #[test]
+    fn test_truncate_creates_missing_file() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+
+        let dir = setup();
+        let file = dir.join("new.txt");
+
+        let output = Command::new(&armybox)
+            .args(["truncate", "-s", "10", file.to_str().unwrap()])
+            .output()
+            .unwrap();
+
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(fs::metadata(&file).unwrap().len(), 10);
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn test_truncate_no_create_skips_missing_file() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+
+        let dir = setup();
+        let existing = dir.join("existing.txt");
+        fs::write(&existing, "hello world!").unwrap();
+
+        for flag in ["-c", "--no-create"] {
+            let missing = dir.join("missing.txt");
+            let output = Command::new(&armybox)
+                .args(["truncate", flag, "-s", "5", missing.to_str().unwrap(), existing.to_str().unwrap()])
+                .output()
+                .unwrap();
+
+            assert_eq!(output.status.code(), Some(0), "{flag}");
+            assert!(!missing.exists(), "{flag} created the file");
+        }
+        assert_eq!(fs::metadata(&existing).unwrap().len(), 5);
+        cleanup(&dir);
     }
 }
