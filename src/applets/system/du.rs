@@ -42,7 +42,7 @@ pub fn du(argc: i32, argv: *const *const u8) -> i32 {
             return 0;
         }
 
-        total += (st.st_blocks * 512) / 1024; // Convert to KB
+        total += (st.st_blocks as i64 * 512) / 1024; // Convert to KB
 
         if (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32 {
             let fd = io::open(path, libc::O_RDONLY | libc::O_DIRECTORY, 0);

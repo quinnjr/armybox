@@ -581,7 +581,7 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                 // Directory
                 path.push(0);
                 let ret = unsafe {
-                    libc::mkdir(path.as_ptr() as *const libc::c_char, mode)
+                    libc::mkdir(path.as_ptr() as *const libc::c_char, mode as libc::mode_t)
                 };
                 if ret < 0 && crate::sys::errno() != libc::EEXIST {
                     status = 1;
@@ -594,7 +594,7 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                 // File - just set permissions
                 path.push(0);
                 unsafe {
-                    libc::chmod(path.as_ptr() as *const libc::c_char, mode);
+                    libc::chmod(path.as_ptr() as *const libc::c_char, mode as libc::mode_t);
                     libc::chown(path.as_ptr() as *const libc::c_char, uid, gid);
                 }
             }
@@ -603,12 +603,12 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                 if parts.len() >= 7 {
                     let major = sys::parse_u64(parts[5]).unwrap_or(0) as u32;
                     let minor = sys::parse_u64(parts[6]).unwrap_or(0) as u32;
-                    let dev_mode = mode | if dtype == b"c" { libc::S_IFCHR } else { libc::S_IFBLK };
+                    let dev_mode = mode | if dtype == b"c" { libc::S_IFCHR as u32 } else { libc::S_IFBLK as u32 };
                     let dev = sys::makedev(major, minor);
 
                     path.push(0);
                     unsafe {
-                        libc::mknod(path.as_ptr() as *const libc::c_char, dev_mode, dev);
+                        libc::mknod(path.as_ptr() as *const libc::c_char, dev_mode as libc::mode_t, dev);
                         libc::chown(path.as_ptr() as *const libc::c_char, uid, gid);
                     }
                 }

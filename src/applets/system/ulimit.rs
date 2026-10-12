@@ -125,7 +125,7 @@ pub fn ulimit(argc: i32, argv: *const *const u8) -> i32 {
     if value == libc::RLIM_INFINITY {
         io::write_str(1, b"unlimited\n");
     } else {
-        io::write_num(1, value / divisor);
+        io::write_num(1, value as u64 / divisor);
         io::write_str(1, b"\n");
     }
 
@@ -155,7 +155,7 @@ fn print_all_limits(use_hard: bool) {
             if value == libc::RLIM_INFINITY {
                 io::write_str(1, b"unlimited\n");
             } else {
-                io::write_num(1, value / divisor);
+                io::write_num(1, value as u64 / divisor);
                 io::write_str(1, b"\n");
             }
         } else {

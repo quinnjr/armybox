@@ -287,7 +287,7 @@ fn eval_pred(
     match p {
         Pred::True => true,
         Pred::Name(pat) => glob_match(pat, name),
-        Pred::Type(c) => type_match(*c, st.st_mode),
+        Pred::Type(c) => type_match(*c, st.st_mode as libc::mode_t),
         Pred::Print => {
             // A failed stdout write (e.g. EPIPE from `find | head`) must set a
             // nonzero exit and stop the traversal rather than silently exit 0.

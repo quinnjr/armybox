@@ -48,7 +48,7 @@ pub fn fallocate(argc: i32, argv: *const *const u8) -> i32 {
         return 1;
     }
 
-    if unsafe { libc::ftruncate(fd, size) } != 0 {
+    if io::ftruncate(fd, size) != 0 {
         sys::perror(b"fallocate");
         io::close(fd);
         return 1;

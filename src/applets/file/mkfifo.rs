@@ -176,7 +176,7 @@ pub fn mkfifo(argc: i32, argv: *const *const u8) -> i32 {
 
     let mut exit_code = 0;
     for path in files {
-        if unsafe { libc::mkfifo(path.as_ptr() as *const libc::c_char, mode) } < 0 {
+        if unsafe { libc::mkfifo(path.as_ptr() as *const libc::c_char, mode as libc::mode_t) } < 0 {
             sys::perror(path);
             exit_code = 1;
         }

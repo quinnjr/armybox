@@ -36,7 +36,7 @@ pub fn mkswap(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     // Get device size
-    let size = unsafe { libc::lseek(fd, 0, libc::SEEK_END) };
+    let size = io::lseek(fd, 0, libc::SEEK_END);
     if size < 0 {
         sys::perror(b"lseek");
         io::close(fd);
@@ -56,7 +56,7 @@ pub fn mkswap(argc: i32, argv: *const *const u8) -> i32 {
     let magic = b"SWAPSPACE2";
     let magic_offset = page_size - 10;
 
-    if unsafe { libc::lseek(fd, magic_offset, libc::SEEK_SET) } < 0 {
+    if io::lseek(fd, magic_offset, libc::SEEK_SET) < 0 {
         sys::perror(b"lseek");
         io::close(fd);
         return 1;
