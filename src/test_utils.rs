@@ -35,10 +35,17 @@ pub mod test_helpers {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() {
-            return release;
+        // Prefer the binary from this test build's own profile, so a stale
+        // build from the other profile isn't tested by mistake
+        let (own, other) = if cfg!(debug_assertions) {
+            ("target/debug/armybox", "target/release/armybox")
+        } else {
+            ("target/release/armybox", "target/debug/armybox")
+        };
+        let own = manifest_dir.join(own);
+        if own.exists() {
+            return own;
         }
-        manifest_dir.join("target/debug/armybox")
+        manifest_dir.join(other)
     }
 }

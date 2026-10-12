@@ -349,22 +349,10 @@ fn cut_line(
 mod tests {
     extern crate std;
     use std::io::Write;
-    use std::path::PathBuf;
+
     use std::process::{Command, Stdio};
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() {
-            return release;
-        }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_cut_field() {
