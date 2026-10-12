@@ -10,8 +10,8 @@ pub trait ToLowercase {
 impl ToLowercase for str {
     fn to_lowercase(&self) -> String {
         self.chars()
-            .map(|c| {
-                if c >= 'A' && c <= 'Z' {
+            .map(|c: char| {
+                if c.is_ascii_uppercase() {
                     (c as u8 + 32) as char
                 } else {
                     c

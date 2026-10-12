@@ -56,7 +56,7 @@ fn fmod(a: f64, b: f64) -> f64 {
     a - ftrunc(a / b) * b
 }
 
-const LN2: f64 = 0.6931471805599453;
+const LN2: f64 = core::f64::consts::LN_2;
 
 /// Natural log via mantissa/exponent split and an atanh series.
 fn fln(x: f64) -> f64 {
@@ -164,8 +164,8 @@ fn fsqrt(x: f64) -> f64 {
     g
 }
 
-const PI: f64 = 3.141592653589793;
-const TWO_PI: f64 = 6.283185307179586;
+const PI: f64 = core::f64::consts::PI;
+const TWO_PI: f64 = core::f64::consts::TAU;
 
 fn fsin(mut x: f64) -> f64 {
     if !x.is_finite() {
@@ -887,7 +887,7 @@ impl<'a> Lexer<'a> {
                 }
                 _ if c.is_ascii_digit()
                     || (c == b'.'
-                        && self.s.get(self.i + 1).map_or(false, |d| d.is_ascii_digit())) =>
+                        && self.s.get(self.i + 1).is_some_and(|d| d.is_ascii_digit())) =>
                 {
                     self.lex_number()
                 }
@@ -985,7 +985,7 @@ impl<'a> Lexer<'a> {
             && self
                 .s
                 .get(self.i + 1)
-                .map_or(false, |&c| c == b'x' || c == b'X')
+                .is_some_and(|&c| c == b'x' || c == b'X')
         {
             self.i += 2;
             while self.i < self.s.len() && self.s[self.i].is_ascii_hexdigit() {
@@ -1983,7 +1983,7 @@ impl Interp {
     fn is_param(&self, name: &[u8]) -> bool {
         self.frames
             .last()
-            .map_or(false, |f| f.params.iter().any(|p| p == name))
+            .is_some_and(|f| f.params.iter().any(|p| p == name))
     }
 
     // --- variable get/set ---
@@ -2050,7 +2050,7 @@ impl Interp {
         if self.in_func() && self.is_param(name) {
             self.frames
                 .last()
-                .map_or(false, |f| f.arrays.contains_key(name))
+                .is_some_and(|f| f.arrays.contains_key(name))
         } else {
             self.arrays.contains_key(name)
         }
@@ -2259,11 +2259,11 @@ impl Interp {
             Expr::In(subs, arr) => {
                 let key = self.subscript(subs);
                 let present = if self.in_func() && self.is_param(arr) {
-                    self.frames.last().map_or(false, |f| {
-                        f.arrays.get(arr).map_or(false, |m| m.contains_key(&key))
-                    })
+                    self.frames
+                        .last()
+                        .is_some_and(|f| f.arrays.get(arr).is_some_and(|m| m.contains_key(&key)))
                 } else {
-                    self.arrays.get(arr).map_or(false, |m| m.contains_key(&key))
+                    self.arrays.get(arr).is_some_and(|m| m.contains_key(&key))
                 };
                 Value::Num(if present { 1.0 } else { 0.0 })
             }
@@ -3111,7 +3111,7 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
     let mut fs: Option<Vec<u8>> = None;
     let mut assigns: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
     let mut prog_files: Vec<Vec<u8>> = Vec::new();
-    let mut program_text: Option<Vec<u8>> = None;
+    let program_text: Option<Vec<u8>> = None;
 
     // --- option parsing ---
     while i < argc {
@@ -3375,11 +3375,7 @@ fn run_rules(it: &mut Interp, rules: &[Rule]) -> Flow {
                     }
                     true
                 } else if it.eval(a).is_true() {
-                    if it.eval(b).is_true() {
-                        it.range_active[idx] = false;
-                    } else {
-                        it.range_active[idx] = true;
-                    }
+                    it.range_active[idx] = !it.eval(b).is_true();
                     true
                 } else {
                     false

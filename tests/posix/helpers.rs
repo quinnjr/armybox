@@ -2,6 +2,9 @@
 //!
 //! Common utilities for running armybox and verifying POSIX-compliant behavior.
 
+// A shared toolkit: not every helper is used by the current tests
+#![allow(dead_code)]
+
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};

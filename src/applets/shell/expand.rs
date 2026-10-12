@@ -254,9 +254,9 @@ pub(super) fn expand_dollar(shell: &Shell, input: &[u8], start: usize) -> (Vec<u
                         return (value.unwrap_or_default(), pos);
                     }
                 }
-                b'?' => {
+                b'?'
                     // ${VAR:?msg} / ${VAR?msg}
-                    if is_unset_or_null {
+                    if is_unset_or_null => {
                         io::write_str(2, b"sh: ");
                         io::write_all(2, &var_name);
                         io::write_str(2, b": ");
@@ -267,10 +267,7 @@ pub(super) fn expand_dollar(shell: &Shell, input: &[u8], start: usize) -> (Vec<u
                             io::write_str(2, b"\n");
                         }
                         return (Vec::new(), pos);
-                    } else {
-                        return (value.unwrap_or_default(), pos);
                     }
-                }
                 _ => {
                     // Unknown operator, just return value
                     return (value.unwrap_or_default(), pos);

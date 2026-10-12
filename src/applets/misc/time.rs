@@ -297,11 +297,9 @@ fn print_verbose_stats(
     // Calculate CPU percentage
     let total_cpu_usec = (user_sec * 1_000_000 + user_usec) + (sys_sec * 1_000_000 + sys_usec);
     let real_usec_total = real_sec * 1_000_000 + real_usec;
-    let cpu_percent = if real_usec_total > 0 {
-        (total_cpu_usec * 100) / real_usec_total
-    } else {
-        0
-    };
+    let cpu_percent = (total_cpu_usec * 100)
+        .checked_div(real_usec_total)
+        .unwrap_or(0);
 
     io::write_str(2, b"\tPercent of CPU this job got: ");
     io::write_num(2, cpu_percent);

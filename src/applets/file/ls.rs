@@ -723,10 +723,8 @@ fn write_classify_suffix(mode: u32) {
         m if m == libc::S_IFSOCK as u32 => {
             out(b"=");
         }
-        m if m == libc::S_IFREG as u32 => {
-            if mode & 0o111 != 0 {
-                out(b"*");
-            }
+        m if m == libc::S_IFREG as u32 && mode & 0o111 != 0 => {
+            out(b"*");
         }
         _ => {}
     }

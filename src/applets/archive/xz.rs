@@ -244,17 +244,17 @@ impl<'a> RangeDecoder<'a> {
 
     fn decode_bit(&mut self, prob: &mut u16) -> u32 {
         let bound = (self.range >> RC_BIT_MODEL_TOTAL_BITS) * (*prob as u32);
-        let bit;
-        if self.code < bound {
+
+        let bit = if self.code < bound {
             self.range = bound;
             *prob += ((RC_BIT_MODEL_TOTAL - *prob as u32) >> RC_MOVE_BITS) as u16;
-            bit = 0;
+            0
         } else {
             self.range -= bound;
             self.code -= bound;
             *prob -= (*prob >> RC_MOVE_BITS) as u16;
-            bit = 1;
-        }
+            1
+        };
         self.normalize();
         bit
     }

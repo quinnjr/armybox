@@ -631,9 +631,9 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                     libc::chown(path.as_ptr() as *const libc::c_char, uid, gid);
                 }
             }
-            b"c" | b"b" => {
+            b"c" | b"b"
                 // Character or block device
-                if parts.len() >= 7 {
+                if parts.len() >= 7 => {
                     let major = sys::parse_u64(parts[5]).unwrap_or(0) as u32;
                     let minor = sys::parse_u64(parts[6]).unwrap_or(0) as u32;
                     let dev_mode = mode
@@ -654,7 +654,6 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                         libc::chown(path.as_ptr() as *const libc::c_char, uid, gid);
                     }
                 }
-            }
             _ => {}
         }
     }

@@ -198,7 +198,7 @@ fn find_matches(data: &[u8]) -> (Vec<RawSequence>, Vec<u8>) {
             literals.extend_from_slice(&data[lit_start..pos]);
 
             sequences.push(RawSequence {
-                lit_len: lit_len,
+                lit_len,
                 match_len: best_len,
                 offset: best_offset,
             });
@@ -211,9 +211,7 @@ fn find_matches(data: &[u8]) -> (Vec<RawSequence>, Vec<u8>) {
             } else if lit_len > 0 {
                 match best_offset {
                     2 => {
-                        let tmp = offsets[1];
-                        offsets[1] = offsets[0];
-                        offsets[0] = tmp;
+                        offsets.swap(0, 1);
                     }
                     3 => {
                         let tmp = offsets[2];
@@ -226,9 +224,7 @@ fn find_matches(data: &[u8]) -> (Vec<RawSequence>, Vec<u8>) {
             } else {
                 match best_offset {
                     1 => {
-                        let tmp = offsets[1];
-                        offsets[1] = offsets[0];
-                        offsets[0] = tmp;
+                        offsets.swap(0, 1);
                     }
                     2 => {
                         let tmp = offsets[2];
@@ -350,8 +346,7 @@ fn encode_sequences_section(sequences: &[RawSequence], output: &mut Vec<u8>) -> 
     let ml_info = build_enc_table(&ml_hist, max_ml, ML_MAX_AL);
 
     // Compression modes byte
-    let modes_byte =
-        ((ll_info.mode as u8) << 6) | ((of_info.mode as u8) << 4) | ((ml_info.mode as u8) << 2);
+    let modes_byte = (ll_info.mode << 6) | (of_info.mode << 4) | (ml_info.mode << 2);
     output.push(modes_byte);
 
     // Write table descriptions

@@ -219,14 +219,12 @@ pub fn init_abp() -> Result<(), String> {
     ];
 
     for dir in &dirs {
-        if io::access(*dir, libc::F_OK) != 0 {
-            if io::mkdir(*dir, 0o755) != 0 {
-                let mut msg = String::from("cannot create directory: ");
-                if let Ok(s) = core::str::from_utf8(*dir) {
-                    msg.push_str(s);
-                }
-                return Err(msg);
+        if io::access(dir, libc::F_OK) != 0 && io::mkdir(dir, 0o755) != 0 {
+            let mut msg = String::from("cannot create directory: ");
+            if let Ok(s) = core::str::from_utf8(dir) {
+                msg.push_str(s);
             }
+            return Err(msg);
         }
     }
 

@@ -655,7 +655,7 @@ fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
     }
     'outer: for i in 0..=(h.len() - n.len()) {
         for j in 0..n.len() {
-            if h[i + j].to_ascii_lowercase() != n[j].to_ascii_lowercase() {
+            if !h[i + j].eq_ignore_ascii_case(&n[j]) {
                 continue 'outer;
             }
         }
@@ -821,6 +821,12 @@ pub mod build {
         }
     }
 
+    impl Default for PackageIndexBuilder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     fn write_sref(buf: &mut Vec<u8>, sref: &StringRef) {
         buf.extend_from_slice(&sref.offset.to_le_bytes());
         buf.extend_from_slice(&sref.len.to_le_bytes());
@@ -897,7 +903,6 @@ mod tests {
             depends: "musl".into(),
             provides: "rg".into(),
             category: Category::Misc,
-            ..Default::default()
         });
 
         builder.add(PackageInfo {
@@ -910,7 +915,6 @@ mod tests {
             depends: "musl".into(),
             provides: "".into(),
             category: Category::Misc,
-            ..Default::default()
         });
 
         builder.add(PackageInfo {
@@ -923,7 +927,6 @@ mod tests {
             depends: "".into(),
             provides: "".into(),
             category: Category::Core,
-            ..Default::default()
         });
 
         builder.build()

@@ -3,7 +3,6 @@
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/nohup.html
 
 use crate::posix::helpers::*;
-use std::fs;
 
 /// POSIX: "The nohup utility shall invoke the utility ignoring the SIGHUP signal"
 #[test]

@@ -89,7 +89,7 @@ fn tar_member(name: &str, data: &[u8]) -> Vec<u8> {
     let mut out = block;
     out.extend_from_slice(data);
     let pad = (512 - (data.len() % 512)) % 512;
-    out.extend(core::iter::repeat(0u8).take(pad));
+    out.extend(std::iter::repeat_n(0u8, pad));
     out
 }
 
@@ -137,9 +137,11 @@ fn assemble_signed(
     let pk = sk.verifying_key().to_bytes();
     let kid = key_id(&pk);
 
-    let mut meta = PackageMetadata::default();
-    meta.name = String::from("secpkg");
-    meta.version = String::from("1.0.0");
+    let meta = PackageMetadata {
+        name: String::from("secpkg"),
+        version: String::from("1.0.0"),
+        ..Default::default()
+    };
 
     let pkg = AbpPackage {
         header: AbpHeader {

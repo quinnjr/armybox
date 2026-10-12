@@ -786,10 +786,7 @@ impl Database {
         for pkg in self.list_packages() {
             for dep in &pkg.depends {
                 // Parse dependency and check if it matches
-                let dep_name = dep
-                    .split(|c| c == '>' || c == '<' || c == '=')
-                    .next()
-                    .unwrap_or(dep);
+                let dep_name = dep.split(['>', '<', '=']).next().unwrap_or(dep);
                 if dep_name == package {
                     dependents.push(pkg.name.clone());
                     break;

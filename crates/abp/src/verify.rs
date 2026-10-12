@@ -86,10 +86,8 @@ fn verify_package_integrity(pkg: &AbpPackage) -> Result<(), String> {
     };
 
     // Track which manifest entries were seen in the payload.
-    let mut matched: Vec<bool> = Vec::with_capacity(pkg.manifest.entries.len());
-    for _ in 0..pkg.manifest.entries.len() {
-        matched.push(false);
-    }
+    let mut matched: Vec<bool> = Vec::new();
+    matched.resize(pkg.manifest.entries.len(), false);
 
     // Walk with the SAME strict iterator the installer uses, so GNU long names,
     // pax `path=`/`size=` overrides and base-256 sizes are interpreted

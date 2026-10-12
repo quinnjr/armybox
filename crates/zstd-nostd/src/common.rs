@@ -115,8 +115,8 @@ pub const ML_EXTRA_BITS: [u8; 53] = [
     1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 ];
 
-/// Offset codes extra bits (code N uses N extra bits)
-/// The baseline for offset code N is (1 << N)
+// Offset codes extra bits (code N uses N extra bits)
+// The baseline for offset code N is (1 << N)
 
 /// Predefined FSE distribution for literal lengths (accuracy log 6)
 pub const LL_DEFAULT_DIST: [i16; 36] = [

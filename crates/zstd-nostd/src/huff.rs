@@ -17,7 +17,6 @@ use crate::fse::FseTable;
 /// Maximum Huffman weight / code length
 const MAX_BITS: u8 = 11;
 
-/// Maximum number of symbols
 // ============================================================================
 // Decoding
 // ============================================================================
@@ -200,7 +199,7 @@ impl HuffTable {
         } else {
             // Direct encoding: 4-bit nibbles
             let num_symbols = (header_byte as usize) - 127;
-            let num_bytes = (num_symbols + 1) / 2;
+            let num_bytes = num_symbols.div_ceil(2);
             if 1 + num_bytes > data.len() {
                 return Err(ZstdError::CorruptData);
             }
@@ -353,7 +352,7 @@ pub fn decompress_4streams(
     }
 
     // Each stream decompresses to regen_size/4 bytes (last one gets remainder)
-    let seg_size = (regen_size + 3) / 4;
+    let seg_size = regen_size.div_ceil(4);
     let sizes = [
         core::cmp::min(seg_size, regen_size),
         core::cmp::min(seg_size, regen_size.saturating_sub(seg_size)),
@@ -612,7 +611,7 @@ pub fn write_weights(weights: &[u8]) -> Vec<u8> {
 
     // Use direct 4-bit encoding (simpler, good enough for our compressor)
     let header_byte = (num_symbols + 127) as u8;
-    let num_bytes = (num_symbols + 1) / 2;
+    let num_bytes = num_symbols.div_ceil(2);
     let mut out = Vec::with_capacity(1 + num_bytes);
     out.push(header_byte);
 
@@ -711,7 +710,7 @@ fn encode_1stream(table: &HuffEncTable, data: &[u8]) -> Vec<u8> {
 /// Encode 4 Huffman streams
 #[cfg(feature = "alloc")]
 fn encode_4streams(table: &HuffEncTable, data: &[u8]) -> Vec<u8> {
-    let seg = (data.len() + 3) / 4;
+    let seg = data.len().div_ceil(4);
     let segs = [
         &data[..core::cmp::min(seg, data.len())],
         &data[core::cmp::min(seg, data.len())..core::cmp::min(seg * 2, data.len())],

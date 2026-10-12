@@ -535,12 +535,11 @@ fn tar_extract(archive: &[u8], files: &[&[u8]], verbose: bool) -> i32 {
                         }
                     }
                 }
-                b'0' | b'\0' => {
+                b'0' | b'\0'
                     // Regular file
-                    if extract_file(name, fd, size, mode, verbose) != 0 {
+                    if extract_file(name, fd, size, mode, verbose) != 0 => {
                         exit_code = 1;
                     }
-                }
                 _ => {
                     // Skip unknown types
                 }

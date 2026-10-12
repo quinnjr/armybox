@@ -8,7 +8,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 // bzip2 magic bytes
-const MAGIC: [u8; 2] = [b'B', b'Z'];
+const MAGIC: [u8; 2] = *b"BZ";
 const BLOCK_MAGIC: [u8; 6] = [0x31, 0x41, 0x59, 0x26, 0x53, 0x59]; // pi digits
 const STREAM_END_MAGIC: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90]; // sqrt(pi) digits
 

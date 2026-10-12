@@ -251,22 +251,20 @@ mod tests {
         }
 
         let modules = modules.unwrap();
-        for entry in modules {
-            if let Ok(entry) = entry {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
+        for entry in modules.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
 
-                let output = Command::new(&armybox)
-                    .args(["modinfo", &name_str])
-                    .output()
-                    .unwrap();
+            let output = Command::new(&armybox)
+                .args(["modinfo", &name_str])
+                .output()
+                .unwrap();
 
-                // If module exists, should succeed
-                if output.status.code() == Some(0) {
-                    let stdout = std::string::String::from_utf8_lossy(&output.stdout);
-                    assert!(stdout.contains("filename:"));
-                    return; // Found at least one working module
-                }
+            // If module exists, should succeed
+            if output.status.code() == Some(0) {
+                let stdout = std::string::String::from_utf8_lossy(&output.stdout);
+                assert!(stdout.contains("filename:"));
+                return; // Found at least one working module
             }
         }
     }

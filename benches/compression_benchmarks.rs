@@ -1,7 +1,6 @@
 //! Benchmarks for compression applets
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use std::hint::black_box;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::{NamedTempFile, TempDir};
@@ -110,7 +109,7 @@ fn bench_gzip_decompress(c: &mut Criterion) {
             .unwrap();
 
         let gz_path = temp_dir.path().join("test.txt.gz");
-        let gz_size = std::fs::metadata(&gz_path).unwrap().len();
+        let _gz_size = std::fs::metadata(&gz_path).unwrap().len();
 
         group.throughput(Throughput::Bytes(size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), &gz_path, |b, gz_path| {

@@ -292,13 +292,13 @@ fn lookup_user(username: &[u8]) -> Option<UserInfo> {
         // Parse uid and gid. Reject a malformed entry outright instead of
         // silently falling back to uid/gid 0 (root), which would be a
         // privilege-escalation fail-open.
-        let uid = match sys::parse_u64(fields[2]) {
-            Some(v) => v as u32,
-            None => return None,
+        let uid = {
+            let v = sys::parse_u64(fields[2])?;
+            v as u32
         };
-        let gid = match sys::parse_u64(fields[3]) {
-            Some(v) => v as u32,
-            None => return None,
+        let gid = {
+            let v = sys::parse_u64(fields[3])?;
+            v as u32
         };
         let home = fields[5].to_vec();
         let shell = if fields[6].is_empty() {

@@ -58,7 +58,7 @@ fn posix_uname_all() {
     let result = run(&["uname", "-a"]);
     assert_success(&result);
     // Should have multiple space-separated fields
-    let fields: Vec<&str> = result.1.trim().split_whitespace().collect();
+    let fields: Vec<&str> = result.1.split_whitespace().collect();
     assert!(fields.len() >= 3);
 }
 

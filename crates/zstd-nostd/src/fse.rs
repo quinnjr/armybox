@@ -91,15 +91,14 @@ impl FseTable {
             }
         }
 
-        for i in 0..table_size {
-            let sym = entries[i].symbol as usize;
+        for entry in entries.iter_mut().take(table_size) {
+            let sym = entry.symbol as usize;
             let next_state = symbol_next[sym];
             symbol_next[sym] += 1;
 
             let nb = accuracy_log as u32 - (32 - (next_state as u32).leading_zeros() - 1);
-            entries[i].num_bits = nb as u8;
-            entries[i].baseline =
-                ((next_state as u16) << nb as u16).wrapping_sub(table_size as u16);
+            entry.num_bits = nb as u8;
+            entry.baseline = ((next_state as u16) << nb as u16).wrapping_sub(table_size as u16);
         }
 
         Ok(FseTable {
@@ -251,9 +250,7 @@ impl FseTable {
                     let repeat_bits = raw & 3;
                     bit_pos += 2;
 
-                    for _ in 0..repeat_bits {
-                        probs.push(0);
-                    }
+                    probs.resize(probs.len() + repeat_bits as usize, 0);
 
                     if repeat_bits < 3 {
                         break;
@@ -265,8 +262,8 @@ impl FseTable {
         // Truncate to max_symbol + 1
         probs.truncate(max_symbol + 1);
 
-        let bytes_consumed = (bit_pos + 7) / 8;
-        Ok((probs, accuracy_log as u8, bytes_consumed))
+        let bytes_consumed = bit_pos.div_ceil(8);
+        Ok((probs, accuracy_log, bytes_consumed))
     }
 }
 

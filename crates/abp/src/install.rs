@@ -705,7 +705,7 @@ impl<'a> TarWalker<'a> {
 /// Number of bytes a member of `size` data occupies in the archive, rounded up
 /// to a whole 512-byte block.
 fn block_round(size: u64) -> usize {
-    ((size + 511) / 512 * 512) as usize
+    (size.div_ceil(512) * 512) as usize
 }
 
 /// Strip trailing NUL bytes from a long-name / pax path value.
@@ -820,7 +820,7 @@ pub(crate) fn parse_tar_size(field: &[u8]) -> u64 {
         if b == 0 || b == b' ' {
             break;
         }
-        if b >= b'0' && b <= b'7' {
+        if (b'0'..=b'7').contains(&b) {
             result = result * 8 + (b - b'0') as u64;
         }
     }
@@ -833,7 +833,7 @@ fn parse_tar_mode(field: &[u8]) -> u32 {
         if b == 0 || b == b' ' {
             break;
         }
-        if b >= b'0' && b <= b'7' {
+        if (b'0'..=b'7').contains(&b) {
             result = result * 8 + (b - b'0') as u32;
         }
     }
@@ -983,7 +983,7 @@ mod tests {
         let mut out = block;
         out.extend_from_slice(data);
         let pad = (512 - (data.len() % 512)) % 512;
-        out.extend(core::iter::repeat(0u8).take(pad));
+        out.extend(std::iter::repeat_n(0u8, pad));
         out
     }
 

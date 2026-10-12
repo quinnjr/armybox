@@ -319,6 +319,8 @@ fn print_stats(mem: &MemInfo, cpu: &CpuStats, proc_stats: &ProcStats) {
         + cpu.softirq
         + cpu.steal;
 
+    // One guard covers all four divisions, and an idle CPU reads as 100% id
+    #[allow(clippy::manual_checked_ops)]
     let (us, sy, id, wa, st) = if total_cpu > 0 {
         let us = ((cpu.user + cpu.nice) * 100 / total_cpu) as u32;
         let sy = ((cpu.system + cpu.irq + cpu.softirq) * 100 / total_cpu) as u32;

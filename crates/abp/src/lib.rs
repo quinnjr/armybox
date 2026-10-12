@@ -33,6 +33,10 @@
 //! ```
 
 #![cfg_attr(not(test), no_std)]
+// libc types differ in width across glibc, musl and Bionic (mode_t, c_char,
+// ...), so portable casts are often no-ops on the host clippy runs on; removing
+// them breaks other targets (see #1)
+#![allow(clippy::unnecessary_cast)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

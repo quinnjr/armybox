@@ -151,7 +151,7 @@ impl BitWriter {
 
         // Total bytes needed: ceil((total + 1) / 8) where +1 is for sentinel
         let total_with_sentinel = total + 1;
-        let num_bytes = (total_with_sentinel + 7) / 8;
+        let num_bytes = total_with_sentinel.div_ceil(8);
         let mut buf = vec![0u8; num_bytes];
 
         // The sentinel bit goes at position `total` (0-indexed from LSB of byte 0)
@@ -178,6 +178,12 @@ impl BitWriter {
         }
 
         buf
+    }
+}
+
+impl Default for BitWriter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

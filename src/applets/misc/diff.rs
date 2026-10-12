@@ -251,8 +251,6 @@ mod tests {
     #[test]
     #[cfg(feature = "alloc")]
     fn test_diff_identical_files() {
-        use std::io::Write;
-
         // Create two identical temporary files
         let dir = std::env::temp_dir();
         let path1 = dir.join("diff_test_identical1.txt");

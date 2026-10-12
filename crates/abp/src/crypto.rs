@@ -28,6 +28,12 @@ pub struct Sha256 {
     buflen: usize,
 }
 
+impl Default for Sha256 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Sha256 {
     /// Create a new SHA256 hasher
     pub fn new() -> Self {
@@ -268,6 +274,12 @@ pub struct Sha512 {
     count: u128,
     buffer: [u8; 128],
     buflen: usize,
+}
+
+impl Default for Sha512 {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Sha512 {
@@ -515,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_sha256_empty() {
-        let hash = sha256(b"");
+        let _hash = sha256(b"");
         let hex = sha256_hex(b"");
         assert_eq!(
             &hex[..],
@@ -525,7 +537,7 @@ mod tests {
 
     #[test]
     fn test_sha256_hello() {
-        let hash = sha256(b"hello");
+        let _hash = sha256(b"hello");
         let hex = sha256_hex(b"hello");
         assert_eq!(
             &hex[..],

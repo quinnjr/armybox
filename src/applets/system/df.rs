@@ -265,11 +265,7 @@ fn show_mount_entry(
         let total_inodes = stat_buf.f_files;
         let free_inodes = stat_buf.f_ffree;
         let used_inodes = total_inodes.saturating_sub(free_inodes);
-        let use_percent = if total_inodes > 0 {
-            ((used_inodes * 100) / total_inodes) as u32
-        } else {
-            0
-        };
+        let use_percent = (used_inodes * 100).checked_div(total_inodes).unwrap_or(0) as u32;
 
         // Total inodes (12 chars)
         print_size_padded(total_inodes, human, si, base, 12);
@@ -296,11 +292,7 @@ fn show_mount_entry(
 
         // Use percentage based on total - (free - avail) for reserved blocks
         let usable = total_kb.saturating_sub(free_kb.saturating_sub(avail_kb));
-        let use_percent = if usable > 0 {
-            ((used_kb * 100) / usable).min(100) as u32
-        } else {
-            0
-        };
+        let use_percent = (used_kb * 100).checked_div(usable).unwrap_or(0).min(100) as u32;
 
         // Total (14 chars to handle TB-size disks)
         print_size_padded(total_kb, human, si, base, 14);

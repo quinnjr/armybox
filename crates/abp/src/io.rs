@@ -336,6 +336,10 @@ pub fn strlen(s: *const u8) -> usize {
 }
 
 /// Convert C string pointer to slice
+///
+/// # Safety
+/// `s` must be non-null and point to a NUL-terminated string that stays
+/// valid and unmodified for as long as the returned slice is used.
 pub unsafe fn cstr_to_slice(s: *const u8) -> &'static [u8] {
     debug_assert!(!s.is_null(), "cstr_to_slice called with null pointer");
     let len = strlen(s);
@@ -343,6 +347,11 @@ pub unsafe fn cstr_to_slice(s: *const u8) -> &'static [u8] {
 }
 
 /// Get dirent name as u8 slice
+///
+/// # Safety
+/// `entry` must be a non-null `dirent` (e.g. from `readdir`) that stays
+/// valid for as long as the returned slice is used, i.e. until the next
+/// `readdir`/`closedir` on its stream.
 pub unsafe fn dirent_name(entry: *const libc::dirent) -> (&'static [u8], usize) {
     debug_assert!(!entry.is_null(), "dirent_name called with null pointer");
     unsafe {

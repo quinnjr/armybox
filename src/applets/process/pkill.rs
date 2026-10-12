@@ -31,9 +31,9 @@ fn parse_signal(spec: &[u8]) -> Option<i32> {
         return sys::parse_i64(spec).map(|v| v as i32);
     }
     let name = if spec.len() > 3
-        && spec[0].to_ascii_uppercase() == b'S'
-        && spec[1].to_ascii_uppercase() == b'I'
-        && spec[2].to_ascii_uppercase() == b'G'
+        && spec[0].eq_ignore_ascii_case(&b'S')
+        && spec[1].eq_ignore_ascii_case(&b'I')
+        && spec[2].eq_ignore_ascii_case(&b'G')
     {
         &spec[3..]
     } else {

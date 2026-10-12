@@ -19,8 +19,7 @@ pub fn fetch_index(base_url: &str) -> Result<Vec<AvailablePackage>, String> {
     url.push_str("APKINDEX");
 
     // For now, we only support file:// URLs for testing
-    if url.starts_with("file://") {
-        let path = &url[7..];
+    if let Some(path) = url.strip_prefix("file://") {
         return fetch_file_index(path);
     }
 
@@ -151,8 +150,7 @@ fn hex_digit(c: u8) -> Option<u8> {
 /// Download a package
 pub fn download_package(url: &str, dest: &[u8]) -> Result<(), String> {
     // For now, only support file:// URLs
-    if url.starts_with("file://") {
-        let path = &url[7..];
+    if let Some(path) = url.strip_prefix("file://") {
         return copy_file(path.as_bytes(), dest);
     }
 

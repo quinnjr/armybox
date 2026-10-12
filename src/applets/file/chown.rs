@@ -118,7 +118,7 @@ fn parse_owner_group(s: &[u8]) -> Option<(u32, u32)> {
     // Parse group if present
     let gid = match group_part {
         None => u32::MAX, // don't change group
-        Some(g) if g.is_empty() => u32::MAX,
+        Some([]) => u32::MAX,
         Some(g) => {
             if let Some(n) = sys::parse_u64(g) {
                 n as u32

@@ -1,7 +1,6 @@
 //! Benchmarks for text processing applets (grep, sed, awk, sort, etc.)
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use std::hint::black_box;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::NamedTempFile;
@@ -244,7 +243,7 @@ fn bench_sort(c: &mut Criterion) {
         }
         let string_path = temp_string.path().to_str().unwrap().to_string();
 
-        let size = std::fs::metadata(&numeric_path).unwrap().len();
+        let _size = std::fs::metadata(&numeric_path).unwrap().len();
         group.throughput(Throughput::Elements(lines as u64));
 
         // Numeric sort

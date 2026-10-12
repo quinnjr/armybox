@@ -29,7 +29,6 @@ pub fn halt(argc: i32, argv: *const *const u8) -> i32 {
 mod tests {
     extern crate std;
     use std::path::PathBuf;
-    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {

@@ -67,11 +67,11 @@ pub fn file(argc: i32, argv: *const *const u8) -> i32 {
                         if n >= 4 {
                             if magic[0..4] == [0x7F, b'E', b'L', b'F'] {
                                 io::write_str(1, b"ELF executable\n");
-                            } else if magic[0..2] == [b'#', b'!'] {
+                            } else if magic[0..2] == *b"#!" {
                                 io::write_str(1, b"script\n");
                             } else if magic[0..4] == [0x1F, 0x8B, 0x08, 0x00] {
                                 io::write_str(1, b"gzip compressed\n");
-                            } else if n >= 3 && magic[0..3] == [b'B', b'Z', b'h'] {
+                            } else if n >= 3 && magic[0..3] == *b"BZh" {
                                 io::write_str(1, b"bzip2 compressed\n");
                             } else if st.st_size == 0 {
                                 io::write_str(1, b"empty\n");

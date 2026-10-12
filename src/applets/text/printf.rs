@@ -126,9 +126,7 @@ fn unescape_all(s: &[u8], out: &mut Vec<u8>) -> bool {
 /// Format an unsigned value in the given radix into a fresh Vec.
 fn digits(mut n: u64, radix: u64, upper: bool) -> Vec<u8> {
     if n == 0 {
-        let mut v = Vec::new();
-        v.push(b'0');
-        return v;
+        return alloc::vec![b'0'];
     }
     let lut: &[u8] = if upper {
         b"0123456789ABCDEF"

@@ -148,7 +148,7 @@ fn lookup_uid(name: &[u8]) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
     use std::path::PathBuf;

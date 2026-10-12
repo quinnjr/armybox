@@ -275,7 +275,7 @@ mod tests {
         }
 
         let dir = setup();
-        fs::write(dir.join("binary.bin"), &[0u8, 1, 2, 255, 254, 253]).unwrap();
+        fs::write(dir.join("binary.bin"), [0u8, 1, 2, 255, 254, 253]).unwrap();
 
         let output = Command::new(&armybox)
             .args(["cat", dir.join("binary.bin").to_str().unwrap()])

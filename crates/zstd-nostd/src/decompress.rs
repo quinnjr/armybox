@@ -44,7 +44,7 @@ pub fn decompress_bounded(input: &[u8], max_output: usize) -> Result<Vec<u8>, Zs
         if magic == ZSTD_MAGIC {
             let consumed = decode_frame(input, pos, &mut output, max_output)?;
             pos += consumed;
-        } else if magic >= SKIPPABLE_MAGIC_LOW && magic <= SKIPPABLE_MAGIC_HIGH {
+        } else if (SKIPPABLE_MAGIC_LOW..=SKIPPABLE_MAGIC_HIGH).contains(&magic) {
             // Skippable frame
             if pos + 8 > input.len() {
                 return Err(ZstdError::CorruptData);
@@ -642,6 +642,7 @@ fn decode_sequences_section(
 }
 
 /// Decode an FSE table for a specific sequence type
+#[allow(clippy::too_many_arguments)] // mirrors the per-type parameters in RFC 8878
 fn decode_seq_table(
     data: &[u8],
     mode: SeqMode,
@@ -761,10 +762,8 @@ fn resolve_offset(offset: u32, lit_len: u32, offsets: &mut [u32; 3]) -> Result<u
             }
             2 => {
                 // offset2: swap 1 and 2
-                let tmp = offsets[1];
-                offsets[1] = offsets[0];
-                offsets[0] = tmp;
-                tmp
+                offsets.swap(0, 1);
+                offsets[0]
             }
             3 => {
                 // offset3: rotate
@@ -781,10 +780,8 @@ fn resolve_offset(offset: u32, lit_len: u32, offsets: &mut [u32; 3]) -> Result<u
         match offset {
             1 => {
                 // offset2
-                let tmp = offsets[1];
-                offsets[1] = offsets[0];
-                offsets[0] = tmp;
-                tmp
+                offsets.swap(0, 1);
+                offsets[0]
             }
             2 => {
                 // offset3
@@ -937,15 +934,9 @@ mod tests {
             0x6d,
         ];
         let mut expected = Vec::new();
-        for _ in 0..2000 {
-            expected.push(b'A');
-        }
-        for _ in 0..2000 {
-            expected.push(b'B');
-        }
-        for _ in 0..2000 {
-            expected.push(b'A');
-        }
+        expected.resize(2000, b'A');
+        expected.resize(4000, b'B');
+        expected.resize(6000, b'A');
 
         let result = crate::decompress(compressed);
         match &result {
@@ -996,15 +987,9 @@ mod tests {
             0x03, 0x14, 0x00, 0x25, 0x8a, 0x37, 0x2c, 0x95, 0xce, 0x1f, 0xae,
         ];
         let mut expected = Vec::new();
-        for _ in 0..50 {
-            expected.push(b'A');
-        }
-        for _ in 0..50 {
-            expected.push(b'B');
-        }
-        for _ in 0..50 {
-            expected.push(b'A');
-        }
+        expected.resize(50, b'A');
+        expected.resize(100, b'B');
+        expected.resize(150, b'A');
 
         let result = crate::decompress(compressed);
         match &result {

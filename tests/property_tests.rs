@@ -5,7 +5,7 @@
 
 use proptest::prelude::*;
 use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use tempfile::NamedTempFile;
 
 fn armybox() -> String {

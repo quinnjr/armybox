@@ -68,7 +68,7 @@ pub fn shuf(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
     use std::fs;

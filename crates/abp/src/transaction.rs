@@ -76,6 +76,12 @@ enum DbChange {
     FilesUnregistered(Vec<String>),
 }
 
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transaction {
     /// Create a new transaction
     pub fn new() -> Self {
@@ -237,6 +243,7 @@ impl Transaction {
         })
     }
 
+    #[allow(clippy::too_many_arguments)] // full upgrade context, forwarded to remove/install
     fn execute_upgrade(
         &self,
         db: &Database,

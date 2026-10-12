@@ -83,7 +83,7 @@ impl AbpHeader {
         }
 
         // Check magic
-        if &data[0..4] != &ABP_MAGIC {
+        if data[0..4] != ABP_MAGIC {
             return None;
         }
 
@@ -834,22 +834,21 @@ impl Dependency {
     pub fn parse(s: &str) -> Self {
         let s = s.trim();
 
-        if let Some(idx) = s.find(|c| c == '=' || c == '<' || c == '>') {
+        if let Some(idx) = s.find(['=', '<', '>']) {
             let name = String::from(s[..idx].trim());
             let rest = &s[idx..];
 
-            let constraint = if rest.starts_with(">=") {
-                Some(VersionConstraint::Ge(String::from(rest[2..].trim())))
-            } else if rest.starts_with("<=") {
-                Some(VersionConstraint::Le(String::from(rest[2..].trim())))
-            } else if rest.starts_with('>') {
-                Some(VersionConstraint::Gt(String::from(rest[1..].trim())))
-            } else if rest.starts_with('<') {
-                Some(VersionConstraint::Lt(String::from(rest[1..].trim())))
-            } else if rest.starts_with('=') {
-                Some(VersionConstraint::Eq(String::from(rest[1..].trim())))
+            let constraint = if let Some(v) = rest.strip_prefix(">=") {
+                Some(VersionConstraint::Ge(String::from(v.trim())))
+            } else if let Some(v) = rest.strip_prefix("<=") {
+                Some(VersionConstraint::Le(String::from(v.trim())))
+            } else if let Some(v) = rest.strip_prefix('>') {
+                Some(VersionConstraint::Gt(String::from(v.trim())))
+            } else if let Some(v) = rest.strip_prefix('<') {
+                Some(VersionConstraint::Lt(String::from(v.trim())))
             } else {
-                None
+                rest.strip_prefix('=')
+                    .map(|v| VersionConstraint::Eq(String::from(v.trim())))
             };
 
             Dependency { name, constraint }
@@ -921,11 +920,13 @@ mod tests {
 
     #[test]
     fn test_metadata_roundtrip() {
-        let mut meta = PackageMetadata::default();
-        meta.name = String::from("test-pkg");
-        meta.version = String::from("1.0.0");
-        meta.description = String::from("Test package");
-        meta.depends = vec![String::from("dep1"), String::from("dep2")];
+        let meta = PackageMetadata {
+            name: String::from("test-pkg"),
+            version: String::from("1.0.0"),
+            description: String::from("Test package"),
+            depends: vec![String::from("dep1"), String::from("dep2")],
+            ..Default::default()
+        };
 
         let toml = meta.to_toml();
         let parsed = PackageMetadata::from_toml(&toml).unwrap();
@@ -943,9 +944,11 @@ mod tests {
             to trigger real compression. Repetitive patterns help: \
             ABCDEFGH ABCDEFGH ABCDEFGH ABCDEFGH ABCDEFGH ABCDEFGH";
 
-        let mut meta = PackageMetadata::default();
-        meta.name = String::from("test-zstd");
-        meta.version = String::from("1.0.0");
+        let meta = PackageMetadata {
+            name: String::from("test-zstd"),
+            version: String::from("1.0.0"),
+            ..Default::default()
+        };
 
         let manifest = Manifest {
             entries: Vec::new(),
@@ -1006,9 +1009,11 @@ mod tests {
         let original_payload = b"Some data that gets compressed once";
         let compressed = zstd_nostd::compress(original_payload, 3);
 
-        let mut meta = PackageMetadata::default();
-        meta.name = String::from("test-precompressed");
-        meta.version = String::from("1.0.0");
+        let meta = PackageMetadata {
+            name: String::from("test-precompressed"),
+            version: String::from("1.0.0"),
+            ..Default::default()
+        };
 
         let manifest = Manifest {
             entries: Vec::new(),
@@ -1056,9 +1061,11 @@ mod tests {
     // byte-exact rather than a re-serialization of parsed structures.
     #[test]
     fn test_signed_region_is_exact_on_disk_bytes() {
-        let mut meta = PackageMetadata::default();
-        meta.name = String::from("sig-region");
-        meta.version = String::from("1.0.0");
+        let meta = PackageMetadata {
+            name: String::from("sig-region"),
+            version: String::from("1.0.0"),
+            ..Default::default()
+        };
         let pkg = AbpPackage {
             header: AbpHeader {
                 version_major: ABP_VERSION_MAJOR,
@@ -1101,9 +1108,11 @@ mod tests {
     // fabricating one from re-serialized fields.
     #[test]
     fn test_verify_signature_false_for_in_memory_package() {
-        let mut meta = PackageMetadata::default();
-        meta.name = String::from("no-region");
-        meta.version = String::from("1.0.0");
+        let meta = PackageMetadata {
+            name: String::from("no-region"),
+            version: String::from("1.0.0"),
+            ..Default::default()
+        };
         let pkg = AbpPackage {
             header: AbpHeader {
                 version_major: ABP_VERSION_MAJOR,
