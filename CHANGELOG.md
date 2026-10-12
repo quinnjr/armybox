@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `top` is now an interactive real-time process viewer instead of a one-shot
+  `ps` wrapper. It is a port of BusyBox 1.36.1's `procps/top.c` for the
+  configuration embedded systems ship (global CPU percentages, per-process
+  %CPU, no SMP/topmem/threads screens): the `Mem:`/`CPU:`/`Load average:`
+  header, the `PID PPID USER STAT VSZ %VSZ %CPU COMMAND` table, `-b`/`-n`/`-d`
+  options and the `n`/`m`/`p`/`t`/`r`/`q` keys. Rendering matches BusyBox byte
+  for byte, including `smart_ulltoa5()` sizes (`1225m`, `1448g`) and the STAT
+  field's `W`/`<`/`N` flags.
+- `top` accepts `--version` (and already handled `--help`), as CONTRIBUTING.md
+  asks of applets.
+- `ps`: exposes its `/proc/<pid>` parser (`Proc`) to `top`, and gained
+  `Proc::args()`/`Proc::comm()` accessors. The `top` feature now selects
+  `alloc` and `ps` (`top = ["alloc", "ps"]`), so `--no-default-features
+  --features top` builds; it previously failed to compile.
+
+### Fixed
+- `ps`: `state` (the `S` column, `-o state`) read the first character of the
+  process name instead of the state letter after `<comm>) `.
+- `ps`: `args`/`COMMAND` no longer grow trailing spaces for processes that
+  rewrite their `argv`: the NUL padding after the last argument is not part of
+  the command line and is not converted to spaces.
+- `ps`: the task name (`comm`) is truncated to 15 characters, as BusyBox's
+  `COMM_LEN - 1` and procps do; some vendor kernels report longer names in
+  `/proc/<pid>/stat` (e.g. a 17-character `kworker/u3:0-hci0`).
+
 ## [0.5.0] - 2026-08-18
 
 ### Added
