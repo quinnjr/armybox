@@ -487,9 +487,10 @@ strip = "symbols"
 debug = false
 overflow-checks = false
 
-# Don't use panic=abort for dev profile to allow tests
+# The no_std binary can't unwind. Test builds ignore this setting (the test
+# harness always uses unwind), so abort here doesn't affect cargo test.
 [profile.dev]
-panic = "unwind"
+panic = "abort"
 
 [[bin]]
 name = "armybox"
