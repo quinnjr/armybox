@@ -1116,7 +1116,7 @@ fn sleep_ms(ms: i32) {
     }
     let ts = libc::timespec {
         tv_sec: (ms / 1000) as libc::time_t,
-        tv_nsec: ((ms % 1000) as i64) * 1_000_000,
+        tv_nsec: ((ms % 1000) as libc::c_long) * 1_000_000,
     };
     unsafe { libc::nanosleep(&ts, core::ptr::null_mut()) };
 }
