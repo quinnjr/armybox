@@ -2,8 +2,8 @@
 //!
 //! Calculate IP network information.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// ipcalc - IP address calculator
 ///
@@ -29,7 +29,7 @@ pub fn ipcalc(argc: i32, argv: *const *const u8) -> i32 {
 
     // Parse address and optional prefix
     let (ip_part, prefix) = if let Some(pos) = addr.iter().position(|&c| c == b'/') {
-        (&addr[..pos], Some(&addr[pos+1..]))
+        (&addr[..pos], Some(&addr[pos + 1..]))
     } else {
         (addr, None)
     };
@@ -70,8 +70,10 @@ pub fn ipcalc(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    let ip = ((octets[0] as u32) << 24) | ((octets[1] as u32) << 16) |
-             ((octets[2] as u32) << 8) | (octets[3] as u32);
+    let ip = ((octets[0] as u32) << 24)
+        | ((octets[1] as u32) << 16)
+        | ((octets[2] as u32) << 8)
+        | (octets[3] as u32);
 
     // Parse prefix length
     let prefix_len = if let Some(p) = prefix {
@@ -88,12 +90,24 @@ pub fn ipcalc(argc: i32, argv: *const *const u8) -> i32 {
         val
     } else {
         // Default prefix based on class
-        if octets[0] < 128 { 8 }       // Class A
-        else if octets[0] < 192 { 16 } // Class B
-        else { 24 }                     // Class C
+        if octets[0] < 128 {
+            8
+        }
+        // Class A
+        else if octets[0] < 192 {
+            16
+        }
+        // Class B
+        else {
+            24
+        } // Class C
     };
 
-    let mask = if prefix_len == 0 { 0 } else { !0u32 << (32 - prefix_len) };
+    let mask = if prefix_len == 0 {
+        0
+    } else {
+        !0u32 << (32 - prefix_len)
+    };
     let network = ip & mask;
     let broadcast = network | !mask;
 
@@ -121,7 +135,11 @@ pub fn ipcalc(argc: i32, argv: *const *const u8) -> i32 {
     io::write_str(1, b"\n");
 
     // Host range
-    let hosts = if prefix_len >= 31 { 0 } else { (1u32 << (32 - prefix_len)) - 2 };
+    let hosts = if prefix_len >= 31 {
+        0
+    } else {
+        (1u32 << (32 - prefix_len)) - 2
+    };
     io::write_str(1, b"Hosts:     ");
     io::write_all(1, crate::sys::format_u64(hosts as u64, &mut num_buf));
     io::write_str(1, b"\n");
@@ -142,8 +160,8 @@ fn write_ip(ip: u32, buf: &mut [u8; 20]) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -153,19 +171,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_ipcalc_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ipcalc"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ipcalc"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -175,7 +194,9 @@ mod tests {
     #[test]
     fn test_ipcalc_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ipcalc", "192.168.1.100/24"])
@@ -192,7 +213,9 @@ mod tests {
     #[test]
     fn test_ipcalc_no_prefix() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ipcalc", "10.0.0.1"])
@@ -207,7 +230,9 @@ mod tests {
     #[test]
     fn test_ipcalc_invalid_address() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ipcalc", "999.999.999.999"])
@@ -220,7 +245,9 @@ mod tests {
     #[test]
     fn test_ipcalc_slash_32() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ipcalc", "192.168.1.1/32"])

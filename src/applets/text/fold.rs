@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/fold.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// fold - wrap lines to specified width
 ///
@@ -50,8 +50,12 @@ pub fn fold(argc: i32, argv: *const *const u8) -> i32 {
                 return 2;
             }
             if arg.len() > 1 && arg[0] == b'-' {
-                if has_opt(arg, b'b') { by_bytes = true; }
-                if has_opt(arg, b's') { break_at_blank = true; }
+                if has_opt(arg, b'b') {
+                    by_bytes = true;
+                }
+                if has_opt(arg, b's') {
+                    break_at_blank = true;
+                }
                 if has_opt(arg, b'w') {
                     let wval: Option<&[u8]> = if arg.len() > 2 && arg[1] == b'w' {
                         Some(&arg[2..])
@@ -82,7 +86,9 @@ pub fn fold(argc: i32, argv: *const *const u8) -> i32 {
         i += 1;
     }
 
-    if width == 0 { width = 1; }
+    if width == 0 {
+        width = 1;
+    }
 
     #[cfg(feature = "alloc")]
     {
@@ -109,7 +115,9 @@ pub fn fold(argc: i32, argv: *const *const u8) -> i32 {
                 }
 
                 let ok = fold_fd(fd, width, by_bytes, break_at_blank);
-                if fd != 0 { io::close(fd); }
+                if fd != 0 {
+                    io::close(fd);
+                }
                 if !ok {
                     io::write_str(2, b"fold: write error\n");
                     return 1;
@@ -117,7 +125,9 @@ pub fn fold(argc: i32, argv: *const *const u8) -> i32 {
             }
         }
 
-        if had_error { return 1; }
+        if had_error {
+            return 1;
+        }
     }
 
     #[cfg(not(feature = "alloc"))]
@@ -154,7 +164,9 @@ fn fold_fd(fd: i32, width: usize, by_bytes: bool, break_at_blank: bool) -> bool 
         let mut buf = [0u8; 4096];
         loop {
             let n = io::read(fd, &mut buf);
-            if n <= 0 { break; }
+            if n <= 0 {
+                break;
+            }
 
             for &c in &buf[..n as usize] {
                 if c == b'\n' {
@@ -217,18 +229,26 @@ fn fold_fd(fd: i32, width: usize, by_bytes: bool, break_at_blank: bool) -> bool 
         let mut buf = [0u8; 4096];
         loop {
             let n = io::read(fd, &mut buf);
-            if n <= 0 { break; }
+            if n <= 0 {
+                break;
+            }
 
             for &c in &buf[..n as usize] {
                 if c == b'\n' {
-                    if io::write_str(1, b"\n") < 0 { return false; }
+                    if io::write_str(1, b"\n") < 0 {
+                        return false;
+                    }
                     col = 0;
                 } else {
                     if col >= width {
-                        if io::write_str(1, b"\n") < 0 { return false; }
+                        if io::write_str(1, b"\n") < 0 {
+                            return false;
+                        }
                         col = 0;
                     }
-                    if io::write_all(1, &[c]) < 0 { return false; }
+                    if io::write_all(1, &[c]) < 0 {
+                        return false;
+                    }
                     col += 1;
                 }
             }
@@ -240,9 +260,9 @@ fn fold_fd(fd: i32, width: usize, by_bytes: bool, break_at_blank: bool) -> bool 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -252,14 +272,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_fold_default_width() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["fold"])
@@ -287,7 +311,9 @@ mod tests {
     #[test]
     fn test_fold_custom_width() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["fold", "-w", "10"])
@@ -313,7 +339,9 @@ mod tests {
     #[test]
     fn test_fold_short_line() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["fold", "-w", "20"])

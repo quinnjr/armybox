@@ -8,7 +8,7 @@
 
 extern crate armybox;
 
-use armybox::{io, applets, run_applet};
+use armybox::{applets, io, run_applet};
 
 /// Main entry point
 #[unsafe(no_mangle)]
@@ -99,12 +99,18 @@ fn print_help() {
     io::write_str(1, b"  -l, --list      List all available applets\n");
     io::write_str(1, b"  -h, --help      Show this help message\n");
     io::write_str(1, b"  -V, --version   Show version information\n");
-    io::write_str(1, b"  --install DIR   Create symlinks in DIR for all applets\n");
+    io::write_str(
+        1,
+        b"  --install DIR   Create symlinks in DIR for all applets\n",
+    );
 }
 
 /// Print version
 fn print_version() {
-    io::write_str(1, concat!("armybox ", env!("CARGO_PKG_VERSION"), "\n").as_bytes());
+    io::write_str(
+        1,
+        concat!("armybox ", env!("CARGO_PKG_VERSION"), "\n").as_bytes(),
+    );
     io::write_str(1, b"A #[no_std] BusyBox/Toybox clone in Rust\n");
     io::write_str(1, b"Copyright (c) 2025 Joseph R. Quinn\n");
 }
@@ -123,7 +129,7 @@ fn install_symlinks(dir: &[u8]) -> i32 {
         libc::readlink(
             target_buf.as_ptr() as *const libc::c_char,
             target.as_mut_ptr() as *mut libc::c_char,
-            target.len() - 1
+            target.len() - 1,
         )
     };
 
@@ -142,10 +148,38 @@ fn install_symlinks(dir: &[u8]) -> i32 {
 
     // Get list via list_applets - for now just create basic symlinks
     let names: &[&[u8]] = &[
-        b"true", b"false", b"echo", b"cat", b"ls", b"cp", b"mv", b"rm",
-        b"mkdir", b"rmdir", b"pwd", b"touch", b"ln", b"chmod", b"head", b"tail",
-        b"wc", b"grep", b"sed", b"awk", b"sort", b"uniq", b"cut", b"tr",
-        b"date", b"uname", b"hostname", b"whoami", b"id", b"ps", b"kill", b"sleep",
+        b"true",
+        b"false",
+        b"echo",
+        b"cat",
+        b"ls",
+        b"cp",
+        b"mv",
+        b"rm",
+        b"mkdir",
+        b"rmdir",
+        b"pwd",
+        b"touch",
+        b"ln",
+        b"chmod",
+        b"head",
+        b"tail",
+        b"wc",
+        b"grep",
+        b"sed",
+        b"awk",
+        b"sort",
+        b"uniq",
+        b"cut",
+        b"tr",
+        b"date",
+        b"uname",
+        b"hostname",
+        b"whoami",
+        b"id",
+        b"ps",
+        b"kill",
+        b"sleep",
     ];
     for &name in names {
         // Build link path: dir/name

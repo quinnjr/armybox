@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/touch.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// touch - change file access and modification times
 ///
@@ -131,7 +131,10 @@ pub fn touch(argc: i32, argv: *const *const u8) -> i32 {
                 None => {
                     // Current time - use utimes with null
                     if access_only && mod_only {
-                        if unsafe { libc::utimes(path.as_ptr() as *const libc::c_char, core::ptr::null()) } < 0 {
+                        if unsafe {
+                            libc::utimes(path.as_ptr() as *const libc::c_char, core::ptr::null())
+                        } < 0
+                        {
                             sys::perror(path);
                             exit_code = 1;
                         }
@@ -148,7 +151,11 @@ pub fn touch(argc: i32, argv: *const *const u8) -> i32 {
 
                         let times = [
                             libc::timeval {
-                                tv_sec: if access_only { now.tv_sec } else { st2.st_atime },
+                                tv_sec: if access_only {
+                                    now.tv_sec
+                                } else {
+                                    st2.st_atime
+                                },
                                 tv_usec: 0,
                             },
                             libc::timeval {
@@ -156,7 +163,10 @@ pub fn touch(argc: i32, argv: *const *const u8) -> i32 {
                                 tv_usec: 0,
                             },
                         ];
-                        if unsafe { libc::utimes(path.as_ptr() as *const libc::c_char, times.as_ptr()) } < 0 {
+                        if unsafe {
+                            libc::utimes(path.as_ptr() as *const libc::c_char, times.as_ptr())
+                        } < 0
+                        {
                             sys::perror(path);
                             exit_code = 1;
                         }
@@ -173,15 +183,25 @@ pub fn touch(argc: i32, argv: *const *const u8) -> i32 {
 
                     let times = [
                         libc::timeval {
-                            tv_sec: if access_only { atime as libc::time_t } else { st2.st_atime },
+                            tv_sec: if access_only {
+                                atime as libc::time_t
+                            } else {
+                                st2.st_atime
+                            },
                             tv_usec: 0,
                         },
                         libc::timeval {
-                            tv_sec: if mod_only { mtime as libc::time_t } else { st2.st_mtime },
+                            tv_sec: if mod_only {
+                                mtime as libc::time_t
+                            } else {
+                                st2.st_mtime
+                            },
                             tv_usec: 0,
                         },
                     ];
-                    if unsafe { libc::utimes(path.as_ptr() as *const libc::c_char, times.as_ptr()) } < 0 {
+                    if unsafe { libc::utimes(path.as_ptr() as *const libc::c_char, times.as_ptr()) }
+                        < 0
+                    {
                         sys::perror(path);
                         exit_code = 1;
                     }
@@ -278,22 +298,28 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_touch_test_{}_{}", std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_touch_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -306,7 +332,9 @@ mod tests {
     #[test]
     fn test_touch_create_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("newfile.txt");
@@ -324,7 +352,9 @@ mod tests {
     #[test]
     fn test_touch_multiple_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file1 = dir.join("file1.txt");
@@ -344,7 +374,9 @@ mod tests {
     #[test]
     fn test_touch_update_existing() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("existing.txt");
@@ -374,7 +406,9 @@ mod tests {
     #[test]
     fn test_touch_no_create() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("nonexistent.txt");
@@ -392,7 +426,9 @@ mod tests {
     #[test]
     fn test_touch_reference_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let ref_file = dir.join("ref.txt");
@@ -409,7 +445,12 @@ mod tests {
 
         // Now touch target with -r ref
         let output = Command::new(&armybox)
-            .args(["touch", "-r", ref_file.to_str().unwrap(), target.to_str().unwrap()])
+            .args([
+                "touch",
+                "-r",
+                ref_file.to_str().unwrap(),
+                target.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -425,7 +466,9 @@ mod tests {
     #[test]
     fn test_touch_no_permission() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Skip if root
         if std::env::var("USER").map(|u| u == "root").unwrap_or(false) {

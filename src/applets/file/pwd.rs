@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/pwd.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// pwd - print name of current/working directory
 ///
@@ -78,9 +78,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -91,13 +91,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_pwd_test_{}_{}", std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_pwd_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -110,7 +116,9 @@ mod tests {
     #[test]
     fn test_pwd_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
 
@@ -130,12 +138,11 @@ mod tests {
     #[test]
     fn test_pwd_output_ends_with_newline() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["pwd"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["pwd"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -145,12 +152,11 @@ mod tests {
     #[test]
     fn test_pwd_absolute_path() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["pwd"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["pwd"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -161,12 +167,11 @@ mod tests {
     #[test]
     fn test_pwd_physical_flag() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["pwd", "-P"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["pwd", "-P"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -176,7 +181,9 @@ mod tests {
     #[test]
     fn test_pwd_logical_flag() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
 

@@ -108,9 +108,7 @@ pub fn write_num(fd: i32, mut n: u64) -> isize {
 
 /// Read from file descriptor into buffer
 pub fn read(fd: i32, buf: &mut [u8]) -> isize {
-    unsafe {
-        libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len())
-    }
+    unsafe { libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) }
 }
 
 /// Read entire file into Vec
@@ -182,7 +180,12 @@ pub fn mkdir(path: &[u8], mode: u32) -> i32 {
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    unsafe { libc::mkdir(path_buf.as_ptr() as *const libc::c_char, mode as libc::mode_t) }
+    unsafe {
+        libc::mkdir(
+            path_buf.as_ptr() as *const libc::c_char,
+            mode as libc::mode_t,
+        )
+    }
 }
 
 /// Remove a directory
@@ -226,7 +229,12 @@ pub fn rename(old: &[u8], new: &[u8]) -> i32 {
     new_buf[..new.len()].copy_from_slice(new);
     new_buf[new.len()] = 0;
 
-    unsafe { libc::rename(old_buf.as_ptr() as *const libc::c_char, new_buf.as_ptr() as *const libc::c_char) }
+    unsafe {
+        libc::rename(
+            old_buf.as_ptr() as *const libc::c_char,
+            new_buf.as_ptr() as *const libc::c_char,
+        )
+    }
 }
 
 /// Create a symlink
@@ -244,7 +252,12 @@ pub fn symlink(target: &[u8], linkpath: &[u8]) -> i32 {
     link_buf[..linkpath.len()].copy_from_slice(linkpath);
     link_buf[linkpath.len()] = 0;
 
-    unsafe { libc::symlink(target_buf.as_ptr() as *const libc::c_char, link_buf.as_ptr() as *const libc::c_char) }
+    unsafe {
+        libc::symlink(
+            target_buf.as_ptr() as *const libc::c_char,
+            link_buf.as_ptr() as *const libc::c_char,
+        )
+    }
 }
 
 /// Change file permissions
@@ -257,7 +270,12 @@ pub fn chmod(path: &[u8], mode: u32) -> i32 {
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    unsafe { libc::chmod(path_buf.as_ptr() as *const libc::c_char, mode as libc::mode_t) }
+    unsafe {
+        libc::chmod(
+            path_buf.as_ptr() as *const libc::c_char,
+            mode as libc::mode_t,
+        )
+    }
 }
 
 /// Check file access permissions (POSIX access())

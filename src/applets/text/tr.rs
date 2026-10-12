@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/tr.html
 
-use crate::io;
 use crate::applets::{get_arg, has_opt};
+use crate::io;
 
 /// tr - translate or delete characters
 ///
@@ -51,10 +51,18 @@ pub fn tr(argc: i32, argv: *const *const u8) -> i32 {
                     return 2;
                 }
                 if arg.len() > 1 && arg[0] == b'-' {
-                    if has_opt(arg, b'd') { delete = true; }
-                    if has_opt(arg, b's') { squeeze = true; }
-                    if has_opt(arg, b'c') || has_opt(arg, b'C') { complement = true; }
-                    if has_opt(arg, b't') { truncate = true; }
+                    if has_opt(arg, b'd') {
+                        delete = true;
+                    }
+                    if has_opt(arg, b's') {
+                        squeeze = true;
+                    }
+                    if has_opt(arg, b'c') || has_opt(arg, b'C') {
+                        complement = true;
+                    }
+                    if has_opt(arg, b't') {
+                        truncate = true;
+                    }
                 } else if set1_idx == 0 {
                     set1_idx = i;
                 } else if set2_idx == 0 {
@@ -69,7 +77,11 @@ pub fn tr(argc: i32, argv: *const *const u8) -> i32 {
         }
 
         let set1 = unsafe { get_arg(argv, set1_idx).unwrap() };
-        let set2 = if set2_idx > 0 { unsafe { get_arg(argv, set2_idx) } } else { None };
+        let set2 = if set2_idx > 0 {
+            unsafe { get_arg(argv, set2_idx) }
+        } else {
+            None
+        };
 
         // Translate requires two operands. If neither -d nor -s is given, a
         // second operand is mandatory.
@@ -112,7 +124,11 @@ pub fn tr(argc: i32, argv: *const *const u8) -> i32 {
                 for &b in &set1_expanded {
                     in1[b as usize] = true;
                 }
-                let last = if s2e.is_empty() { 0 } else { s2e[s2e.len() - 1] };
+                let last = if s2e.is_empty() {
+                    0
+                } else {
+                    s2e[s2e.len() - 1]
+                };
                 for j in 0..256 {
                     if !in1[j] {
                         map[j] = last;
@@ -392,9 +408,9 @@ fn expand_set(s: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -404,14 +420,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_tr_lowercase_to_uppercase() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["tr", "a-z", "A-Z"])
@@ -434,7 +454,9 @@ mod tests {
     #[test]
     fn test_tr_delete() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["tr", "-d", "aeiou"])
@@ -457,7 +479,9 @@ mod tests {
     #[test]
     fn test_tr_squeeze() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["tr", "-s", " ", " "])
@@ -480,7 +504,9 @@ mod tests {
     #[test]
     fn test_tr_simple_replace() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["tr", "abc", "xyz"])

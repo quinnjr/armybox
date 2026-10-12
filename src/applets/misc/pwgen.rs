@@ -2,9 +2,9 @@
 //!
 //! Generate pronounceable or secure passwords.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// pwgen - generate pronounceable passwords
 ///
@@ -48,10 +48,14 @@ pub fn pwgen(argc: i32, argv: *const *const u8) -> i32 {
             } else if let Some(n) = sys::parse_u64(arg) {
                 if positional == 0 {
                     length = n as usize;
-                    if length == 0 { length = DEFAULT_LENGTH; }
+                    if length == 0 {
+                        length = DEFAULT_LENGTH;
+                    }
                 } else {
                     count = n as usize;
-                    if count == 0 { count = 1; }
+                    if count == 0 {
+                        count = 1;
+                    }
                 }
                 positional += 1;
             }
@@ -106,8 +110,8 @@ pub fn pwgen(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -117,19 +121,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_pwgen() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["pwgen"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["pwgen"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -139,7 +144,9 @@ mod tests {
     #[test]
     fn test_pwgen_length() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["pwgen", "16"])
@@ -154,7 +161,9 @@ mod tests {
     #[test]
     fn test_pwgen_count() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["pwgen", "8", "3"])

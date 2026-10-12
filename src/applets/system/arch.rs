@@ -19,8 +19,12 @@ use crate::io;
 /// - >0: An error occurred
 pub fn arch(_argc: i32, _argv: *const *const u8) -> i32 {
     let mut uts: libc::utsname = unsafe { core::mem::zeroed() };
-    if io::uname(&mut uts) != 0 { return 1; }
-    io::write_all(1, unsafe { io::cstr_to_slice(uts.machine.as_ptr() as *const u8) });
+    if io::uname(&mut uts) != 0 {
+        return 1;
+    }
+    io::write_all(1, unsafe {
+        io::cstr_to_slice(uts.machine.as_ptr() as *const u8)
+    });
     io::write_str(1, b"\n");
     0
 }
@@ -28,8 +32,8 @@ pub fn arch(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -39,19 +43,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_arch_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["arch"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["arch"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -59,12 +64,11 @@ mod tests {
     #[test]
     fn test_arch_matches_uname_m() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let arch_output = Command::new(&armybox)
-            .args(["arch"])
-            .output()
-            .unwrap();
+        let arch_output = Command::new(&armybox).args(["arch"]).output().unwrap();
 
         let uname_output = Command::new(&armybox)
             .args(["uname", "-m"])

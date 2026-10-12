@@ -8,13 +8,16 @@
 //! - `case/in/esac` - pattern matching
 
 #[cfg(feature = "alloc")]
-use super::state::Shell;
-#[cfg(feature = "alloc")]
-use super::util::{skip_whitespace_and_comments, find_word_end, find_keyword, find_matching_done, skip_to_next_token, is_keyword_boundary};
-#[cfg(feature = "alloc")]
 use super::expand::split_words;
 #[cfg(feature = "alloc")]
 use super::parser::parse_word;
+#[cfg(feature = "alloc")]
+use super::state::Shell;
+#[cfg(feature = "alloc")]
+use super::util::{
+    find_keyword, find_matching_done, find_word_end, is_keyword_boundary, skip_to_next_token,
+    skip_whitespace_and_comments,
+};
 
 use crate::io;
 
@@ -52,7 +55,9 @@ pub(super) fn execute_if(shell: &mut Shell, script: &[u8], start: usize) -> usiz
 
     while scan < script.len() && depth > 0 {
         scan = skip_whitespace_and_comments(script, scan);
-        if scan >= script.len() { break; }
+        if scan >= script.len() {
+            break;
+        }
 
         let word_end = find_word_end(script, scan);
         let word = &script[scan..word_end];
@@ -141,9 +146,13 @@ pub(super) fn execute_while(shell: &mut Shell, script: &[u8], start: usize) -> u
     // Execute while loop
     loop {
         super::execute_script(shell, condition.trim_ascii());
-        if shell.last_status != 0 { break; }
+        if shell.last_status != 0 {
+            break;
+        }
         super::execute_script(shell, body);
-        if shell.should_exit { break; }
+        if shell.should_exit {
+            break;
+        }
     }
 
     done_pos + 4 // skip "done"
@@ -179,9 +188,13 @@ pub(super) fn execute_until(shell: &mut Shell, script: &[u8], start: usize) -> u
 
     loop {
         super::execute_script(shell, condition.trim_ascii());
-        if shell.last_status == 0 { break; } // opposite of while
+        if shell.last_status == 0 {
+            break;
+        } // opposite of while
         super::execute_script(shell, body);
-        if shell.should_exit { break; }
+        if shell.should_exit {
+            break;
+        }
     }
 
     done_pos + 4
@@ -238,7 +251,9 @@ pub(super) fn execute_for(shell: &mut Shell, script: &[u8], start: usize) -> usi
     for word in words {
         shell.set_var(&var_name, &word);
         super::execute_script(shell, body);
-        if shell.should_exit { break; }
+        if shell.should_exit {
+            break;
+        }
     }
 
     done_pos + 4
@@ -311,11 +326,15 @@ pub(super) fn execute_case(shell: &mut Shell, script: &[u8], start: usize) -> us
     let mut matched = false;
     while pos < esac_pos && !matched {
         pos = skip_whitespace_and_comments(script, pos);
-        if pos >= esac_pos { break; }
+        if pos >= esac_pos {
+            break;
+        }
 
         // Find pattern(s) ending with )
         let paren_pos = script[pos..esac_pos].iter().position(|&c| c == b')');
-        if paren_pos.is_none() { break; }
+        if paren_pos.is_none() {
+            break;
+        }
         let paren_pos = pos + paren_pos.unwrap();
 
         let patterns = &script[pos..paren_pos];
@@ -353,7 +372,9 @@ pub(super) fn execute_case(shell: &mut Shell, script: &[u8], start: usize) -> us
 /// Returns true if the word matches the pattern.
 #[cfg(feature = "alloc")]
 pub(super) fn pattern_matches(word: &[u8], pattern: &[u8]) -> bool {
-    if pattern == b"*" { return true; }
+    if pattern == b"*" {
+        return true;
+    }
 
     let mut wi = 0;
     let mut pi = 0;

@@ -1,14 +1,13 @@
 //! Benchmarks for text processing applets (grep, sed, awk, sort, etc.)
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::NamedTempFile;
 
 fn armybox_path() -> String {
-    std::env::var("ARMYBOX_PATH")
-        .unwrap_or_else(|_| "./target/release/armybox".to_string())
+    std::env::var("ARMYBOX_PATH").unwrap_or_else(|_| "./target/release/armybox".to_string())
 }
 
 /// Generate test text file with realistic content
@@ -49,7 +48,8 @@ fn generate_csv_file(rows: usize) -> NamedTempFile {
             i,
             20 + (i % 50),
             i % 100
-        ).unwrap();
+        )
+        .unwrap();
     }
 
     temp
@@ -70,34 +70,26 @@ fn bench_grep(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(size));
 
         // Simple literal search
-        group.bench_with_input(
-            BenchmarkId::new("literal", lines),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["grep", "ERROR", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("literal", lines), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["grep", "ERROR", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
         // Regex search
-        group.bench_with_input(
-            BenchmarkId::new("regex", lines),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["grep", "-E", "ERROR|WARN", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("regex", lines), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["grep", "-E", "ERROR|WARN", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
         // Case insensitive
         group.bench_with_input(
@@ -130,19 +122,15 @@ fn bench_grep(c: &mut Criterion) {
         );
 
         // Inverted match
-        group.bench_with_input(
-            BenchmarkId::new("inverted", lines),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["grep", "-v", "DEBUG", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("inverted", lines), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["grep", "-v", "DEBUG", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -163,33 +151,25 @@ fn bench_sed(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(size));
 
         // Simple substitution
-        group.bench_with_input(
-            BenchmarkId::new("substitute", lines),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["sed", "s/ERROR/CRITICAL/g", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("substitute", lines), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["sed", "s/ERROR/CRITICAL/g", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
         // Delete lines
-        group.bench_with_input(
-            BenchmarkId::new("delete", lines),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["sed", "/DEBUG/d", path])
-                        .stdout(Stdio::null())
-                        .status()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("delete", lines), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["sed", "/DEBUG/d", path])
+                    .stdout(Stdio::null())
+                    .status()
+            })
+        });
     }
 
     group.finish();
@@ -210,34 +190,26 @@ fn bench_awk(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(size));
 
         // Print specific columns
-        group.bench_with_input(
-            BenchmarkId::new("print_columns", rows),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["awk", "-F,", "{print $2, $4}", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("print_columns", rows), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["awk", "-F,", "{print $2, $4}", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
         // Pattern matching
-        group.bench_with_input(
-            BenchmarkId::new("pattern_match", rows),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["awk", "-F,", "/user_5/{print $0}", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("pattern_match", rows), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["awk", "-F,", "/user_5/{print $0}", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -366,33 +338,25 @@ fn bench_uniq(c: &mut Criterion) {
         let size = std::fs::metadata(&sorted_path).unwrap().len();
         group.throughput(Throughput::Bytes(size));
 
-        group.bench_with_input(
-            BenchmarkId::new("basic", lines),
-            &sorted_path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["uniq", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("basic", lines), &sorted_path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["uniq", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("count", lines),
-            &sorted_path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["uniq", "-c", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("count", lines), &sorted_path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["uniq", "-c", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -413,34 +377,26 @@ fn bench_cut(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(size));
 
         // Cut by delimiter
-        group.bench_with_input(
-            BenchmarkId::new("delimiter", rows),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["cut", "-d,", "-f2,4", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("delimiter", rows), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["cut", "-d,", "-f2,4", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
 
         // Cut by character position
-        group.bench_with_input(
-            BenchmarkId::new("characters", rows),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["cut", "-c1-20", path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("characters", rows), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["cut", "-c1-20", path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -478,20 +434,16 @@ fn bench_tr(c: &mut Criterion) {
         );
 
         // Delete characters
-        group.bench_with_input(
-            BenchmarkId::new("delete", size),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    Command::new(&armybox)
-                        .args(["tr", "-d", "aeiou"])
-                        .stdin(std::fs::File::open(path).unwrap())
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("delete", size), &path, |b, path| {
+            b.iter(|| {
+                Command::new(&armybox)
+                    .args(["tr", "-d", "aeiou"])
+                    .stdin(std::fs::File::open(path).unwrap())
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -529,14 +481,7 @@ fn bench_find(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches,
-    bench_grep,
-    bench_sed,
-    bench_awk,
-    bench_sort,
-    bench_uniq,
-    bench_cut,
-    bench_tr,
+    benches, bench_grep, bench_sed, bench_awk, bench_sort, bench_uniq, bench_cut, bench_tr,
     bench_find,
 );
 

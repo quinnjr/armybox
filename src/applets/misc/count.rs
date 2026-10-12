@@ -21,7 +21,9 @@ pub fn count(_argc: i32, _argv: *const *const u8) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(0, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         count += n as u64;
     }
     io::write_num(1, count);
@@ -32,9 +34,9 @@ pub fn count(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -44,14 +46,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_count() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["count"])

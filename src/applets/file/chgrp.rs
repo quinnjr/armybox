@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/chgrp.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// chgrp - change group ownership
 ///
@@ -129,7 +129,9 @@ fn chgrp_path(path: &[u8], gid: u32, no_deref: bool, recursive: bool) -> i32 {
 
     if recursive {
         let mut st: libc::stat = unsafe { core::mem::zeroed() };
-        if io::stat(path, &mut st) == 0 && (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32 {
+        if io::stat(path, &mut st) == 0
+            && (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32
+        {
             return chgrp_recursive(path, gid, no_deref);
         }
     }
@@ -150,7 +152,9 @@ fn chgrp_recursive(dir: &[u8], gid: u32, no_deref: bool) -> i32 {
 
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let mut offset = 0;
         while offset < n as usize {
@@ -161,11 +165,20 @@ fn chgrp_recursive(dir: &[u8], gid: u32, no_deref: bool) -> i32 {
                 let mut full_path = [0u8; 4096];
                 let mut len = 0;
                 for &c in dir {
-                    if len < full_path.len() - 1 { full_path[len] = c; len += 1; }
+                    if len < full_path.len() - 1 {
+                        full_path[len] = c;
+                        len += 1;
+                    }
                 }
-                if len < full_path.len() - 1 { full_path[len] = b'/'; len += 1; }
+                if len < full_path.len() - 1 {
+                    full_path[len] = b'/';
+                    len += 1;
+                }
                 for &c in name {
-                    if len < full_path.len() - 1 { full_path[len] = c; len += 1; }
+                    if len < full_path.len() - 1 {
+                        full_path[len] = c;
+                        len += 1;
+                    }
                 }
 
                 if chgrp_path(&full_path[..len], gid, no_deref, true) != 0 {
@@ -187,22 +200,28 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_chgrp_test_{}_{}", std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_chgrp_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -215,12 +234,11 @@ mod tests {
     #[test]
     fn test_chgrp_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["chgrp"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["chgrp"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }
@@ -228,7 +246,9 @@ mod tests {
     #[test]
     fn test_chgrp_nonexistent_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["chgrp", "1000", "/nonexistent/file"])
@@ -241,7 +261,9 @@ mod tests {
     #[test]
     fn test_chgrp_no_permission() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Skip if root
         if std::env::var("USER").map(|u| u == "root").unwrap_or(false) {
@@ -265,7 +287,9 @@ mod tests {
     #[test]
     fn test_chgrp_invalid_group() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");

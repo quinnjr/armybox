@@ -14,11 +14,7 @@ fn posix_paste_basic() {
     fs::write(&file1, "a\nb\nc\n").unwrap();
     fs::write(&file2, "1\n2\n3\n").unwrap();
 
-    let result = run(&[
-        "paste",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["paste", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_success(&result);
     assert!(result.1.contains("a\t1"));
     assert!(result.1.contains("b\t2"));
@@ -64,10 +60,7 @@ fn posix_paste_stdin() {
     let file = dir.path().join("file");
     fs::write(&file, "1\n2\n").unwrap();
 
-    let result = run_with_stdin(
-        &["paste", "-", file.to_str().unwrap()],
-        b"a\nb\n",
-    );
+    let result = run_with_stdin(&["paste", "-", file.to_str().unwrap()], b"a\nb\n");
     assert_success(&result);
     assert!(result.1.contains("a\t1"));
 }
@@ -111,11 +104,7 @@ fn posix_paste_uneven() {
     fs::write(&file1, "a\nb\nc\n").unwrap();
     fs::write(&file2, "1\n").unwrap();
 
-    let result = run(&[
-        "paste",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["paste", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_success(&result);
     // Missing entries are empty
     assert!(result.1.contains("a\t1"));

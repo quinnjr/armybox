@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/uniq.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 #[inline]
 fn is_blank(c: u8) -> bool {
@@ -22,8 +22,12 @@ fn to_lower(c: u8) -> u8 {
 fn skip_offset(line: &[u8], fields: usize, chars: usize) -> usize {
     let mut pos = 0;
     for _ in 0..fields {
-        while pos < line.len() && is_blank(line[pos]) { pos += 1; }
-        while pos < line.len() && !is_blank(line[pos]) { pos += 1; }
+        while pos < line.len() && is_blank(line[pos]) {
+            pos += 1;
+        }
+        while pos < line.len() && !is_blank(line[pos]) {
+            pos += 1;
+        }
     }
     pos += chars;
     if pos > line.len() { line.len() } else { pos }
@@ -38,7 +42,9 @@ fn keys_equal(a: &[u8], b: &[u8], fold: bool) -> bool {
     }
     let mut i = 0;
     while i < a.len() {
-        if to_lower(a[i]) != to_lower(b[i]) { return false; }
+        if to_lower(a[i]) != to_lower(b[i]) {
+            return false;
+        }
         i += 1;
     }
     true
@@ -62,16 +68,27 @@ fn opt_num(rest: &[u8], argv: *const *const u8, next: i32) -> (usize, i32) {
 fn parse_usize(s: &[u8]) -> usize {
     let mut n = 0usize;
     for &c in s {
-        if !c.is_ascii_digit() { break; }
+        if !c.is_ascii_digit() {
+            break;
+        }
         n = n.saturating_mul(10).saturating_add((c - b'0') as usize);
     }
     n
 }
 
 fn print_usage() {
-    io::write_str(1, b"Usage: uniq [-cdui] [-f fields] [-s chars] [input_file [output_file]]\n");
-    io::write_str(1, b"Filter adjacent matching lines from INPUT, writing to OUTPUT.\n\n");
-    io::write_str(1, b"  -c            prefix lines with number of occurrences\n");
+    io::write_str(
+        1,
+        b"Usage: uniq [-cdui] [-f fields] [-s chars] [input_file [output_file]]\n",
+    );
+    io::write_str(
+        1,
+        b"Filter adjacent matching lines from INPUT, writing to OUTPUT.\n\n",
+    );
+    io::write_str(
+        1,
+        b"  -c            prefix lines with number of occurrences\n",
+    );
     io::write_str(1, b"  -d            only print duplicate lines\n");
     io::write_str(1, b"  -u            only print unique lines\n");
     io::write_str(1, b"  -i            ignore case when comparing\n");
@@ -118,7 +135,10 @@ pub fn uniq(argc: i32, argv: *const *const u8) -> i32 {
         while i < argc {
             let arg = match unsafe { get_arg(argv, i) } {
                 Some(a) => a,
-                None => { i += 1; continue; }
+                None => {
+                    i += 1;
+                    continue;
+                }
             };
             if arg == b"--help" {
                 print_usage();
@@ -176,7 +196,11 @@ pub fn uniq(argc: i32, argv: *const *const u8) -> i32 {
         };
 
         let out_fd = if operands.len() >= 2 {
-            let fd = io::open(operands[1], libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+            let fd = io::open(
+                operands[1],
+                libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                0o644,
+            );
             if fd < 0 {
                 io::write_str(2, b"uniq: ");
                 sys::perror(operands[1]);
@@ -190,7 +214,9 @@ pub fn uniq(argc: i32, argv: *const *const u8) -> i32 {
         let mut lines: Vec<&[u8]> = content.split(|&c| c == b'\n').collect();
         // Drop only the single trailing empty element from a trailing newline.
         if let Some(last) = lines.last() {
-            if last.is_empty() { lines.pop(); }
+            if last.is_empty() {
+                lines.pop();
+            }
         }
 
         let mut exit_code = 0;
@@ -204,7 +230,9 @@ pub fn uniq(argc: i32, argv: *const *const u8) -> i32 {
             while i + cnt < lines.len() {
                 let other = lines[i + cnt];
                 let other_key = &other[skip_offset(other, skip_fields, skip_chars)..];
-                if !keys_equal(key, other_key, fold) { break; }
+                if !keys_equal(key, other_key, fold) {
+                    break;
+                }
                 cnt += 1;
             }
 
@@ -219,12 +247,9 @@ pub fn uniq(argc: i32, argv: *const *const u8) -> i32 {
             if should_print {
                 let mut ok = true;
                 if count {
-                    ok = io::write_num(out_fd, cnt as u64) >= 0
-                        && io::write_str(out_fd, b" ") >= 0;
+                    ok = io::write_num(out_fd, cnt as u64) >= 0 && io::write_str(out_fd, b" ") >= 0;
                 }
-                ok = ok
-                    && io::write_all(out_fd, line) >= 0
-                    && io::write_str(out_fd, b"\n") >= 0;
+                ok = ok && io::write_all(out_fd, line) >= 0 && io::write_str(out_fd, b"\n") >= 0;
                 if !ok {
                     sys::perror(b"uniq: write error");
                     exit_code = 1;
@@ -255,10 +280,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::{Command, Stdio};
-    use std::io::Write;
     use std::fs;
+    use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -268,13 +293,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_uniq_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_uniq_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -287,7 +318,9 @@ mod tests {
     #[test]
     fn test_uniq_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["uniq"])
@@ -311,7 +344,9 @@ mod tests {
     #[test]
     fn test_uniq_count() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["uniq", "-c"])
@@ -336,7 +371,9 @@ mod tests {
     #[test]
     fn test_uniq_duplicates_only() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["uniq", "-d"])
@@ -360,7 +397,9 @@ mod tests {
     #[test]
     fn test_uniq_unique_only() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["uniq", "-u"])
@@ -384,7 +423,9 @@ mod tests {
     #[test]
     fn test_uniq_from_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");

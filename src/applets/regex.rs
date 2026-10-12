@@ -118,20 +118,17 @@ enum Ast {
 
 fn is_alt_op(b: &[u8], p: usize, ere: bool) -> bool {
     p < b.len()
-        && ((ere && b[p] == b'|')
-            || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b'|'))
+        && ((ere && b[p] == b'|') || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b'|'))
 }
 
 fn is_group_close(b: &[u8], p: usize, ere: bool) -> bool {
     p < b.len()
-        && ((ere && b[p] == b')')
-            || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b')'))
+        && ((ere && b[p] == b')') || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b')'))
 }
 
 fn is_group_open(b: &[u8], p: usize, ere: bool) -> bool {
     p < b.len()
-        && ((ere && b[p] == b'(')
-            || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b'('))
+        && ((ere && b[p] == b'(') || (!ere && b[p] == b'\\' && p + 1 < b.len() && b[p + 1] == b'('))
 }
 
 // ---------------------------------------------------------------------------

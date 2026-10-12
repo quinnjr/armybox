@@ -2,9 +2,9 @@
 //!
 //! Shows or sets the system's hostname.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// hostname - show or set the system hostname
 ///
@@ -26,7 +26,10 @@ pub fn hostname(argc: i32, argv: *const *const u8) -> i32 {
     while i < argc {
         let arg = match unsafe { get_arg(argv, i) } {
             Some(a) => a,
-            None => { i += 1; continue; }
+            None => {
+                i += 1;
+                continue;
+            }
         };
 
         if arg == b"-F" || arg == b"-f" || arg == b"--file" {
@@ -52,7 +55,9 @@ pub fn hostname(argc: i32, argv: *const *const u8) -> i32 {
             // Trim trailing whitespace/newlines
             let name = content.trim_ascii();
             if !name.is_empty() {
-                if unsafe { libc::sethostname(name.as_ptr() as *const libc::c_char, name.len()) } < 0 {
+                if unsafe { libc::sethostname(name.as_ptr() as *const libc::c_char, name.len()) }
+                    < 0
+                {
                     sys::perror(b"sethostname");
                     return 1;
                 }
@@ -106,8 +111,8 @@ pub fn hostname(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -117,19 +122,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_hostname_show() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["hostname"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["hostname"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -139,18 +145,15 @@ mod tests {
     #[test]
     fn test_hostname_matches_system() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Compare with system hostname command
-        let system_output = Command::new("hostname")
-            .output()
-            .unwrap();
+        let system_output = Command::new("hostname").output().unwrap();
         let system_hostname = std::string::String::from_utf8_lossy(&system_output.stdout);
 
-        let output = Command::new(&armybox)
-            .args(["hostname"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["hostname"]).output().unwrap();
 
         let armybox_hostname = std::string::String::from_utf8_lossy(&output.stdout);
         assert_eq!(armybox_hostname.trim(), system_hostname.trim());

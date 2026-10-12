@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/unexpand.html
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// unexpand - convert spaces to tabs
 ///
@@ -25,16 +25,24 @@ pub fn unexpand(argc: i32, argv: *const *const u8) -> i32 {
         if let Some(path) = unsafe { get_arg(argv, argc - 1) } {
             if path.len() > 0 && path[0] != b'-' {
                 io::open(path, libc::O_RDONLY, 0)
-            } else { 0 }
-        } else { 0 }
-    } else { 0 };
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
     let mut buf = [0u8; 4096];
     let mut spaces = 0;
 
     loop {
         let n = io::read(fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         for &c in &buf[..n as usize] {
             if c == b' ' {
@@ -53,16 +61,18 @@ pub fn unexpand(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    if fd != 0 { io::close(fd); }
+    if fd != 0 {
+        io::close(fd);
+    }
     0
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -72,14 +82,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_unexpand_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["unexpand"])
@@ -103,7 +117,9 @@ mod tests {
     #[test]
     fn test_unexpand_partial_spaces() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["unexpand"])
@@ -127,7 +143,9 @@ mod tests {
     #[test]
     fn test_unexpand_multiple_tabs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["unexpand"])

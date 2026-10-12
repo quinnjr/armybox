@@ -3,10 +3,10 @@
 //! Compress files using LZMA/XZ algorithm.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use alloc::vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// Read a file into a Vec
 fn read_file(path: &[u8]) -> Option<Vec<u8>> {
@@ -45,9 +45,9 @@ const XZ_MAGIC: [u8; 6] = [0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
 const XZ_FOOTER_MAGIC: [u8; 2] = [0x59, 0x5A];
 
 // LZMA constants
-const LZMA_LC: u32 = 3;  // Literal context bits
-const LZMA_LP: u32 = 0;  // Literal position bits
-const LZMA_PB: u32 = 2;  // Position bits
+const LZMA_LC: u32 = 3; // Literal context bits
+const LZMA_LP: u32 = 0; // Literal position bits
+const LZMA_PB: u32 = 2; // Position bits
 
 const NUM_STATES: usize = 12;
 const NUM_POS_BITS_MAX: usize = 4;
@@ -281,7 +281,13 @@ impl<'a> RangeDecoder<'a> {
 
 /// LZMA state transitions
 fn state_update_literal(state: usize) -> usize {
-    if state < 4 { 0 } else if state < 10 { state - 3 } else { state - 6 }
+    if state < 4 {
+        0
+    } else if state < 10 {
+        state - 3
+    } else {
+        state - 6
+    }
 }
 
 fn state_update_match(state: usize) -> usize {
@@ -316,12 +322,12 @@ struct LzmaEncoder {
     is_rep0_long: [[u16; NUM_POS_STATES_MAX]; NUM_STATES],
     is_rep1: [u16; NUM_STATES],
     is_rep2: [u16; NUM_STATES],
-    pos_slot: [[u16; 64]; 4],  // 4 len categories, 64 slots
+    pos_slot: [[u16; 64]; 4], // 4 len categories, 64 slots
     pos_special: [u16; NUM_FULL_DISTANCES - END_POS_MODEL_INDEX],
     pos_align: [u16; ALIGN_TABLE_SIZE],
     len_enc: LenEncoder,
     rep_len_enc: LenEncoder,
-    literal: Vec<u16>,  // Literal probabilities
+    literal: Vec<u16>, // Literal probabilities
 
     // State
     state: usize,
@@ -365,11 +371,21 @@ impl LenEncoder {
         } else if len < LEN_LOW_SYMBOLS + LEN_MID_SYMBOLS {
             rc.encode_bit(&mut self.choice, 1);
             rc.encode_bit(&mut self.choice2, 0);
-            encode_tree(rc, &mut self.mid[pos_state], LEN_MID_BITS, (len - LEN_LOW_SYMBOLS) as u32);
+            encode_tree(
+                rc,
+                &mut self.mid[pos_state],
+                LEN_MID_BITS,
+                (len - LEN_LOW_SYMBOLS) as u32,
+            );
         } else {
             rc.encode_bit(&mut self.choice, 1);
             rc.encode_bit(&mut self.choice2, 1);
-            encode_tree(rc, &mut self.high, LEN_HIGH_BITS, (len - LEN_LOW_SYMBOLS - LEN_MID_SYMBOLS) as u32);
+            encode_tree(
+                rc,
+                &mut self.high,
+                LEN_HIGH_BITS,
+                (len - LEN_LOW_SYMBOLS - LEN_MID_SYMBOLS) as u32,
+            );
         }
     }
 }
@@ -403,9 +419,14 @@ impl LenDecoder {
         if rc.decode_bit(&mut self.choice) == 0 {
             decode_tree(rc, &mut self.low[pos_state], LEN_LOW_BITS) + MATCH_LEN_MIN
         } else if rc.decode_bit(&mut self.choice2) == 0 {
-            decode_tree(rc, &mut self.mid[pos_state], LEN_MID_BITS) + MATCH_LEN_MIN + LEN_LOW_SYMBOLS
+            decode_tree(rc, &mut self.mid[pos_state], LEN_MID_BITS)
+                + MATCH_LEN_MIN
+                + LEN_LOW_SYMBOLS
         } else {
-            decode_tree(rc, &mut self.high, LEN_HIGH_BITS) + MATCH_LEN_MIN + LEN_LOW_SYMBOLS + LEN_MID_SYMBOLS
+            decode_tree(rc, &mut self.high, LEN_HIGH_BITS)
+                + MATCH_LEN_MIN
+                + LEN_LOW_SYMBOLS
+                + LEN_MID_SYMBOLS
         }
     }
 }
@@ -500,9 +521,17 @@ impl LzmaEncoder {
         }
     }
 
-    fn encode_literal(&mut self, rc: &mut RangeEncoder, prev_byte: u8, byte: u8, pos: usize, match_byte: u8) {
+    fn encode_literal(
+        &mut self,
+        rc: &mut RangeEncoder,
+        prev_byte: u8,
+        byte: u8,
+        pos: usize,
+        match_byte: u8,
+    ) {
         let _pos_state = pos & ((1 << self.lp) - 1);
-        let lit_state = ((pos & ((1 << self.lp) - 1)) << self.lc as usize) | ((prev_byte >> (8 - self.lc)) as usize);
+        let lit_state = ((pos & ((1 << self.lp) - 1)) << self.lc as usize)
+            | ((prev_byte >> (8 - self.lc)) as usize);
         let probs = &mut self.literal[lit_state * 0x300..][..0x300];
 
         if is_lit_state(self.state) {
@@ -548,10 +577,20 @@ impl LzmaEncoder {
 
             if pos_slot < END_POS_MODEL_INDEX as u32 {
                 // Index into pos_special: base - pos_slot (not base - pos_slot - 1)
-                encode_tree_reverse(rc, &mut self.pos_special[(base - pos_slot) as usize..], footer_bits, pos_reduced);
+                encode_tree_reverse(
+                    rc,
+                    &mut self.pos_special[(base - pos_slot) as usize..],
+                    footer_bits,
+                    pos_reduced,
+                );
             } else {
                 rc.encode_direct(pos_reduced >> NUM_ALIGN_BITS, footer_bits - NUM_ALIGN_BITS);
-                encode_tree_reverse(rc, &mut self.pos_align, NUM_ALIGN_BITS, pos_reduced & ((1 << NUM_ALIGN_BITS) - 1));
+                encode_tree_reverse(
+                    rc,
+                    &mut self.pos_align,
+                    NUM_ALIGN_BITS,
+                    pos_reduced & ((1 << NUM_ALIGN_BITS) - 1),
+                );
             }
         }
 
@@ -801,7 +840,8 @@ impl LzmaDecoder {
 
     fn decode_literal(&mut self, rc: &mut RangeDecoder, output: &[u8], pos: usize) -> Option<u8> {
         let prev_byte = if pos > 0 { output[pos - 1] } else { 0 };
-        let lit_state = ((pos & ((1 << self.lp) - 1)) << self.lc as usize) | ((prev_byte >> (8 - self.lc)) as usize);
+        let lit_state = ((pos & ((1 << self.lp) - 1)) << self.lc as usize)
+            | ((prev_byte >> (8 - self.lc)) as usize);
         let probs = &mut self.literal[lit_state * 0x300..][..0x300];
 
         if is_lit_state(self.state) {
@@ -846,7 +886,8 @@ impl LzmaDecoder {
             if base_idx + (1 << num_direct_bits) > self.pos_special.len() {
                 return None;
             }
-            dist += decode_tree_reverse(rc, &mut self.pos_special[base_idx..], num_direct_bits) as u32;
+            dist +=
+                decode_tree_reverse(rc, &mut self.pos_special[base_idx..], num_direct_bits) as u32;
         } else {
             dist += (rc.decode_direct(num_direct_bits - NUM_ALIGN_BITS) << NUM_ALIGN_BITS) as u32;
             dist += decode_tree_reverse(rc, &mut self.pos_align, NUM_ALIGN_BITS) as u32;
@@ -865,7 +906,7 @@ fn lzma_decompress(data: &[u8], expected_size: Option<u64>) -> Option<Vec<u8>> {
     let props = data[0];
     let dict_size = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
     let uncompressed_size = u64::from_le_bytes([
-        data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12]
+        data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12],
     ]);
 
     let expected = expected_size.unwrap_or(uncompressed_size);
@@ -1174,7 +1215,11 @@ fn xz_compress(data: &[u8], check_type: u8, dict_size: u32) -> Vec<u8> {
     // LZMA2 properties: dictionary size
     // Dict size is encoded as: 2^(props/2 + 12) for even props, 3*2^((props-1)/2 + 11) for odd
     let dict_bits = 32 - dict_size.leading_zeros();
-    let dict_prop = if dict_bits <= 12 { 0 } else { ((dict_bits - 12) * 2) as u8 };
+    let dict_prop = if dict_bits <= 12 {
+        0
+    } else {
+        ((dict_bits - 12) * 2) as u8
+    };
     encode_vli(1, &mut block_header); // Properties size
     block_header.push(dict_prop);
 
@@ -1272,7 +1317,7 @@ fn xz_decompress(data: &[u8]) -> Option<Vec<u8>> {
     }
 
     // Check footer magic
-    if &data[data.len()-2..] != &XZ_FOOTER_MAGIC {
+    if &data[data.len() - 2..] != &XZ_FOOTER_MAGIC {
         return None;
     }
 
@@ -1339,7 +1384,7 @@ fn xz_decompress(data: &[u8]) -> Option<Vec<u8>> {
         }
 
         pos += block_header_size + 4;
-        let comp_start = pos;  // Remember where compressed data starts
+        let comp_start = pos; // Remember where compressed data starts
 
         // Find compressed data end (scan for end marker or use known size)
         // For simplicity, we'll look for the LZMA2 end marker
@@ -1364,7 +1409,8 @@ fn xz_decompress(data: &[u8]) -> Option<Vec<u8>> {
                     return None;
                 }
                 comp_end += 2;
-                let comp_size = (((data[comp_end] as usize) << 8) | (data[comp_end + 1] as usize)) + 1;
+                let comp_size =
+                    (((data[comp_end] as usize) << 8) | (data[comp_end + 1] as usize)) + 1;
                 comp_end += 2;
                 if ctrl >= 0xC0 {
                     comp_end += 1; // Properties byte
@@ -1773,8 +1819,8 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::vec::Vec;
     use super::*;
+    use std::vec::Vec;
 
     #[test]
     fn test_lzma_roundtrip() {

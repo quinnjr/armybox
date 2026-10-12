@@ -2,8 +2,8 @@
 //!
 //! Extract and display information from kernel modules.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// modinfo - show information about a kernel module
 ///
@@ -172,8 +172,8 @@ fn print_field(name: &[u8], value: &[u8], value_only: bool) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -183,19 +183,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_modinfo_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["modinfo"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["modinfo"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -205,7 +206,9 @@ mod tests {
     #[test]
     fn test_modinfo_nonexistent_module() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["modinfo", "nonexistent_module_xyz"])
@@ -220,7 +223,9 @@ mod tests {
     #[test]
     fn test_modinfo_with_field_filter() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Try with a module that might exist (kernel modules vary by system)
         let output = Command::new(&armybox)
@@ -235,7 +240,9 @@ mod tests {
     #[test]
     fn test_modinfo_existing_module() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Try to find any loaded module
         let modules = std::fs::read_dir("/sys/module");

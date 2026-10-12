@@ -2,9 +2,9 @@
 //!
 //! Create, extract, and list tar archives.
 
-use alloc::vec::Vec;
+use super::{create_parent_dirs, get_arg, mode_string, open_read, open_write_create};
 use crate::io;
-use super::{get_arg, open_read, open_write_create, create_parent_dirs, mode_string};
+use alloc::vec::Vec;
 
 /// USTAR tar header structure (512 bytes)
 #[repr(C)]
@@ -69,9 +69,7 @@ impl TarHeader {
     }
 
     pub fn compute_checksum(&self) -> u32 {
-        let bytes = unsafe {
-            core::slice::from_raw_parts(self as *const _ as *const u8, 512)
-        };
+        let bytes = unsafe { core::slice::from_raw_parts(self as *const _ as *const u8, 512) };
         let mut sum = 0u32;
         for (i, &b) in bytes.iter().enumerate() {
             // Treat checksum field (bytes 148-155) as spaces
@@ -98,7 +96,9 @@ impl TarHeader {
 fn parse_octal(bytes: &[u8]) -> u64 {
     let mut result = 0u64;
     for &b in bytes {
-        if b == 0 || b == b' ' { break; }
+        if b == 0 || b == b' ' {
+            break;
+        }
         if b >= b'0' && b <= b'7' {
             result = result * 8 + (b - b'0') as u64;
         }
@@ -170,7 +170,11 @@ pub fn tar(argc: i32, argv: *const *const u8) -> i32 {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.starts_with(b"-") || (i == 1 && !arg.starts_with(b"/")) {
                 // Options (possibly without leading dash for first arg)
-                let opts = if arg.starts_with(b"-") { &arg[1..] } else { arg };
+                let opts = if arg.starts_with(b"-") {
+                    &arg[1..]
+                } else {
+                    arg
+                };
                 for &c in opts {
                     match c {
                         b'c' => create = true,
@@ -263,9 +267,13 @@ fn tar_add_file(fd: i32, path: &[u8], verbose: bool) -> i32 {
         if !dir.is_null() {
             loop {
                 let entry = io::readdir(dir);
-                if entry.is_null() { break; }
+                if entry.is_null() {
+                    break;
+                }
                 let name = unsafe { io::cstr_to_slice((*entry).d_name.as_ptr() as *const u8) };
-                if name == b"." || name == b".." { continue; }
+                if name == b"." || name == b".." {
+                    continue;
+                }
 
                 // Build full path
                 let mut full_path = Vec::new();
@@ -322,9 +330,8 @@ fn tar_add_dir_entry(fd: i32, path: &[u8], stat: &libc::stat, verbose: bool) {
 
     header.set_checksum();
 
-    let header_bytes = unsafe {
-        core::slice::from_raw_parts(&header as *const _ as *const u8, 512)
-    };
+    let header_bytes =
+        unsafe { core::slice::from_raw_parts(&header as *const _ as *const u8, 512) };
     io::write_all(fd, header_bytes);
 
     if verbose {
@@ -376,9 +383,8 @@ fn tar_add_link_entry(fd: i32, path: &[u8], stat: &libc::stat, verbose: bool) ->
 
     header.set_checksum();
 
-    let header_bytes = unsafe {
-        core::slice::from_raw_parts(&header as *const _ as *const u8, 512)
-    };
+    let header_bytes =
+        unsafe { core::slice::from_raw_parts(&header as *const _ as *const u8, 512) };
     io::write_all(fd, header_bytes);
 
     if verbose {
@@ -425,9 +431,8 @@ fn tar_add_file_entry(fd: i32, path: &[u8], stat: &libc::stat, verbose: bool) ->
 
     header.set_checksum();
 
-    let header_bytes = unsafe {
-        core::slice::from_raw_parts(&header as *const _ as *const u8, 512)
-    };
+    let header_bytes =
+        unsafe { core::slice::from_raw_parts(&header as *const _ as *const u8, 512) };
     io::write_all(fd, header_bytes);
 
     // Write file content
@@ -438,7 +443,9 @@ fn tar_add_file_entry(fd: i32, path: &[u8], stat: &libc::stat, verbose: bool) ->
         while remaining > 0 {
             let to_read = remaining.min(512) as usize;
             let n = io::read(file_fd, &mut buf[..to_read]);
-            if n <= 0 { break; }
+            if n <= 0 {
+                break;
+            }
             // Pad last block to 512 bytes
             if (n as usize) < 512 {
                 for i in (n as usize)..512 {
@@ -484,9 +491,8 @@ fn tar_extract(archive: &[u8], files: &[&[u8]], verbose: bool) -> i32 {
         let mode = header.get_mode();
 
         // Check if this file matches the filter (if any)
-        let should_extract = files.is_empty() || files.iter().any(|&f| {
-            name.starts_with(f) || f == name
-        });
+        let should_extract =
+            files.is_empty() || files.iter().any(|&f| name.starts_with(f) || f == name);
 
         // Reject absolute paths and paths with ".." components: extracting
         // them could write outside the destination directory.
@@ -660,8 +666,8 @@ fn tar_list(archive: &[u8], verbose: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -671,19 +677,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_tar_no_archive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["tar", "-c"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["tar", "-c"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -693,7 +700,9 @@ mod tests {
     #[test]
     fn test_tar_no_mode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["tar", "-f", "test.tar"])
@@ -708,7 +717,9 @@ mod tests {
     #[test]
     fn test_tar_create_and_list() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_tar_test");
         let _ = std::fs::create_dir_all(&dir);
@@ -718,8 +729,12 @@ mod tests {
 
         // Create
         let output = Command::new(&armybox)
-            .args(["tar", "-cf", tar_path.to_str().unwrap(),
-                   dir.join("testfile.txt").to_str().unwrap()])
+            .args([
+                "tar",
+                "-cf",
+                tar_path.to_str().unwrap(),
+                dir.join("testfile.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 

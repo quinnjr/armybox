@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Table of symbolic signal names (without the "SIG" prefix) to numbers.
 const SIGNALS: &[(&[u8], i32)] = &[
@@ -158,8 +158,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -169,14 +169,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_kill_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Kill with signal 0 (check if process exists) on our own PID
         let pid = std::process::id();
@@ -191,7 +195,9 @@ mod tests {
     #[test]
     fn test_kill_nonexistent_pid() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Try to kill a very high PID that doesn't exist
         let output = Command::new(&armybox)

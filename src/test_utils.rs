@@ -16,7 +16,7 @@ pub mod test_helpers {
     pub fn create_test_dir(prefix: &str) -> PathBuf {
         let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pid = std::process::id();
-        let dir = std::env::temp_dir().join(format!("{}_{}_{}",  prefix, pid, id));
+        let dir = std::env::temp_dir().join(format!("{}_{}_{}", prefix, pid, id));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("Failed to create test directory");
         dir
@@ -36,7 +36,9 @@ pub mod test_helpers {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 }

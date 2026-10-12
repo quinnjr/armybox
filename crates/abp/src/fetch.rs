@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
+use crate::database::AvailablePackage;
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::database::AvailablePackage;
 
 /// Fetch repository index
 pub fn fetch_index(base_url: &str) -> Result<Vec<AvailablePackage>, String> {
@@ -104,10 +104,7 @@ fn parse_index(data: &[u8]) -> Result<Vec<AvailablePackage>, String> {
             b'V' => current.version = String::from(value),
             b'T' => current.description = String::from(value),
             b'D' => {
-                current.depends = value
-                    .split_whitespace()
-                    .map(String::from)
-                    .collect();
+                current.depends = value.split_whitespace().map(String::from).collect();
             }
             b'S' => current.size = value.parse().unwrap_or(0),
             b'C' => {

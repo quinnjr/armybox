@@ -4,12 +4,12 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec::Vec;
 
-use crate::sys::{rtentry, RTF_GATEWAY, RTF_HOST, RTF_UP};
+use crate::sys::{RTF_GATEWAY, RTF_HOST, RTF_UP, rtentry};
 
 /// route - show/manipulate IP routing table
 ///
@@ -84,7 +84,10 @@ pub fn route(argc: i32, argv: *const *const u8) -> i32 {
 
 fn print_help() {
     io::write_str(1, b"Usage: route [-n] [-e]\n");
-    io::write_str(1, b"       route add -net|-host DEST [gw GW] [netmask MASK] [dev IF]\n");
+    io::write_str(
+        1,
+        b"       route add -net|-host DEST [gw GW] [netmask MASK] [dev IF]\n",
+    );
     io::write_str(1, b"       route del -net|-host DEST\n");
     io::write_str(1, b"\n");
     io::write_str(1, b"Options:\n");
@@ -97,9 +100,15 @@ fn show_routes(numeric: bool, extended: bool) -> i32 {
     io::write_str(1, b"Kernel IP routing table\n");
 
     if extended {
-        io::write_str(1, b"Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface\n");
+        io::write_str(
+            1,
+            b"Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface\n",
+        );
     } else {
-        io::write_str(1, b"Destination     Gateway         Genmask         Flags Metric Ref    Use Iface\n");
+        io::write_str(
+            1,
+            b"Destination     Gateway         Genmask         Flags Metric Ref    Use Iface\n",
+        );
     }
 
     let fd = io::open(b"/proc/net/route", libc::O_RDONLY, 0);
@@ -120,8 +129,12 @@ fn show_routes(numeric: bool, extended: bool) -> i32 {
 
     // Skip header line and process each route
     for (i, line) in content.split(|&c| c == b'\n').enumerate() {
-        if i == 0 { continue; } // Skip header
-        if line.is_empty() { continue; }
+        if i == 0 {
+            continue;
+        } // Skip header
+        if line.is_empty() {
+            continue;
+        }
 
         if let Some(entry) = parse_route_line(line) {
             print_route_entry(&entry, numeric, extended);
@@ -149,7 +162,8 @@ struct RouteEntry<'a> {
 /// Parse a line from /proc/net/route
 fn parse_route_line(line: &[u8]) -> Option<RouteEntry<'_>> {
     // Format: Iface Destination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT
-    let fields: Vec<&[u8]> = line.split(|&c| c == b'\t' || c == b' ')
+    let fields: Vec<&[u8]> = line
+        .split(|&c| c == b'\t' || c == b' ')
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -555,8 +569,8 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -566,19 +580,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_route_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["route"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["route"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -588,7 +603,9 @@ mod tests {
     #[test]
     fn test_route_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["route", "-h"])

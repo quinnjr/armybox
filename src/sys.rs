@@ -183,30 +183,78 @@ pub fn format_mode(mode: u32, buf: &mut [u8; 10]) {
     };
 
     // User permissions
-    buf[1] = if mode & libc::S_IRUSR as u32 != 0 { b'r' } else { b'-' };
-    buf[2] = if mode & libc::S_IWUSR as u32 != 0 { b'w' } else { b'-' };
-    buf[3] = if mode & libc::S_ISUID as u32 != 0 {
-        if mode & libc::S_IXUSR as u32 != 0 { b's' } else { b'S' }
+    buf[1] = if mode & libc::S_IRUSR as u32 != 0 {
+        b'r'
     } else {
-        if mode & libc::S_IXUSR as u32 != 0 { b'x' } else { b'-' }
+        b'-'
+    };
+    buf[2] = if mode & libc::S_IWUSR as u32 != 0 {
+        b'w'
+    } else {
+        b'-'
+    };
+    buf[3] = if mode & libc::S_ISUID as u32 != 0 {
+        if mode & libc::S_IXUSR as u32 != 0 {
+            b's'
+        } else {
+            b'S'
+        }
+    } else {
+        if mode & libc::S_IXUSR as u32 != 0 {
+            b'x'
+        } else {
+            b'-'
+        }
     };
 
     // Group permissions
-    buf[4] = if mode & libc::S_IRGRP as u32 != 0 { b'r' } else { b'-' };
-    buf[5] = if mode & libc::S_IWGRP as u32 != 0 { b'w' } else { b'-' };
-    buf[6] = if mode & libc::S_ISGID as u32 != 0 {
-        if mode & libc::S_IXGRP as u32 != 0 { b's' } else { b'S' }
+    buf[4] = if mode & libc::S_IRGRP as u32 != 0 {
+        b'r'
     } else {
-        if mode & libc::S_IXGRP as u32 != 0 { b'x' } else { b'-' }
+        b'-'
+    };
+    buf[5] = if mode & libc::S_IWGRP as u32 != 0 {
+        b'w'
+    } else {
+        b'-'
+    };
+    buf[6] = if mode & libc::S_ISGID as u32 != 0 {
+        if mode & libc::S_IXGRP as u32 != 0 {
+            b's'
+        } else {
+            b'S'
+        }
+    } else {
+        if mode & libc::S_IXGRP as u32 != 0 {
+            b'x'
+        } else {
+            b'-'
+        }
     };
 
     // Other permissions
-    buf[7] = if mode & libc::S_IROTH as u32 != 0 { b'r' } else { b'-' };
-    buf[8] = if mode & libc::S_IWOTH as u32 != 0 { b'w' } else { b'-' };
-    buf[9] = if mode & libc::S_ISVTX as u32 != 0 {
-        if mode & libc::S_IXOTH as u32 != 0 { b't' } else { b'T' }
+    buf[7] = if mode & libc::S_IROTH as u32 != 0 {
+        b'r'
     } else {
-        if mode & libc::S_IXOTH as u32 != 0 { b'x' } else { b'-' }
+        b'-'
+    };
+    buf[8] = if mode & libc::S_IWOTH as u32 != 0 {
+        b'w'
+    } else {
+        b'-'
+    };
+    buf[9] = if mode & libc::S_ISVTX as u32 != 0 {
+        if mode & libc::S_IXOTH as u32 != 0 {
+            b't'
+        } else {
+            b'T'
+        }
+    } else {
+        if mode & libc::S_IXOTH as u32 != 0 {
+            b'x'
+        } else {
+            b'-'
+        }
     };
 }
 
@@ -242,32 +290,44 @@ pub fn makedev(major: u32, minor: u32) -> libc::dev_t {
 pub fn errno() -> i32 {
     // Bionic exposes errno as `__errno()`; glibc and musl as `__errno_location()`.
     #[cfg(target_os = "android")]
-    unsafe { *libc::__errno() }
+    unsafe {
+        *libc::__errno()
+    }
 
     #[cfg(target_os = "linux")]
-    unsafe { *libc::__errno_location() }
+    unsafe {
+        *libc::__errno_location()
+    }
 
     #[cfg(not(any(target_os = "linux", target_os = "android")))]
-    unsafe { *libc::__error() }
+    unsafe {
+        *libc::__error()
+    }
 }
 
 /// Clear errno
 pub fn clear_errno() {
     #[cfg(target_os = "android")]
-    unsafe { *libc::__errno() = 0; }
+    unsafe {
+        *libc::__errno() = 0;
+    }
 
     #[cfg(target_os = "linux")]
-    unsafe { *libc::__errno_location() = 0; }
+    unsafe {
+        *libc::__errno_location() = 0;
+    }
 
     #[cfg(not(any(target_os = "linux", target_os = "android")))]
-    unsafe { *libc::__error() = 0; }
+    unsafe {
+        *libc::__error() = 0;
+    }
 }
 
 /// Constants Bionic has but the libc crate does not bind for Android
 /// (`SCHED_OTHER` in sched.h, `_PC_FILESIZEBITS` in unistd.h). Applets
 /// reference these via `sys::` so a single code path works everywhere.
 #[cfg(not(target_os = "android"))]
-pub use libc::{SCHED_OTHER, _PC_FILESIZEBITS};
+pub use libc::{_PC_FILESIZEBITS, SCHED_OTHER};
 #[cfg(target_os = "android")]
 pub const SCHED_OTHER: libc::c_int = 0;
 #[cfg(target_os = "android")]
@@ -295,7 +355,13 @@ pub fn reboot(cmd: libc::c_int) -> i32 {
     unsafe {
         const LINUX_REBOOT_MAGIC1: libc::c_uint = 0xfee1dead;
         const LINUX_REBOOT_MAGIC2: libc::c_uint = 672274793;
-        libc::syscall(libc::SYS_reboot, LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2, cmd, 0) as i32
+        libc::syscall(
+            libc::SYS_reboot,
+            LINUX_REBOOT_MAGIC1,
+            LINUX_REBOOT_MAGIC2,
+            cmd,
+            0,
+        ) as i32
     }
 }
 
@@ -329,7 +395,7 @@ pub fn gethostid() -> i64 {
 /// group occupies exactly the kernel's `void *rt_pad4` slot), so route and
 /// ifup share one construction path on every platform.
 #[cfg(not(target_os = "android"))]
-pub use libc::{rtentry, RTF_GATEWAY, RTF_HOST, RTF_UP};
+pub use libc::{RTF_GATEWAY, RTF_HOST, RTF_UP, rtentry};
 #[cfg(target_os = "android")]
 pub const RTF_UP: libc::c_ushort = 0x0001;
 #[cfg(target_os = "android")]
@@ -442,7 +508,9 @@ pub fn format_num_buf(n: u64, buf: &mut [u8]) -> usize {
 /// // RIGHT - use immediately
 /// io::write_all(1, format_num(123));
 /// ```
-#[deprecated(note = "Use format_u64() with a local buffer instead - this function is not thread-safe")]
+#[deprecated(
+    note = "Use format_u64() with a local buffer instead - this function is not thread-safe"
+)]
 pub fn format_num(n: u64) -> &'static [u8] {
     // Use format_u64 which already exists
     // SAFETY: This uses a static mutable buffer which creates a data race

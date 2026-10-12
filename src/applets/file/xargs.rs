@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use alloc::ffi::CString;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
 
 /// xargs - build and execute command lines from standard input
 ///
@@ -252,9 +252,8 @@ pub fn xargs(argc: i32, argv: *const *const u8) -> i32 {
         for (start, end) in batches {
             let batch_len = end - start;
             // A single oversized item that can't fit within max_bytes on its own.
-            let is_single_oversized = batch_len == 1
-                && items[start].len() + 1 > max_bytes
-                && max_args.is_none();
+            let is_single_oversized =
+                batch_len == 1 && items[start].len() + 1 > max_bytes && max_args.is_none();
             // A `-n`-requested batch that had to be shrunk below the requested
             // count because it would otherwise exceed max_bytes (there is more
             // input still to come, so this wasn't just running out of items).
@@ -331,7 +330,10 @@ fn split_whitespace_quoted(input: &[u8]) -> Vec<Vec<u8>> {
                 in_word = true;
                 i += 1;
                 while i < n && input[i] != b'"' {
-                    if input[i] == b'\\' && i + 1 < n && (input[i + 1] == b'"' || input[i + 1] == b'\\') {
+                    if input[i] == b'\\'
+                        && i + 1 < n
+                        && (input[i + 1] == b'"' || input[i + 1] == b'\\')
+                    {
                         cur.push(input[i + 1]);
                         i += 2;
                     } else {
@@ -388,7 +390,11 @@ fn split_lines_trimmed(input: &[u8]) -> Vec<Vec<u8>> {
 /// already consumed by the command name and its initial arguments.
 fn arg_max_budget(command: &[u8], initial_args: &[&[u8]]) -> usize {
     let sys_max = unsafe { libc::sysconf(libc::_SC_ARG_MAX) };
-    let arg_max: usize = if sys_max > 0 { sys_max as usize } else { 128 * 1024 };
+    let arg_max: usize = if sys_max > 0 {
+        sys_max as usize
+    } else {
+        128 * 1024
+    };
 
     // Leave headroom for environment and the command/initial args already
     // fixed in every invocation.
@@ -404,7 +410,11 @@ fn arg_max_budget(command: &[u8], initial_args: &[&[u8]]) -> usize {
 /// Group items into batches honoring both `-n` (max item count) and a
 /// byte-length budget (ARG_MAX-derived). Always makes progress: a single
 /// oversized item still forms its own batch.
-fn compute_batches(items: &[Vec<u8>], max_args: Option<usize>, max_bytes: usize) -> Vec<(usize, usize)> {
+fn compute_batches(
+    items: &[Vec<u8>],
+    max_args: Option<usize>,
+    max_bytes: usize,
+) -> Vec<(usize, usize)> {
     let mut batches = Vec::new();
     let len = items.len();
     let mut start = 0;
@@ -445,7 +455,9 @@ fn compute_batches(items: &[Vec<u8>], max_args: Option<usize>, max_bytes: usize)
 /// Build args with replacement. GNU xargs replaces every occurrence of
 /// REPLSTR within each argument, not just the first.
 fn build_replace_args(args: &[&[u8]], repl: &[u8], item: &[u8]) -> Vec<Vec<u8>> {
-    args.iter().map(|arg| replace_all_subsequences(arg, repl, item)).collect()
+    args.iter()
+        .map(|arg| replace_all_subsequences(arg, repl, item))
+        .collect()
 }
 
 /// Replace every non-overlapping occurrence of `repl` in `arg` with `item`.
@@ -469,7 +481,9 @@ fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     if needle.is_empty() {
         return None;
     }
-    haystack.windows(needle.len()).position(|window| window == needle)
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
 }
 
 /// Run a command synchronously
@@ -490,7 +504,9 @@ fn run_command(cmd: &[u8], args: &[&[u8]], verbose: bool) -> i32 {
 
     // Parent - wait for child
     let mut status: libc::c_int = 0;
-    unsafe { libc::waitpid(pid, &mut status, 0); }
+    unsafe {
+        libc::waitpid(pid, &mut status, 0);
+    }
 
     get_exit_code(status)
 }
@@ -536,12 +552,15 @@ fn exec_command(cmd: &[u8], args: &[&[u8]]) -> ! {
         }
     }
 
-    let ptrs: Vec<*const libc::c_char> = cstrings.iter()
+    let ptrs: Vec<*const libc::c_char> = cstrings
+        .iter()
         .map(|s| s.as_ptr())
         .chain(core::iter::once(core::ptr::null()))
         .collect();
 
-    unsafe { libc::execvp(ptrs[0], ptrs.as_ptr()); }
+    unsafe {
+        libc::execvp(ptrs[0], ptrs.as_ptr());
+    }
 
     // exec failed
     io::write_str(2, b"xargs: ");
@@ -551,13 +570,19 @@ fn exec_command(cmd: &[u8], args: &[&[u8]]) -> ! {
     let errno = crate::sys::errno();
     if errno == libc::ENOENT {
         io::write_str(2, b"command not found\n");
-        unsafe { libc::_exit(127); }
+        unsafe {
+            libc::_exit(127);
+        }
     } else if errno == libc::EACCES {
         io::write_str(2, b"permission denied\n");
-        unsafe { libc::_exit(126); }
+        unsafe {
+            libc::_exit(126);
+        }
     } else {
         io::write_str(2, b"cannot run command\n");
-        unsafe { libc::_exit(126); }
+        unsafe {
+            libc::_exit(126);
+        }
     }
 }
 
@@ -593,7 +618,13 @@ fn update_exit_status(current: i32, new: i32) -> i32 {
         255 => 124,
         126 | 127 => new,
         1..=125 if current == 0 => 123,
-        _ => if current == 0 { new } else { current },
+        _ => {
+            if current == 0 {
+                new
+            } else {
+                current
+            }
+        }
     }
 }
 
@@ -617,15 +648,33 @@ fn print_command(cmd: &[u8], args: &[&[u8]]) {
 
 fn print_help() {
     io::write_str(1, b"Usage: xargs [OPTIONS] [COMMAND [INITIAL-ARGS]]\n\n");
-    io::write_str(1, b"Build and execute command lines from standard input.\n\n");
+    io::write_str(
+        1,
+        b"Build and execute command lines from standard input.\n\n",
+    );
     io::write_str(1, b"Options:\n");
-    io::write_str(1, b"  -0, --null           Items separated by null, not newline\n");
+    io::write_str(
+        1,
+        b"  -0, --null           Items separated by null, not newline\n",
+    );
     io::write_str(1, b"  -d DELIM             Items separated by DELIM\n");
-    io::write_str(1, b"  -I REPLSTR           Replace REPLSTR in args with input item\n");
-    io::write_str(1, b"  -n MAXARGS           Use at most MAXARGS per command line\n");
-    io::write_str(1, b"  -P MAXPROCS          Run up to MAXPROCS processes in parallel\n");
+    io::write_str(
+        1,
+        b"  -I REPLSTR           Replace REPLSTR in args with input item\n",
+    );
+    io::write_str(
+        1,
+        b"  -n MAXARGS           Use at most MAXARGS per command line\n",
+    );
+    io::write_str(
+        1,
+        b"  -P MAXPROCS          Run up to MAXPROCS processes in parallel\n",
+    );
     io::write_str(1, b"  -r, --no-run-if-empty  Don't run if input is empty\n");
-    io::write_str(1, b"  -t, --verbose        Print command before executing\n");
+    io::write_str(
+        1,
+        b"  -t, --verbose        Print command before executing\n",
+    );
     io::write_str(1, b"  -x                   Exit if command line too long\n");
     io::write_str(1, b"  -h, --help           Show this help\n\n");
     io::write_str(1, b"Examples:\n");
@@ -638,9 +687,9 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -650,14 +699,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_xargs_echo() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["xargs", "echo"])
@@ -681,7 +734,9 @@ mod tests {
     #[test]
     fn test_xargs_empty_input() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["xargs", "-r", "echo"])
@@ -704,7 +759,9 @@ mod tests {
     #[test]
     fn test_xargs_n1() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["xargs", "-n1", "echo"])
@@ -729,7 +786,9 @@ mod tests {
     #[test]
     fn test_xargs_null() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["xargs", "-0", "echo"])
@@ -753,7 +812,9 @@ mod tests {
     #[test]
     fn test_xargs_replace() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["xargs", "-I{}", "echo", "item:{}"])
@@ -777,7 +838,9 @@ mod tests {
     #[test]
     fn test_xargs_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["xargs", "--help"])

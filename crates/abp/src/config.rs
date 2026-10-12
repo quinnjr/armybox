@@ -4,9 +4,9 @@
 
 extern crate alloc;
 
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
 
 /// ABP configuration
 #[derive(Clone)]
@@ -182,7 +182,10 @@ impl RepoConfig {
 
             if let Some(eq_pos) = line.find('=') {
                 let key = line[..eq_pos].trim();
-                let value = line[eq_pos + 1..].trim().trim_matches('"').trim_matches('\'');
+                let value = line[eq_pos + 1..]
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'');
 
                 match key {
                     "name" => config.name = String::from(value),
@@ -201,7 +204,6 @@ impl RepoConfig {
         Some(config)
     }
 }
-
 
 /// Initialize ABP directories and configuration
 pub fn init_abp() -> Result<(), String> {

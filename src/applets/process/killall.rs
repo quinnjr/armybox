@@ -2,9 +2,9 @@
 //!
 //! Send a signal to all processes with the given name.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Table of symbolic signal names (without the "SIG" prefix) to numbers.
 const SIGNALS: &[(&[u8], i32)] = &[
@@ -95,12 +95,16 @@ pub fn killall(argc: i32, argv: *const *const u8) -> i32 {
 
     // Scan /proc for processes
     let fd = io::open(b"/proc", libc::O_RDONLY | libc::O_DIRECTORY, 0);
-    if fd < 0 { return 1; }
+    if fd < 0 {
+        return 1;
+    }
 
     let mut buf = [0u8; 4096];
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         let mut offset = 0;
         while offset < n as usize {
             let dirent = unsafe { &*(buf.as_ptr().add(offset) as *const libc::dirent64) };
@@ -110,9 +114,18 @@ pub fn killall(argc: i32, argv: *const *const u8) -> i32 {
                 // Read /proc/PID/comm
                 let mut path = [0u8; 64];
                 let mut pi = 0;
-                for &c in b"/proc/" { path[pi] = c; pi += 1; }
-                for &c in name { path[pi] = c; pi += 1; }
-                for &c in b"/comm\0" { path[pi] = c; pi += 1; }
+                for &c in b"/proc/" {
+                    path[pi] = c;
+                    pi += 1;
+                }
+                for &c in name {
+                    path[pi] = c;
+                    pi += 1;
+                }
+                for &c in b"/comm\0" {
+                    path[pi] = c;
+                    pi += 1;
+                }
 
                 let comm_fd = io::open(&path, libc::O_RDONLY, 0);
                 if comm_fd >= 0 {
@@ -145,8 +158,8 @@ pub fn killall(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -156,19 +169,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_killall_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["killall"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["killall"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -178,7 +192,9 @@ mod tests {
     #[test]
     fn test_killall_nonexistent_process() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["killall", "nonexistent_process_name_12345"])

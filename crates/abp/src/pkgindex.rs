@@ -175,17 +175,37 @@ impl Category {
     pub fn from_name(name: &str) -> Self {
         match name {
             "musl" | "musl-dev" | "linux" | "linux-headers" | "zlib" => Self::Core,
-            n if n.starts_with("llvm") || n.starts_with("clang") || n.starts_with("compiler-rt")
-                || n.starts_with("lld") || n.starts_with("libcxx") || n == "gcc"
-                || n == "binutils" || n == "make" || n == "cmake" || n == "ninja"
-                || n == "rust" || n == "build-essential" || n == "pkgconf"
-                || n == "bison" || n == "flex" || n == "nasm"
-                || n == "perl" || n == "python3" => Self::Devel,
+            n if n.starts_with("llvm")
+                || n.starts_with("clang")
+                || n.starts_with("compiler-rt")
+                || n.starts_with("lld")
+                || n.starts_with("libcxx")
+                || n == "gcc"
+                || n == "binutils"
+                || n == "make"
+                || n == "cmake"
+                || n == "ninja"
+                || n == "rust"
+                || n == "build-essential"
+                || n == "pkgconf"
+                || n == "bison"
+                || n == "flex"
+                || n == "nasm"
+                || n == "perl"
+                || n == "python3" =>
+            {
+                Self::Devel
+            }
             "openssl" | "curl" => Self::Network,
             "xz" | "bzip2" | "zstd" => Self::Archive,
-            n if n.starts_with("xorriso") || n.starts_with("syslinux")
-                || n.starts_with("grub") || n.starts_with("mtools")
-                || n.starts_with("dosfstools") => Self::System,
+            n if n.starts_with("xorriso")
+                || n.starts_with("syslinux")
+                || n.starts_with("grub")
+                || n.starts_with("mtools")
+                || n.starts_with("dosfstools") =>
+            {
+                Self::System
+            }
             "helix" => Self::Editor,
             "nushell" => Self::Shell,
             n if n.contains("coreutils") || n.contains("essential") => Self::Meta,
@@ -298,14 +318,13 @@ impl<'a> PackageIndex<'a> {
         }
 
         // Validate section bounds
-        let idx_end = header.index_offset as usize
-            + (header.pkg_count as usize) * INDEX_ENTRY_SIZE;
+        let idx_end = header.index_offset as usize + (header.pkg_count as usize) * INDEX_ENTRY_SIZE;
         if idx_end > data.len() {
             return Err(IndexError::BadOffset);
         }
 
-        let ent_end = header.entries_offset as usize
-            + (header.pkg_count as usize) * PACKAGE_ENTRY_SIZE;
+        let ent_end =
+            header.entries_offset as usize + (header.pkg_count as usize) * PACKAGE_ENTRY_SIZE;
         if ent_end > data.len() {
             return Err(IndexError::BadOffset);
         }
@@ -339,9 +358,7 @@ impl<'a> PackageIndex<'a> {
                 let start = strings_start + name_off;
                 let end = start + name_len;
                 // Name must lie within the declared string table.
-                if name_off > strings_size
-                    || name_len > strings_size - name_off
-                    || end > data.len()
+                if name_off > strings_size || name_len > strings_size - name_off || end > data.len()
                 {
                     return Err(IndexError::BadStringRef);
                 }
@@ -386,7 +403,10 @@ impl<'a> PackageIndex<'a> {
             match entry_name.cmp(name_bytes) {
                 core::cmp::Ordering::Equal => {
                     let pkg = self.read_package_entry(idx_entry.entry_idx as usize);
-                    return Some(PackageRef { index: self, entry: pkg });
+                    return Some(PackageRef {
+                        index: self,
+                        entry: pkg,
+                    });
                 }
                 core::cmp::Ordering::Less => lo = mid + 1,
                 core::cmp::Ordering::Greater => hi = mid,
@@ -407,13 +427,20 @@ impl<'a> PackageIndex<'a> {
 
     /// Iterate all packages in entry-table order.
     pub fn iter(&'a self) -> PackageIter<'a> {
-        PackageIter { index: self, pos: 0 }
+        PackageIter {
+            index: self,
+            pos: 0,
+        }
     }
 
     /// Search for packages whose name contains the given substring.
     /// Returns indices into the entry table. O(n) scan.
     pub fn search<'q>(&'a self, query: &'q str) -> SearchIter<'a, 'q> {
-        SearchIter { index: self, query, pos: 0 }
+        SearchIter {
+            index: self,
+            query,
+            pos: 0,
+        }
     }
 
     // ── Internal helpers ───────────────────────────────────────
@@ -432,17 +459,17 @@ impl<'a> PackageIndex<'a> {
         let base = self.header.entries_offset as usize + n * PACKAGE_ENTRY_SIZE;
         let d = &self.data[base..];
         PackageEntry {
-            name:        read_sref(d, 0),
-            version:     read_sref(d, 6),
+            name: read_sref(d, 0),
+            version: read_sref(d, 6),
             description: read_sref(d, 12),
-            url:         read_sref(d, 18),
-            license:     read_sref(d, 24),
-            arch:        read_sref(d, 30),
-            depends:     read_sref(d, 36),
-            provides:    read_sref(d, 42),
-            category:    d[48],
-            flags:       d[49],
-            _reserved:   read_u16(d, 50),
+            url: read_sref(d, 18),
+            license: read_sref(d, 24),
+            arch: read_sref(d, 30),
+            depends: read_sref(d, 36),
+            provides: read_sref(d, 42),
+            category: d[48],
+            flags: d[49],
+            _reserved: read_u16(d, 50),
         }
     }
 
@@ -473,31 +500,63 @@ pub struct PackageRef<'a> {
 }
 
 impl<'a> PackageRef<'a> {
-    #[inline] pub fn name(&self) -> &'a str { self.index.resolve_str(self.entry.name) }
-    #[inline] pub fn version(&self) -> &'a str { self.index.resolve_str(self.entry.version) }
-    #[inline] pub fn description(&self) -> &'a str { self.index.resolve_str(self.entry.description) }
-    #[inline] pub fn url(&self) -> &'a str { self.index.resolve_str(self.entry.url) }
-    #[inline] pub fn license(&self) -> &'a str { self.index.resolve_str(self.entry.license) }
-    #[inline] pub fn arch(&self) -> &'a str { self.index.resolve_str(self.entry.arch) }
-    #[inline] pub fn category(&self) -> Category { Category::from_u8(self.entry.category) }
-    #[inline] pub fn flags(&self) -> u8 { self.entry.flags }
+    #[inline]
+    pub fn name(&self) -> &'a str {
+        self.index.resolve_str(self.entry.name)
+    }
+    #[inline]
+    pub fn version(&self) -> &'a str {
+        self.index.resolve_str(self.entry.version)
+    }
+    #[inline]
+    pub fn description(&self) -> &'a str {
+        self.index.resolve_str(self.entry.description)
+    }
+    #[inline]
+    pub fn url(&self) -> &'a str {
+        self.index.resolve_str(self.entry.url)
+    }
+    #[inline]
+    pub fn license(&self) -> &'a str {
+        self.index.resolve_str(self.entry.license)
+    }
+    #[inline]
+    pub fn arch(&self) -> &'a str {
+        self.index.resolve_str(self.entry.arch)
+    }
+    #[inline]
+    pub fn category(&self) -> Category {
+        Category::from_u8(self.entry.category)
+    }
+    #[inline]
+    pub fn flags(&self) -> u8 {
+        self.entry.flags
+    }
 
     /// Raw comma-separated depends string
     #[inline]
-    pub fn depends_raw(&self) -> &'a str { self.index.resolve_str(self.entry.depends) }
+    pub fn depends_raw(&self) -> &'a str {
+        self.index.resolve_str(self.entry.depends)
+    }
 
     /// Raw comma-separated provides string
     #[inline]
-    pub fn provides_raw(&self) -> &'a str { self.index.resolve_str(self.entry.provides) }
+    pub fn provides_raw(&self) -> &'a str {
+        self.index.resolve_str(self.entry.provides)
+    }
 
     /// Iterate dependency names (splits on comma)
     pub fn depends(&self) -> FieldIter<'a> {
-        FieldIter { remaining: self.depends_raw() }
+        FieldIter {
+            remaining: self.depends_raw(),
+        }
     }
 
     /// Iterate provides names (splits on comma)
     pub fn provides(&self) -> FieldIter<'a> {
-        FieldIter { remaining: self.provides_raw() }
+        FieldIter {
+            remaining: self.provides_raw(),
+        }
     }
 }
 
@@ -629,15 +688,15 @@ fn read_sref(d: &[u8], off: usize) -> StringRef {
 
 fn read_header(data: &[u8]) -> Header {
     Header {
-        magic:          [data[0], data[1], data[2], data[3]],
-        version:        read_u16(data, 4),
-        flags:          read_u16(data, 6),
-        pkg_count:      read_u32(data, 8),
-        index_offset:   read_u32(data, 12),
+        magic: [data[0], data[1], data[2], data[3]],
+        version: read_u16(data, 4),
+        flags: read_u16(data, 6),
+        pkg_count: read_u32(data, 8),
+        index_offset: read_u32(data, 12),
         entries_offset: read_u32(data, 16),
         strings_offset: read_u32(data, 20),
-        strings_size:   read_u32(data, 24),
-        total_size:     read_u32(data, 28),
+        strings_size: read_u32(data, 24),
+        total_size: read_u32(data, 28),
     }
 }
 
@@ -648,10 +707,10 @@ fn read_header(data: &[u8]) -> Header {
 #[cfg(feature = "alloc")]
 pub mod build {
     extern crate alloc;
+    use super::*;
     use alloc::collections::BTreeMap;
     use alloc::string::String;
     use alloc::vec::Vec;
-    use super::*;
 
     /// Input to the builder — one per package
     #[derive(Clone, Debug, Default)]
@@ -662,8 +721,8 @@ pub mod build {
         pub url: String,
         pub license: String,
         pub arch: String,
-        pub depends: String,   // comma-separated
-        pub provides: String,  // comma-separated
+        pub depends: String,  // comma-separated
+        pub provides: String, // comma-separated
         pub category: Category,
     }
 
@@ -674,7 +733,9 @@ pub mod build {
 
     impl PackageIndexBuilder {
         pub fn new() -> Self {
-            PackageIndexBuilder { packages: Vec::new() }
+            PackageIndexBuilder {
+                packages: Vec::new(),
+            }
         }
 
         pub fn add(&mut self, info: PackageInfo) {
@@ -719,7 +780,7 @@ pub mod build {
             // ── 4. Write header ─────────────────────────────
             buf.extend_from_slice(&MAGIC);
             buf.extend_from_slice(&VERSION.to_le_bytes());
-            buf.extend_from_slice(&0u16.to_le_bytes());  // flags
+            buf.extend_from_slice(&0u16.to_le_bytes()); // flags
             buf.extend_from_slice(&(pkg_count as u32).to_le_bytes());
             buf.extend_from_slice(&index_offset.to_le_bytes());
             buf.extend_from_slice(&entries_offset.to_le_bytes());
@@ -798,7 +859,10 @@ pub mod build {
             if s.is_empty() {
                 return StringRef { offset: 0, len: 0 };
             }
-            self.map.get(s).copied().unwrap_or(StringRef { offset: 0, len: 0 })
+            self.map
+                .get(s)
+                .copied()
+                .unwrap_or(StringRef { offset: 0, len: 0 })
         }
 
         fn len(&self) -> usize {
@@ -817,8 +881,8 @@ pub mod build {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::build::*;
+    use super::*;
 
     fn sample_db() -> Vec<u8> {
         let mut builder = PackageIndexBuilder::new();
@@ -972,7 +1036,10 @@ mod tests {
     fn test_bad_magic() {
         let mut data = sample_db();
         data[0] = b'X';
-        assert_eq!(PackageIndex::from_bytes(&data).unwrap_err(), IndexError::BadMagic);
+        assert_eq!(
+            PackageIndex::from_bytes(&data).unwrap_err(),
+            IndexError::BadMagic
+        );
     }
 
     #[test]
@@ -1006,8 +1073,7 @@ mod tests {
         for n in 0..count {
             let src = io + n * INDEX_ENTRY_SIZE;
             let dst = io + (count - 1 - n) * INDEX_ENTRY_SIZE;
-            bad[dst..dst + INDEX_ENTRY_SIZE]
-                .copy_from_slice(&data[src..src + INDEX_ENTRY_SIZE]);
+            bad[dst..dst + INDEX_ENTRY_SIZE].copy_from_slice(&data[src..src + INDEX_ENTRY_SIZE]);
         }
         assert_eq!(
             PackageIndex::from_bytes(&bad).unwrap_err(),

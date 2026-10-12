@@ -2,14 +2,14 @@
 //!
 //! Simple TFTP client for file transfers.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 // TFTP opcodes
-const TFTP_RRQ: u16 = 1;   // Read request
-const TFTP_WRQ: u16 = 2;   // Write request
-const TFTP_DATA: u16 = 3;  // Data packet
-const TFTP_ACK: u16 = 4;   // Acknowledgment
+const TFTP_RRQ: u16 = 1; // Read request
+const TFTP_WRQ: u16 = 2; // Write request
+const TFTP_DATA: u16 = 3; // Data packet
+const TFTP_ACK: u16 = 4; // Acknowledgment
 const TFTP_ERROR: u16 = 5; // Error packet
 
 // TFTP constants
@@ -199,7 +199,8 @@ fn tftp_get(sock: i32, server: &libc::sockaddr_in, remote: &[u8], local: &[u8]) 
     loop {
         let mut recv_buf = [0u8; 516];
         let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-        let mut from_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
+        let mut from_len: libc::socklen_t =
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
         let n = unsafe {
             libc::recvfrom(
@@ -314,7 +315,8 @@ fn tftp_put(sock: i32, server: &libc::sockaddr_in, remote: &[u8], local: &[u8]) 
     // Wait for ACK 0
     let mut recv_buf = [0u8; 516];
     let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-    let mut from_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
+    let mut from_len: libc::socklen_t =
+        core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
     let n = unsafe {
         libc::recvfrom(
@@ -490,17 +492,19 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     }
     parts[3] = current as u8;
 
-    Some(((parts[0] as u32) << 24) |
-         ((parts[1] as u32) << 16) |
-         ((parts[2] as u32) << 8) |
-         (parts[3] as u32))
+    Some(
+        ((parts[0] as u32) << 24)
+            | ((parts[1] as u32) << 16)
+            | ((parts[2] as u32) << 8)
+            | (parts[3] as u32),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -510,19 +514,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_tftp_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["tftp"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["tftp"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -532,7 +537,9 @@ mod tests {
     #[test]
     fn test_tftp_missing_mode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["tftp", "-l", "file", "-r", "file", "host"])

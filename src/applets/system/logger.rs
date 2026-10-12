@@ -4,9 +4,9 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use crate::io;
 use super::super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 // Syslog priorities (facility | level)
 const LOG_KERN: i32 = 0 << 3;
@@ -224,33 +224,43 @@ fn log_message(priority: i32, tag: &[u8], pid: i32, message: &[u8], to_stderr: b
     // Add timestamp (Month Day HH:MM:SS)
     let now = unsafe { libc::time(core::ptr::null_mut()) };
     let mut tm: libc::tm = unsafe { core::mem::zeroed() };
-    unsafe { libc::localtime_r(&now, &mut tm); }
+    unsafe {
+        libc::localtime_r(&now, &mut tm);
+    }
 
     const MONTHS: [&[u8]; 12] = [
-        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun",
-        b"Jul", b"Aug", b"Sep", b"Oct", b"Nov", b"Dec"
+        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun", b"Jul", b"Aug", b"Sep", b"Oct", b"Nov",
+        b"Dec",
     ];
 
     buf.extend_from_slice(MONTHS[tm.tm_mon as usize]);
     buf.push(b' ');
 
     let day_str = crate::sys::format_u64(tm.tm_mday as u64, &mut num_buf);
-    if day_str.len() < 2 { buf.push(b' '); }
+    if day_str.len() < 2 {
+        buf.push(b' ');
+    }
     buf.extend_from_slice(day_str);
     buf.push(b' ');
 
     let hour_str = crate::sys::format_u64(tm.tm_hour as u64, &mut num_buf);
-    if hour_str.len() < 2 { buf.push(b'0'); }
+    if hour_str.len() < 2 {
+        buf.push(b'0');
+    }
     buf.extend_from_slice(hour_str);
     buf.push(b':');
 
     let min_str = crate::sys::format_u64(tm.tm_min as u64, &mut num_buf);
-    if min_str.len() < 2 { buf.push(b'0'); }
+    if min_str.len() < 2 {
+        buf.push(b'0');
+    }
     buf.extend_from_slice(min_str);
     buf.push(b':');
 
     let sec_str = crate::sys::format_u64(tm.tm_sec as u64, &mut num_buf);
-    if sec_str.len() < 2 { buf.push(b'0'); }
+    if sec_str.len() < 2 {
+        buf.push(b'0');
+    }
     buf.extend_from_slice(sec_str);
     buf.push(b' ');
 
@@ -273,9 +283,7 @@ fn log_message(priority: i32, tag: &[u8], pid: i32, message: &[u8], to_stderr: b
 
     // Try /dev/log (Unix domain socket for syslog)
     let dev_log = b"/dev/log\0";
-    let sock = unsafe {
-        libc::socket(libc::AF_UNIX, libc::SOCK_DGRAM, 0)
-    };
+    let sock = unsafe { libc::socket(libc::AF_UNIX, libc::SOCK_DGRAM, 0) };
 
     if sock >= 0 {
         let mut addr: libc::sockaddr_un = unsafe { core::mem::zeroed() };
@@ -289,7 +297,7 @@ fn log_message(priority: i32, tag: &[u8], pid: i32, message: &[u8], to_stderr: b
             libc::connect(
                 sock,
                 &addr as *const _ as *const libc::sockaddr,
-                core::mem::size_of::<libc::sockaddr_un>() as libc::socklen_t
+                core::mem::size_of::<libc::sockaddr_un>() as libc::socklen_t,
             )
         };
 
@@ -299,17 +307,16 @@ fn log_message(priority: i32, tag: &[u8], pid: i32, message: &[u8], to_stderr: b
             }
         }
 
-        unsafe { libc::close(sock); }
+        unsafe {
+            libc::close(sock);
+        }
     }
 
     // Fallback: write to /var/log/messages or syslog
-    let fallback_paths = [
-        b"/var/log/messages\0" as &[u8],
-        b"/var/log/syslog\0",
-    ];
+    let fallback_paths = [b"/var/log/messages\0" as &[u8], b"/var/log/syslog\0"];
 
     for path in &fallback_paths {
-        let fd = io::open(&path[..path.len()-1], libc::O_WRONLY | libc::O_APPEND, 0);
+        let fd = io::open(&path[..path.len() - 1], libc::O_WRONLY | libc::O_APPEND, 0);
         if fd >= 0 {
             io::write_all(fd, &buf);
             io::close(fd);
@@ -381,16 +388,22 @@ fn print_help() {
     io::write_str(1, b"  -f FILE     Log each line from FILE\n");
     io::write_str(1, b"  -p PRIO     Priority (facility.level)\n");
     io::write_str(1, b"  -t TAG      Tag for log entries\n\n");
-    io::write_str(1, b"Facilities: kern, user, mail, daemon, auth, syslog, lpr,\n");
+    io::write_str(
+        1,
+        b"Facilities: kern, user, mail, daemon, auth, syslog, lpr,\n",
+    );
     io::write_str(1, b"            news, uucp, cron, local0-7\n\n");
-    io::write_str(1, b"Levels: emerg, alert, crit, err, warning, notice, info, debug\n");
+    io::write_str(
+        1,
+        b"Levels: emerg, alert, crit, err, warning, notice, info, debug\n",
+    );
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -400,14 +413,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_logger_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["logger", "test message"])
@@ -420,7 +437,9 @@ mod tests {
     #[test]
     fn test_logger_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["logger", "--help"])
@@ -435,7 +454,9 @@ mod tests {
     #[test]
     fn test_logger_stderr() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["logger", "-s", "-t", "test", "hello world"])

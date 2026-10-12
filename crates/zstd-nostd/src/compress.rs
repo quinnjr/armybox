@@ -5,12 +5,12 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
-use crate::common::*;
 use crate::bitstream::BitWriter;
+use crate::common::*;
 use crate::fse::{FseTable, normalize_counts, write_table_description};
 use crate::xxhash::xxhash64;
 
@@ -40,21 +40,26 @@ fn encode_frame(input: &[u8], _level: u32, output: &mut Vec<u8>) {
     let single_segment = true;
     let content_checksum = true;
 
-    let descriptor = (fcs_flag << 6)
-        | ((single_segment as u8) << 5)
-        | ((content_checksum as u8) << 2);
+    let descriptor =
+        (fcs_flag << 6) | ((single_segment as u8) << 5) | ((content_checksum as u8) << 2);
 
     output.push(descriptor);
 
     // Frame content size
     match fcs_flag {
-        0 => { output.push(input.len() as u8); }
+        0 => {
+            output.push(input.len() as u8);
+        }
         1 => {
             let val = (input.len() as u16).wrapping_sub(256);
             output.extend_from_slice(&val.to_le_bytes());
         }
-        2 => { output.extend_from_slice(&(input.len() as u32).to_le_bytes()); }
-        _ => { output.extend_from_slice(&(input.len() as u64).to_le_bytes()); }
+        2 => {
+            output.extend_from_slice(&(input.len() as u32).to_le_bytes());
+        }
+        _ => {
+            output.extend_from_slice(&(input.len() as u64).to_le_bytes());
+        }
     }
 
     // Encode blocks
@@ -96,9 +101,8 @@ fn encode_block(data: &[u8], is_last: bool, output: &mut Vec<u8>) {
     }
 
     // Fall back to raw block
-    let block_header = (is_last as u32)
-        | ((BlockType::Raw as u32) << 1)
-        | ((data.len() as u32) << 3);
+    let block_header =
+        (is_last as u32) | ((BlockType::Raw as u32) << 1) | ((data.len() as u32) << 3);
     output.push(block_header as u8);
     output.push((block_header >> 8) as u8);
     output.push((block_header >> 16) as u8);
@@ -284,16 +288,12 @@ fn encode_literals_section(literals: &[u8], output: &mut Vec<u8>) {
         output.push(header);
     } else if regen_size < 4096 {
         // 2-byte header, size_format=1
-        let header = (LiteralsType::Raw as u16)
-            | (1u16 << 2)
-            | ((regen_size as u16) << 4);
+        let header = (LiteralsType::Raw as u16) | (1u16 << 2) | ((regen_size as u16) << 4);
         output.push(header as u8);
         output.push((header >> 8) as u8);
     } else {
         // 3-byte header, size_format=3
-        let header = (LiteralsType::Raw as u32)
-            | (3u32 << 2)
-            | ((regen_size as u32) << 4);
+        let header = (LiteralsType::Raw as u32) | (3u32 << 2) | ((regen_size as u32) << 4);
         output.push(header as u8);
         output.push((header >> 8) as u8);
         output.push((header >> 16) as u8);
@@ -333,9 +333,15 @@ fn encode_sequences_section(sequences: &[RawSequence], output: &mut Vec<u8>) -> 
         ll_hist[ll] += 1;
         ml_hist[ml] += 1;
         of_hist[of] += 1;
-        if ll > max_ll { max_ll = ll; }
-        if ml > max_ml { max_ml = ml; }
-        if of > max_of { max_of = of; }
+        if ll > max_ll {
+            max_ll = ll;
+        }
+        if ml > max_ml {
+            max_ml = ml;
+        }
+        if of > max_of {
+            max_of = of;
+        }
     }
 
     // For each table, determine mode and build table
@@ -344,9 +350,8 @@ fn encode_sequences_section(sequences: &[RawSequence], output: &mut Vec<u8>) -> 
     let ml_info = build_enc_table(&ml_hist, max_ml, ML_MAX_AL);
 
     // Compression modes byte
-    let modes_byte = ((ll_info.mode as u8) << 6)
-        | ((of_info.mode as u8) << 4)
-        | ((ml_info.mode as u8) << 2);
+    let modes_byte =
+        ((ll_info.mode as u8) << 6) | ((of_info.mode as u8) << 4) | ((ml_info.mode as u8) << 2);
     output.push(modes_byte);
 
     // Write table descriptions
@@ -466,15 +471,25 @@ fn build_enc_table(hist: &[u32], max_sym: usize, max_al: u8) -> EncTableInfo {
 
 fn compute_table_log(hist: &[u32], max_sym: usize, max_al: u8) -> u8 {
     let total: u32 = hist[..=max_sym].iter().sum();
-    if total == 0 { return 5; }
+    if total == 0 {
+        return 5;
+    }
 
-    let log = if total < 16 { 5 }
-    else if total < 64 { 6 }
-    else if total < 256 { 7 }
-    else { 8 };
+    let log = if total < 16 {
+        5
+    } else if total < 64 {
+        6
+    } else if total < 256 {
+        7
+    } else {
+        8
+    };
 
-    let min_log = if max_sym < 2 { 1 }
-    else { (32 - (max_sym as u32).leading_zeros()) as u8 };
+    let min_log = if max_sym < 2 {
+        1
+    } else {
+        (32 - (max_sym as u32).leading_zeros()) as u8
+    };
 
     core::cmp::max(log, min_log + 1).min(max_al)
 }
@@ -540,9 +555,12 @@ fn encode_seq_bitstream(
 
     let mut updates: Vec<SeqUpdate> = (0..n)
         .map(|_| SeqUpdate {
-            ll_bits: 0, ll_nbits: 0,
-            of_bits: 0, of_nbits: 0,
-            ml_bits: 0, ml_nbits: 0,
+            ll_bits: 0,
+            ll_nbits: 0,
+            of_bits: 0,
+            of_nbits: 0,
+            ml_bits: 0,
+            ml_nbits: 0,
         })
         .collect();
 
@@ -550,16 +568,31 @@ fn encode_seq_bitstream(
     // transition range includes the current target (*_state).
     for i in (0..n - 1).rev() {
         let (src_ll, ll_nb, ll_bv) = find_source_state(
-            &ll_info.dec_table, &ll_info.enc_map, seq_codes[i].0, ll_state);
+            &ll_info.dec_table,
+            &ll_info.enc_map,
+            seq_codes[i].0,
+            ll_state,
+        );
         let (src_of, of_nb, of_bv) = find_source_state(
-            &of_info.dec_table, &of_info.enc_map, seq_codes[i].1, of_state);
+            &of_info.dec_table,
+            &of_info.enc_map,
+            seq_codes[i].1,
+            of_state,
+        );
         let (src_ml, ml_nb, ml_bv) = find_source_state(
-            &ml_info.dec_table, &ml_info.enc_map, seq_codes[i].2, ml_state);
+            &ml_info.dec_table,
+            &ml_info.enc_map,
+            seq_codes[i].2,
+            ml_state,
+        );
 
         updates[i] = SeqUpdate {
-            ll_bits: ll_bv, ll_nbits: ll_nb,
-            of_bits: of_bv, of_nbits: of_nb,
-            ml_bits: ml_bv, ml_nbits: ml_nb,
+            ll_bits: ll_bv,
+            ll_nbits: ll_nb,
+            of_bits: of_bv,
+            of_nbits: of_nb,
+            ml_bits: ml_bv,
+            ml_nbits: ml_nb,
         };
 
         ll_state = src_ll;
@@ -731,57 +764,57 @@ mod tests {
     }
 }
 
-    #[test]
-    fn test_compress_decompress_abc() {
-        let input = b"ABCABCABCABCABCABCABCABCABCABC"; // 30 bytes, repeated pattern
-        let compressed = compress(input, 3);
-        let decompressed = crate::decompress(&compressed).unwrap();
-        assert_eq!(decompressed, input);
+#[test]
+fn test_compress_decompress_abc() {
+    let input = b"ABCABCABCABCABCABCABCABCABCABC"; // 30 bytes, repeated pattern
+    let compressed = compress(input, 3);
+    let decompressed = crate::decompress(&compressed).unwrap();
+    assert_eq!(decompressed, input);
+}
+
+#[test]
+fn test_compress_decompress_zeros_1k() {
+    let input = vec![0u8; 1024];
+    let compressed = compress(&input, 3);
+    let decompressed = crate::decompress(&compressed).unwrap();
+    assert_eq!(decompressed, input);
+}
+
+#[test]
+fn test_compress_decompress_zeros_10k() {
+    let input = vec![0u8; 10240];
+    let compressed = compress(&input, 3);
+    let decompressed = crate::decompress(&compressed).unwrap();
+    assert_eq!(decompressed, input);
+}
+
+#[test]
+fn test_compress_decompress_tarlike() {
+    // Simulate tar-like data: some ASCII + lots of null padding
+    let mut input = Vec::new();
+    input.extend_from_slice(b"./\x00");
+    input.extend_from_slice(&[0u8; 509]); // pad to 512
+    input.extend_from_slice(b"./usr/bin/test.sh\x00");
+    input.extend_from_slice(&[0u8; 494]); // pad to 512
+    input.extend_from_slice(b"#!/bin/sh\necho hello\n");
+    input.extend_from_slice(&[0u8; 491]); // pad to 512
+    input.extend_from_slice(&[0u8; 1024]); // end of archive
+
+    let compressed = compress(&input, 3);
+    let decompressed = crate::decompress(&compressed).unwrap();
+    assert_eq!(decompressed, input);
+}
+
+#[test]
+fn test_compress_decompress_mixed_4k() {
+    // Mixed pattern: repeated text + nulls
+    let mut input = Vec::new();
+    for i in 0..100 {
+        input.extend_from_slice(format!("line {:04}\n", i).as_bytes());
+        input.extend_from_slice(&[0u8; 30]);
     }
 
-    #[test]
-    fn test_compress_decompress_zeros_1k() {
-        let input = vec![0u8; 1024];
-        let compressed = compress(&input, 3);
-        let decompressed = crate::decompress(&compressed).unwrap();
-        assert_eq!(decompressed, input);
-    }
-
-    #[test]
-    fn test_compress_decompress_zeros_10k() {
-        let input = vec![0u8; 10240];
-        let compressed = compress(&input, 3);
-        let decompressed = crate::decompress(&compressed).unwrap();
-        assert_eq!(decompressed, input);
-    }
-
-    #[test]
-    fn test_compress_decompress_tarlike() {
-        // Simulate tar-like data: some ASCII + lots of null padding
-        let mut input = Vec::new();
-        input.extend_from_slice(b"./\x00");
-        input.extend_from_slice(&[0u8; 509]); // pad to 512
-        input.extend_from_slice(b"./usr/bin/test.sh\x00");
-        input.extend_from_slice(&[0u8; 494]); // pad to 512
-        input.extend_from_slice(b"#!/bin/sh\necho hello\n");
-        input.extend_from_slice(&[0u8; 491]); // pad to 512
-        input.extend_from_slice(&[0u8; 1024]); // end of archive
-
-        let compressed = compress(&input, 3);
-        let decompressed = crate::decompress(&compressed).unwrap();
-        assert_eq!(decompressed, input);
-    }
-
-    #[test]
-    fn test_compress_decompress_mixed_4k() {
-        // Mixed pattern: repeated text + nulls
-        let mut input = Vec::new();
-        for i in 0..100 {
-            input.extend_from_slice(format!("line {:04}\n", i).as_bytes());
-            input.extend_from_slice(&[0u8; 30]);
-        }
-
-        let compressed = compress(&input, 3);
-        let decompressed = crate::decompress(&compressed).unwrap();
-        assert_eq!(decompressed, input);
-    }
+    let compressed = compress(&input, 3);
+    let decompressed = crate::decompress(&compressed).unwrap();
+    assert_eq!(decompressed, input);
+}

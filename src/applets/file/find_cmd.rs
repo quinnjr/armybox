@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
+use crate::applets::get_arg;
+use crate::io;
 use alloc::boxed::Box;
 use alloc::ffi::CString;
 use alloc::vec::Vec;
-use crate::io;
-use crate::applets::get_arg;
 
 /// A parsed predicate (leaf of the expression tree).
 enum Pred {
@@ -87,7 +87,10 @@ pub fn find(argc: i32, argv: *const *const u8) -> i32 {
 
     // Pre-pass over expression tokens: extract global options (-depth,
     // -maxdepth) and gather the remaining predicate/operator tokens.
-    let mut cfg = Cfg { depth_first: false, maxdepth: usize::MAX };
+    let mut cfg = Cfg {
+        depth_first: false,
+        maxdepth: usize::MAX,
+    };
     let mut toks: Vec<&'static [u8]> = Vec::new();
     while i < argc {
         let a = match unsafe { get_arg(argv, i) } {
@@ -117,7 +120,12 @@ pub fn find(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     // Parse the expression.
-    let mut parser = Parser { toks: &toks, pos: 0, has_action: false, error: false };
+    let mut parser = Parser {
+        toks: &toks,
+        pos: 0,
+        has_action: false,
+        error: false,
+    };
     let expr = match parser.parse() {
         Some(e) if !parser.error && parser.pos == toks.len() => e,
         _ => {
@@ -307,7 +315,11 @@ fn eval_pred(
             e > (*sec, *nsec)
         }
         Pred::Size { cmp, unit, count } => {
-            let bytes = if st.st_size < 0 { 0u64 } else { st.st_size as u64 };
+            let bytes = if st.st_size < 0 {
+                0u64
+            } else {
+                st.st_size as u64
+            };
             // Round the size up to whole units (POSIX/GNU semantics).
             let units = if *unit <= 1 {
                 bytes
@@ -323,9 +335,9 @@ fn eval_pred(
         Pred::Perm { mode, kind } => {
             let bits = st.st_mode & 0o7777;
             match kind {
-                1 => (bits & mode) == *mode, // -MODE : all listed bits set
+                1 => (bits & mode) == *mode,           // -MODE : all listed bits set
                 2 => *mode == 0 || (bits & mode) != 0, // /MODE : any listed bit set
-                _ => bits == *mode,          // MODE : exact
+                _ => bits == *mode,                    // MODE : exact
             }
         }
     }
@@ -388,14 +400,20 @@ fn run_exec(template: &[&[u8]], path: &[u8], ret: &mut i32) -> bool {
             .chain(core::iter::once(core::ptr::null()))
             .collect();
         if !ptrs.is_empty() {
-            unsafe { libc::execvp(ptrs[0], ptrs.as_ptr()); }
+            unsafe {
+                libc::execvp(ptrs[0], ptrs.as_ptr());
+            }
         }
         io::write_str(2, b"find: exec failed\n");
-        unsafe { libc::_exit(127); }
+        unsafe {
+            libc::_exit(127);
+        }
     }
 
     let mut status = 0i32;
-    unsafe { libc::waitpid(pid, &mut status, 0); }
+    unsafe {
+        libc::waitpid(pid, &mut status, 0);
+    }
     let ok = libc::WIFEXITED(status) && libc::WEXITSTATUS(status) == 0;
     if !ok {
         *ret = 1;
@@ -765,9 +783,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -777,13 +795,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_find_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_find_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -796,7 +820,9 @@ mod tests {
     #[test]
     fn test_find_all() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "").unwrap();
@@ -820,7 +846,9 @@ mod tests {
     #[test]
     fn test_find_by_name() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "").unwrap();
@@ -841,7 +869,9 @@ mod tests {
     #[test]
     fn test_find_by_type() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file.txt"), "").unwrap();
@@ -862,12 +892,11 @@ mod tests {
     #[test]
     fn test_find_default_path() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["find"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["find"]).output().unwrap();
 
         // Should search current directory
         assert_eq!(output.status.code(), Some(0));

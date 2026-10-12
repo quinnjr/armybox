@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/echo.html
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// echo - display a line of text
 ///
@@ -52,8 +52,8 @@ pub fn echo(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -63,14 +63,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_echo_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["echo", "hello", "world"])
@@ -78,13 +82,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "hello world\n");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout),
+            "hello world\n"
+        );
     }
 
     #[test]
     fn test_echo_no_newline() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["echo", "-n", "hello"])
@@ -92,18 +101,20 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "hello");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout),
+            "hello"
+        );
     }
 
     #[test]
     fn test_echo_empty() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["echo"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["echo"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "\n");
@@ -112,7 +123,9 @@ mod tests {
     #[test]
     fn test_echo_special_chars() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["echo", "hello\tworld"])

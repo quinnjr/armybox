@@ -2,9 +2,9 @@
 //!
 //! Print the prime factors of each number.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// factor - factor numbers
 ///
@@ -20,7 +20,9 @@ use super::get_arg;
 /// - 0: Success
 /// - 1: No arguments
 pub fn factor(argc: i32, argv: *const *const u8) -> i32 {
-    if argc < 2 { return 1; }
+    if argc < 2 {
+        return 1;
+    }
 
     for i in 1..argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
@@ -50,8 +52,8 @@ pub fn factor(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -61,14 +63,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_factor_prime() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["factor", "17"])
@@ -83,7 +89,9 @@ mod tests {
     #[test]
     fn test_factor_composite() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["factor", "12"])
@@ -98,7 +106,9 @@ mod tests {
     #[test]
     fn test_factor_large() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["factor", "100"])

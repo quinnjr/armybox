@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/paste.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// paste - merge lines of files
 ///
@@ -105,7 +105,9 @@ pub fn paste(argc: i32, argv: *const *const u8) -> i32 {
                 }
 
                 let content = io::read_all(fd);
-                if fd != 0 { io::close(fd); }
+                if fd != 0 {
+                    io::close(fd);
+                }
 
                 let lines = split_lines(&content);
                 for (idx, line) in lines.iter().enumerate() {
@@ -142,7 +144,9 @@ pub fn paste(argc: i32, argv: *const *const u8) -> i32 {
                 }
 
                 let content = io::read_all(fd);
-                if fd != 0 { io::close(fd); }
+                if fd != 0 {
+                    io::close(fd);
+                }
                 contents.push(content);
             }
 
@@ -167,7 +171,9 @@ pub fn paste(argc: i32, argv: *const *const u8) -> i32 {
             }
         }
 
-        if had_error { return 1; }
+        if had_error {
+            return 1;
+        }
         return 0;
     }
 
@@ -183,7 +189,9 @@ pub fn paste(argc: i32, argv: *const *const u8) -> i32 {
 /// consecutive fields). A marker byte of 0 means "no delimiter".
 #[cfg(feature = "alloc")]
 fn write_delim(delims: &[u8], gap: usize) -> bool {
-    if delims.is_empty() { return true; }
+    if delims.is_empty() {
+        return true;
+    }
     let d = delims[gap % delims.len()];
     if d != 0 {
         return io::write_all(1, &[d]) >= 0;
@@ -236,9 +244,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -248,13 +256,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_paste_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_paste_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -267,7 +281,9 @@ mod tests {
     #[test]
     fn test_paste_two_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file1 = dir.join("file1.txt");
@@ -291,7 +307,9 @@ mod tests {
     #[test]
     fn test_paste_serial() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
@@ -311,7 +329,9 @@ mod tests {
     #[test]
     fn test_paste_custom_delimiter() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file1 = dir.join("file1.txt");
@@ -320,7 +340,13 @@ mod tests {
         fs::write(&file2, "1\n2\n").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["paste", "-d", ",", file1.to_str().unwrap(), file2.to_str().unwrap()])
+            .args([
+                "paste",
+                "-d",
+                ",",
+                file1.to_str().unwrap(),
+                file2.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 

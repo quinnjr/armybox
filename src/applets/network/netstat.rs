@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use alloc::string::String;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 // TCP states
 const TCP_ESTABLISHED: u8 = 1;
@@ -128,7 +128,10 @@ pub fn netstat(argc: i32, argv: *const *const u8) -> i32 {
     if show_pid {
         io::write_str(1, b"Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program\n");
     } else {
-        io::write_str(1, b"Proto Recv-Q Send-Q Local Address           Foreign Address         State\n");
+        io::write_str(
+            1,
+            b"Proto Recv-Q Send-Q Local Address           Foreign Address         State\n",
+        );
     }
 
     if show_tcp {
@@ -145,8 +148,18 @@ pub fn netstat(argc: i32, argv: *const *const u8) -> i32 {
 }
 
 /// Show TCP connections
-fn show_tcp_connections(listening_only: bool, show_all: bool, numeric: bool, show_pid: bool, ipv6: bool) {
-    let path = if ipv6 { b"/proc/net/tcp6" as &[u8] } else { b"/proc/net/tcp" };
+fn show_tcp_connections(
+    listening_only: bool,
+    show_all: bool,
+    numeric: bool,
+    show_pid: bool,
+    ipv6: bool,
+) {
+    let path = if ipv6 {
+        b"/proc/net/tcp6" as &[u8]
+    } else {
+        b"/proc/net/tcp"
+    };
     let proto = if ipv6 { b"tcp6  " } else { b"tcp   " };
 
     let fd = io::open(path, libc::O_RDONLY, 0);
@@ -177,8 +190,18 @@ fn show_tcp_connections(listening_only: bool, show_all: bool, numeric: bool, sho
 }
 
 /// Show UDP connections
-fn show_udp_connections(listening_only: bool, show_all: bool, numeric: bool, show_pid: bool, ipv6: bool) {
-    let path = if ipv6 { b"/proc/net/udp6" as &[u8] } else { b"/proc/net/udp" };
+fn show_udp_connections(
+    listening_only: bool,
+    show_all: bool,
+    numeric: bool,
+    show_pid: bool,
+    ipv6: bool,
+) {
+    let path = if ipv6 {
+        b"/proc/net/udp6" as &[u8]
+    } else {
+        b"/proc/net/udp"
+    };
     let proto = if ipv6 { b"udp6  " } else { b"udp   " };
 
     let fd = io::open(path, libc::O_RDONLY, 0);
@@ -227,7 +250,8 @@ struct NetEntry {
 
 /// Parse a TCP entry from /proc/net/tcp
 fn parse_tcp_entry(line: &[u8], ipv6: bool) -> Option<NetEntry> {
-    let fields: Vec<&[u8]> = line.split(|&c| c == b' ')
+    let fields: Vec<&[u8]> = line
+        .split(|&c| c == b' ')
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -333,25 +357,45 @@ fn print_connection(proto: &[u8], entry: &NetEntry, numeric: bool, show_pid: boo
     // Recv-Q
     let mut buf = [0u8; 16];
     let recv = sys::format_u64(entry.recv_q as u64, &mut buf);
-    for _ in recv.len()..6 { io::write_str(1, b" "); }
+    for _ in recv.len()..6 {
+        io::write_str(1, b" ");
+    }
     io::write_all(1, recv);
     io::write_str(1, b" ");
 
     // Send-Q
     let send = sys::format_u64(entry.send_q as u64, &mut buf);
-    for _ in send.len()..6 { io::write_str(1, b" "); }
+    for _ in send.len()..6 {
+        io::write_str(1, b" ");
+    }
     io::write_all(1, send);
     io::write_str(1, b" ");
 
     // Local address
-    let local = format_addr(entry.local_addr, &entry.local_addr6, entry.local_port, entry.is_ipv6, numeric);
+    let local = format_addr(
+        entry.local_addr,
+        &entry.local_addr6,
+        entry.local_port,
+        entry.is_ipv6,
+        numeric,
+    );
     io::write_all(1, local.as_bytes());
-    for _ in local.len()..24 { io::write_str(1, b" "); }
+    for _ in local.len()..24 {
+        io::write_str(1, b" ");
+    }
 
     // Foreign address
-    let remote = format_addr(entry.remote_addr, &entry.remote_addr6, entry.remote_port, entry.is_ipv6, numeric);
+    let remote = format_addr(
+        entry.remote_addr,
+        &entry.remote_addr6,
+        entry.remote_port,
+        entry.is_ipv6,
+        numeric,
+    );
     io::write_all(1, remote.as_bytes());
-    for _ in remote.len()..24 { io::write_str(1, b" "); }
+    for _ in remote.len()..24 {
+        io::write_str(1, b" ");
+    }
 
     // State
     let state_str = tcp_state_name(entry.state);
@@ -385,7 +429,10 @@ fn format_addr(addr: u32, addr6: &[u8; 16], port: u16, ipv6: bool, numeric: bool
             // Check for IPv4-mapped IPv6
             if addr6[..10].iter().all(|&b| b == 0) && addr6[10] == 0xff && addr6[11] == 0xff {
                 result.push_str("::ffff:");
-                format_ipv4(&mut result, u32::from_be_bytes([addr6[12], addr6[13], addr6[14], addr6[15]]));
+                format_ipv4(
+                    &mut result,
+                    u32::from_be_bytes([addr6[12], addr6[13], addr6[14], addr6[15]]),
+                );
             } else {
                 format_ipv6(&mut result, addr6);
             }
@@ -426,29 +473,41 @@ fn format_ipv4(result: &mut String, addr: u32) {
     let mut buf = [0u8; 8];
 
     let s = sys::format_u64(bytes[0] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
 
     let s = sys::format_u64(bytes[1] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
 
     let s = sys::format_u64(bytes[2] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
 
     let s = sys::format_u64(bytes[3] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
 }
 
 fn format_ipv6(result: &mut String, addr: &[u8; 16]) {
     // Simplified: just show as hex groups
     for i in 0..8 {
-        if i > 0 { result.push(':'); }
+        if i > 0 {
+            result.push(':');
+        }
         let val = ((addr[i * 2] as u16) << 8) | (addr[i * 2 + 1] as u16);
         let mut buf = [0u8; 8];
         let s = sys::format_hex(val as u64, &mut buf);
-        for &b in s { result.push(b as char); }
+        for &b in s {
+            result.push(b as char);
+        }
     }
 }
 
@@ -517,7 +576,10 @@ fn find_process_by_inode(inode: u64) -> Option<(u64, String)> {
                     }
 
                     let fd_name = unsafe { &(*fd_entry).d_name };
-                    let fd_len = fd_name.iter().position(|&c| c == 0).unwrap_or(fd_name.len());
+                    let fd_len = fd_name
+                        .iter()
+                        .position(|&c| c == 0)
+                        .unwrap_or(fd_name.len());
                     let fd_name_u8: &[u8] = unsafe { core::mem::transmute(&fd_name[..fd_len]) };
 
                     if fd_name_u8 == b"." || fd_name_u8 == b".." {
@@ -534,7 +596,7 @@ fn find_process_by_inode(inode: u64) -> Option<(u64, String)> {
                         libc::readlink(
                             link_path.as_ptr() as *const libc::c_char,
                             link_buf.as_mut_ptr() as *mut libc::c_char,
-                            link_buf.len()
+                            link_buf.len(),
                         )
                     };
 
@@ -553,7 +615,8 @@ fn find_process_by_inode(inode: u64) -> Option<(u64, String)> {
                                 let n = io::read(comm_fd, &mut buf);
                                 io::close(comm_fd);
                                 if n > 0 {
-                                    let end = buf[..n as usize].iter()
+                                    let end = buf[..n as usize]
+                                        .iter()
                                         .position(|&c| c == b'\n' || c == 0)
                                         .unwrap_or(n as usize);
                                     // Convert bytes to string manually
@@ -590,7 +653,10 @@ fn find_process_by_inode(inode: u64) -> Option<(u64, String)> {
 /// Show routing table
 fn show_routing_table() {
     io::write_str(1, b"Kernel IP routing table\n");
-    io::write_str(1, b"Destination     Gateway         Genmask         Flags Metric Ref    Use Iface\n");
+    io::write_str(
+        1,
+        b"Destination     Gateway         Genmask         Flags Metric Ref    Use Iface\n",
+    );
 
     let fd = io::open(b"/proc/net/route", libc::O_RDONLY, 0);
     if fd < 0 {
@@ -605,7 +671,8 @@ fn show_routing_table() {
             continue;
         }
 
-        let fields: Vec<&[u8]> = line.split(|&c| c == b'\t')
+        let fields: Vec<&[u8]> = line
+            .split(|&c| c == b'\t')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -624,32 +691,50 @@ fn show_routing_table() {
         // Format destination
         let dest_str = format_route_addr(dest);
         io::write_all(1, dest_str.as_bytes());
-        for _ in dest_str.len()..16 { io::write_str(1, b" "); }
+        for _ in dest_str.len()..16 {
+            io::write_str(1, b" ");
+        }
 
         // Format gateway
         let gw_str = format_route_addr(gateway);
         io::write_all(1, gw_str.as_bytes());
-        for _ in gw_str.len()..16 { io::write_str(1, b" "); }
+        for _ in gw_str.len()..16 {
+            io::write_str(1, b" ");
+        }
 
         // Format mask
         let mask_str = format_route_addr(mask);
         io::write_all(1, mask_str.as_bytes());
-        for _ in mask_str.len()..16 { io::write_str(1, b" "); }
+        for _ in mask_str.len()..16 {
+            io::write_str(1, b" ");
+        }
 
         // Flags
         let mut flag_str = Vec::new();
-        if flags & 0x01 != 0 { flag_str.push(b'U'); } // Up
-        if flags & 0x02 != 0 { flag_str.push(b'G'); } // Gateway
-        if flags & 0x04 != 0 { flag_str.push(b'H'); } // Host
-        if flag_str.is_empty() { flag_str.push(b'-'); }
+        if flags & 0x01 != 0 {
+            flag_str.push(b'U');
+        } // Up
+        if flags & 0x02 != 0 {
+            flag_str.push(b'G');
+        } // Gateway
+        if flags & 0x04 != 0 {
+            flag_str.push(b'H');
+        } // Host
+        if flag_str.is_empty() {
+            flag_str.push(b'-');
+        }
         io::write_all(1, &flag_str);
-        for _ in flag_str.len()..6 { io::write_str(1, b" "); }
+        for _ in flag_str.len()..6 {
+            io::write_str(1, b" ");
+        }
 
         // Metric
         let mut buf = [0u8; 16];
         let m = sys::format_u64(metric, &mut buf);
         io::write_all(1, m);
-        for _ in m.len()..7 { io::write_str(1, b" "); }
+        for _ in m.len()..7 {
+            io::write_str(1, b" ");
+        }
 
         // Ref and Use (always 0 on Linux)
         io::write_str(1, b"0      0 ");
@@ -670,16 +755,24 @@ fn format_route_addr(addr: u32) -> String {
     let mut buf = [0u8; 8];
 
     let s = sys::format_u64(bytes[0] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
     let s = sys::format_u64(bytes[1] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
     let s = sys::format_u64(bytes[2] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
     result.push('.');
     let s = sys::format_u64(bytes[3] as u64, &mut buf);
-    for &b in s { result.push(b as char); }
+    for &b in s {
+        result.push(b as char);
+    }
 
     result
 }
@@ -687,7 +780,10 @@ fn format_route_addr(addr: u32) -> String {
 /// Show interface statistics
 fn show_interface_stats() {
     io::write_str(1, b"Kernel Interface table\n");
-    io::write_str(1, b"Iface      MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg\n");
+    io::write_str(
+        1,
+        b"Iface      MTU    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg\n",
+    );
 
     let fd = io::open(b"/proc/net/dev", libc::O_RDONLY, 0);
     if fd < 0 {
@@ -705,13 +801,15 @@ fn show_interface_stats() {
         // Format: iface: rx_bytes rx_packets rx_errs rx_drop ... tx_bytes tx_packets tx_errs tx_drop ...
         if let Some(colon) = line.iter().position(|&c| c == b':') {
             let iface = &line[..colon];
-            let iface_trimmed = iface.iter()
+            let iface_trimmed = iface
+                .iter()
                 .skip_while(|&&c| c == b' ')
                 .copied()
                 .collect::<Vec<u8>>();
 
             let stats = &line[colon + 1..];
-            let fields: Vec<u64> = stats.split(|&c| c == b' ')
+            let fields: Vec<u64> = stats
+                .split(|&c| c == b' ')
                 .filter(|s| !s.is_empty())
                 .filter_map(|s| sys::parse_u64(s))
                 .collect();
@@ -719,7 +817,9 @@ fn show_interface_stats() {
             if fields.len() >= 16 {
                 // iface
                 io::write_all(1, &iface_trimmed);
-                for _ in iface_trimmed.len()..11 { io::write_str(1, b" "); }
+                for _ in iface_trimmed.len()..11 {
+                    io::write_str(1, b" ");
+                }
 
                 // MTU (get from /sys)
                 let mut mtu_path = Vec::new();
@@ -731,41 +831,59 @@ fn show_interface_stats() {
                 let mut buf = [0u8; 16];
                 let m = sys::format_u64(mtu, &mut buf);
                 io::write_all(1, m);
-                for _ in m.len()..7 { io::write_str(1, b" "); }
+                for _ in m.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 // RX: packets, errors, dropped, overrun
                 let rx_ok = sys::format_u64(fields[1], &mut buf);
                 io::write_all(1, rx_ok);
-                for _ in rx_ok.len()..6 { io::write_str(1, b" "); }
+                for _ in rx_ok.len()..6 {
+                    io::write_str(1, b" ");
+                }
 
                 let rx_err = sys::format_u64(fields[2], &mut buf);
                 io::write_all(1, rx_err);
-                for _ in rx_err.len()..7 { io::write_str(1, b" "); }
+                for _ in rx_err.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 let rx_drp = sys::format_u64(fields[3], &mut buf);
                 io::write_all(1, rx_drp);
-                for _ in rx_drp.len()..7 { io::write_str(1, b" "); }
+                for _ in rx_drp.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 let rx_ovr = sys::format_u64(fields[4], &mut buf);
                 io::write_all(1, rx_ovr);
-                for _ in rx_ovr.len()..10 { io::write_str(1, b" "); }
+                for _ in rx_ovr.len()..10 {
+                    io::write_str(1, b" ");
+                }
 
                 // TX: packets, errors, dropped, overrun
                 let tx_ok = sys::format_u64(fields[9], &mut buf);
                 io::write_all(1, tx_ok);
-                for _ in tx_ok.len()..7 { io::write_str(1, b" "); }
+                for _ in tx_ok.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 let tx_err = sys::format_u64(fields[10], &mut buf);
                 io::write_all(1, tx_err);
-                for _ in tx_err.len()..7 { io::write_str(1, b" "); }
+                for _ in tx_err.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 let tx_drp = sys::format_u64(fields[11], &mut buf);
                 io::write_all(1, tx_drp);
-                for _ in tx_drp.len()..7 { io::write_str(1, b" "); }
+                for _ in tx_drp.len()..7 {
+                    io::write_str(1, b" ");
+                }
 
                 let tx_ovr = sys::format_u64(fields[12], &mut buf);
                 io::write_all(1, tx_ovr);
-                for _ in tx_ovr.len()..5 { io::write_str(1, b" "); }
+                for _ in tx_ovr.len()..5 {
+                    io::write_str(1, b" ");
+                }
 
                 // Flags
                 io::write_str(1, b"BMRU\n");
@@ -787,7 +905,8 @@ fn read_sysfs_value(path: &[u8]) -> Option<u64> {
         return None;
     }
 
-    let end = buf[..n as usize].iter()
+    let end = buf[..n as usize]
+        .iter()
         .position(|&c| c == b'\n' || c == 0)
         .unwrap_or(n as usize);
 
@@ -796,7 +915,10 @@ fn read_sysfs_value(path: &[u8]) -> Option<u64> {
 
 fn print_help() {
     io::write_str(1, b"Usage: netstat [OPTIONS]\n\n");
-    io::write_str(1, b"Display network connections, routing tables, interface statistics.\n\n");
+    io::write_str(
+        1,
+        b"Display network connections, routing tables, interface statistics.\n\n",
+    );
     io::write_str(1, b"Options:\n");
     io::write_str(1, b"  -t, --tcp         Show TCP connections\n");
     io::write_str(1, b"  -u, --udp         Show UDP connections\n");
@@ -812,8 +934,8 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -823,19 +945,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_netstat_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["netstat"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["netstat"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -845,7 +968,9 @@ mod tests {
     #[test]
     fn test_netstat_listening() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["netstat", "-l"])
@@ -860,7 +985,9 @@ mod tests {
     #[test]
     fn test_netstat_route() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["netstat", "-r"])
@@ -875,7 +1002,9 @@ mod tests {
     #[test]
     fn test_netstat_interfaces() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["netstat", "-i"])

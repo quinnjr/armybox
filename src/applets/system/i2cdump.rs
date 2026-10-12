@@ -2,9 +2,9 @@
 //!
 //! Examine I2C registers on a connected device.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // I2C ioctl
 const I2C_SLAVE: crate::io::IoctlReq = 0x0703u32 as crate::io::IoctlReq;
@@ -137,8 +137,8 @@ fn parse_addr(s: &[u8]) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -148,19 +148,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_i2cdump_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["i2cdump"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["i2cdump"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -170,7 +171,9 @@ mod tests {
     #[test]
     fn test_i2cdump_nonexistent_bus() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["i2cdump", "-y", "99", "0x50"])

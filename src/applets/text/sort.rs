@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/sort.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 use core::cmp::Ordering;
 
 #[inline]
@@ -36,18 +36,14 @@ fn parse_pos(s: &[u8]) -> (usize, usize) {
     let mut i = 0;
     let mut f: usize = 0;
     while i < s.len() && s[i].is_ascii_digit() {
-        f = f
-            .saturating_mul(10)
-            .saturating_add((s[i] - b'0') as usize);
+        f = f.saturating_mul(10).saturating_add((s[i] - b'0') as usize);
         i += 1;
     }
     let mut c: usize = 0;
     if i < s.len() && s[i] == b'.' {
         i += 1;
         while i < s.len() && s[i].is_ascii_digit() {
-            c = c
-                .saturating_mul(10)
-                .saturating_add((s[i] - b'0') as usize);
+            c = c.saturating_mul(10).saturating_add((s[i] - b'0') as usize);
             i += 1;
         }
     }
@@ -57,10 +53,17 @@ fn parse_pos(s: &[u8]) -> (usize, usize) {
 fn parse_keydef(s: &[u8]) -> KeyDef {
     let mut comma = s.len();
     for (idx, &c) in s.iter().enumerate() {
-        if c == b',' { comma = idx; break; }
+        if c == b',' {
+            comma = idx;
+            break;
+        }
     }
     let (sf, sc) = parse_pos(&s[..comma]);
-    let (ef, ec) = if comma < s.len() { parse_pos(&s[comma + 1..]) } else { (0, 0) };
+    let (ef, ec) = if comma < s.len() {
+        parse_pos(&s[comma + 1..])
+    } else {
+        (0, 0)
+    };
     KeyDef {
         start_field: if sf == 0 { 1 } else { sf },
         start_char: sc,
@@ -76,15 +79,23 @@ fn field_start(line: &[u8], skip: usize, sep: Option<u8>) -> usize {
         Some(s) => {
             let mut k = 0;
             while k < skip && pos < line.len() {
-                while pos < line.len() && line[pos] != s { pos += 1; }
-                if pos < line.len() { pos += 1; } // consume separator
+                while pos < line.len() && line[pos] != s {
+                    pos += 1;
+                }
+                if pos < line.len() {
+                    pos += 1;
+                } // consume separator
                 k += 1;
             }
         }
         None => {
             for _ in 0..skip {
-                while pos < line.len() && is_blank(line[pos]) { pos += 1; }
-                while pos < line.len() && !is_blank(line[pos]) { pos += 1; }
+                while pos < line.len() && is_blank(line[pos]) {
+                    pos += 1;
+                }
+                while pos < line.len() && !is_blank(line[pos]) {
+                    pos += 1;
+                }
             }
         }
     }
@@ -97,7 +108,9 @@ fn field_end(line: &[u8], field: usize, sep: Option<u8>) -> usize {
         Some(s) => {
             let start = field_start(line, field - 1, Some(s));
             let mut pos = start;
-            while pos < line.len() && line[pos] != s { pos += 1; }
+            while pos < line.len() && line[pos] != s {
+                pos += 1;
+            }
             pos
         }
         None => field_start(line, field, None),
@@ -108,10 +121,14 @@ fn field_end(line: &[u8], field: usize, sep: Option<u8>) -> usize {
 /// optional decimal fraction. Non-numeric input yields 0.
 fn parse_num(s: &[u8]) -> f64 {
     let mut i = 0;
-    while i < s.len() && is_blank(s[i]) { i += 1; }
+    while i < s.len() && is_blank(s[i]) {
+        i += 1;
+    }
     let mut sign = 1.0f64;
     if i < s.len() && (s[i] == b'+' || s[i] == b'-') {
-        if s[i] == b'-' { sign = -1.0; }
+        if s[i] == b'-' {
+            sign = -1.0;
+        }
         i += 1;
     }
     let mut val = 0.0f64;
@@ -146,21 +163,35 @@ fn fold_cmp(a: &[u8], b: &[u8]) -> Ordering {
     while i < n {
         let ca = to_lower(a[i]);
         let cb = to_lower(b[i]);
-        if ca != cb { return ca.cmp(&cb); }
+        if ca != cb {
+            return ca.cmp(&cb);
+        }
         i += 1;
     }
     a.len().cmp(&b.len())
 }
 
 fn print_usage() {
-    io::write_str(1, b"Usage: sort [-cmnrufb] [-o output] [-t char] [-k keydef] [file...]\n");
+    io::write_str(
+        1,
+        b"Usage: sort [-cmnrufb] [-o output] [-t char] [-k keydef] [file...]\n",
+    );
     io::write_str(1, b"Sort, merge, or sequence check text files.\n\n");
-    io::write_str(1, b"  -n            compare according to string numerical value\n");
+    io::write_str(
+        1,
+        b"  -n            compare according to string numerical value\n",
+    );
     io::write_str(1, b"  -r            reverse the result of comparisons\n");
-    io::write_str(1, b"  -u            output only the first of an equal run\n");
+    io::write_str(
+        1,
+        b"  -u            output only the first of an equal run\n",
+    );
     io::write_str(1, b"  -b            ignore leading blanks\n");
     io::write_str(1, b"  -f            fold lowercase to uppercase\n");
-    io::write_str(1, b"  -c            check whether input is already sorted\n");
+    io::write_str(
+        1,
+        b"  -c            check whether input is already sorted\n",
+    );
     io::write_str(1, b"  -k KEYDEF     sort key definition\n");
     io::write_str(1, b"  -t CHAR       field separator character\n");
     io::write_str(1, b"  -o FILE       write output to FILE\n");
@@ -211,7 +242,10 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
         while i < argc {
             let arg = match unsafe { get_arg(argv, i) } {
                 Some(a) => a,
-                None => { i += 1; continue; }
+                None => {
+                    i += 1;
+                    continue;
+                }
             };
             if arg == b"--help" {
                 print_usage();
@@ -263,7 +297,9 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
                                 i += 1;
                                 unsafe { get_arg(argv, i) }.unwrap_or(b"")
                             };
-                            if !val.is_empty() { sep = Some(val[0]); }
+                            if !val.is_empty() {
+                                sep = Some(val[0]);
+                            }
                             break;
                         }
                         _ => {}
@@ -303,7 +339,9 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
             let mut parts: Vec<&[u8]> = buf.split(|&c| c == b'\n').collect();
             // Drop only the single trailing empty element from a trailing newline.
             if let Some(last) = parts.last() {
-                if last.is_empty() { parts.pop(); }
+                if last.is_empty() {
+                    parts.pop();
+                }
             }
             lines.extend_from_slice(&parts);
         }
@@ -314,14 +352,18 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
                 None => {
                     let mut s = 0;
                     if ignore_blanks {
-                        while s < line.len() && is_blank(line[s]) { s += 1; }
+                        while s < line.len() && is_blank(line[s]) {
+                            s += 1;
+                        }
                     }
                     (s, line.len())
                 }
                 Some(k) => {
                     let mut s = field_start(line, k.start_field - 1, sep);
                     if ignore_blanks {
-                        while s < line.len() && is_blank(line[s]) { s += 1; }
+                        while s < line.len() && is_blank(line[s]) {
+                            s += 1;
+                        }
                     }
                     if k.start_char > 1 {
                         s = imin(line.len(), s + (k.start_char - 1));
@@ -333,7 +375,9 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
                     } else {
                         let mut base = field_start(line, k.end_field - 1, sep);
                         if ignore_blanks {
-                            while base < line.len() && is_blank(line[base]) { base += 1; }
+                            while base < line.len() && is_blank(line[base]) {
+                                base += 1;
+                            }
                         }
                         imin(line.len(), base + k.end_char)
                     };
@@ -360,7 +404,11 @@ pub fn sort(argc: i32, argv: *const *const u8) -> i32 {
         if check {
             for w in 1..lines.len() {
                 let ord = cmp(lines[w - 1], lines[w]);
-                let bad = if reverse { ord == Ordering::Less } else { ord == Ordering::Greater };
+                let bad = if reverse {
+                    ord == Ordering::Less
+                } else {
+                    ord == Ordering::Greater
+                };
                 if bad {
                     io::write_str(2, b"sort: input not sorted\n");
                     return 1;
@@ -423,10 +471,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::{Command, Stdio};
-    use std::io::Write;
     use std::fs;
+    use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -436,13 +484,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_sort_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_sort_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -455,7 +509,9 @@ mod tests {
     #[test]
     fn test_sort_alphabetic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
@@ -476,7 +532,9 @@ mod tests {
     #[test]
     fn test_sort_numeric() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sort", "-n"])
@@ -500,7 +558,9 @@ mod tests {
     #[test]
     fn test_sort_reverse() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sort", "-r"])
@@ -524,7 +584,9 @@ mod tests {
     #[test]
     fn test_sort_unique() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sort", "-u"])

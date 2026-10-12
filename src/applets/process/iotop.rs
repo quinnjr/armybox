@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// Process I/O information
 struct ProcessIO {
@@ -98,7 +98,9 @@ pub fn iotop(argc: i32, argv: *const *const u8) -> i32 {
     loop {
         // Sleep
         if iter_count > 0 {
-            unsafe { libc::sleep(delay_secs); }
+            unsafe {
+                libc::sleep(delay_secs);
+            }
         }
 
         // Collect new stats
@@ -112,7 +114,10 @@ pub fn iotop(argc: i32, argv: *const *const u8) -> i32 {
             let (read_rate, write_rate) = if let Some(p) = prev {
                 let read_diff = new.read_bytes.saturating_sub(p.read_bytes);
                 let write_diff = new.write_bytes.saturating_sub(p.write_bytes);
-                (read_diff / delay_secs as u64, write_diff / delay_secs as u64)
+                (
+                    read_diff / delay_secs as u64,
+                    write_diff / delay_secs as u64,
+                )
             } else {
                 (0, 0)
             };
@@ -150,16 +155,25 @@ pub fn iotop(argc: i32, argv: *const *const u8) -> i32 {
             print_rate(total_write);
             io::write_str(1, b"\n");
 
-            io::write_str(1, b"    PID  PRIO  USER     DISK READ  DISK WRITE  COMMAND\n");
+            io::write_str(
+                1,
+                b"    PID  PRIO  USER     DISK READ  DISK WRITE  COMMAND\n",
+            );
         }
 
         // Print entries (limit to 20 in non-batch mode)
-        let limit = if batch_mode { entries.len() } else { 20.min(entries.len()) };
+        let limit = if batch_mode {
+            entries.len()
+        } else {
+            20.min(entries.len())
+        };
         for entry in entries.iter().take(limit) {
             // PID
             let mut buf = [0u8; 16];
             let pid_str = sys::format_u64(entry.pid as u64, &mut buf);
-            for _ in pid_str.len()..7 { io::write_str(1, b" "); }
+            for _ in pid_str.len()..7 {
+                io::write_str(1, b" ");
+            }
             io::write_all(1, pid_str);
             io::write_str(1, b"  ");
 
@@ -170,7 +184,9 @@ pub fn iotop(argc: i32, argv: *const *const u8) -> i32 {
             let uid = get_process_uid(entry.pid);
             let user = get_username(uid);
             io::write_all(1, &user);
-            for _ in user.len()..9 { io::write_str(1, b" "); }
+            for _ in user.len()..9 {
+                io::write_str(1, b" ");
+            }
 
             // Read rate
             print_rate_padded(entry.read_rate, 11);
@@ -181,7 +197,11 @@ pub fn iotop(argc: i32, argv: *const *const u8) -> i32 {
             io::write_str(1, b" ");
 
             // Command
-            let comm_len = entry.comm.iter().position(|&c| c == 0).unwrap_or(entry.comm.len());
+            let comm_len = entry
+                .comm
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(entry.comm.len());
             io::write_all(1, &entry.comm[..comm_len]);
             io::write_str(1, b"\n");
         }
@@ -477,14 +497,17 @@ fn print_help() {
     io::write_str(1, b"  -p PID         Monitor only this PID\n");
     io::write_str(1, b"  -q, --quiet    Suppress header\n");
     io::write_str(1, b"  -h, --help     Show this help\n\n");
-    io::write_str(1, b"Note: Reading other processes' I/O stats requires root.\n");
+    io::write_str(
+        1,
+        b"Note: Reading other processes' I/O stats requires root.\n",
+    );
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -494,14 +517,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_iotop_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["iotop", "-b", "-n1"])
@@ -516,7 +543,9 @@ mod tests {
     #[test]
     fn test_iotop_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["iotop", "--help"])
@@ -531,7 +560,9 @@ mod tests {
     #[test]
     fn test_iotop_only_active() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["iotop", "-o", "-b", "-n1"])

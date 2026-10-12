@@ -2,9 +2,9 @@
 //!
 //! Open a new virtual terminal and run a program on it.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // VT ioctls
 const VT_OPENQRY: crate::io::IoctlReq = 0x5600u32 as crate::io::IoctlReq;
@@ -31,7 +31,10 @@ const VT_WAITACTIVE: crate::io::IoctlReq = 0x5607u32 as crate::io::IoctlReq;
 /// - 1: Error
 pub fn openvt(argc: i32, argv: *const *const u8) -> i32 {
     if argc < 2 {
-        io::write_str(2, b"openvt: usage: openvt [-c N] [-s] [-w] COMMAND [ARGS...]\n");
+        io::write_str(
+            2,
+            b"openvt: usage: openvt [-c N] [-s] [-w] COMMAND [ARGS...]\n",
+        );
         return 1;
     }
 
@@ -165,8 +168,8 @@ pub fn openvt(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -176,19 +179,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_openvt_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["openvt"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["openvt"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -198,7 +202,9 @@ mod tests {
     #[test]
     fn test_openvt_no_tty() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Will fail without TTY access
         let output = Command::new(&armybox)

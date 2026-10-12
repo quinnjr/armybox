@@ -5,8 +5,8 @@
 #[cfg(all(feature = "vi", feature = "alloc"))]
 use alloc::vec::Vec;
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// vi - screen-oriented text editor
 ///
@@ -59,8 +59,16 @@ pub fn vi(argc: i32, argv: *const *const u8) -> i32 {
     unsafe {
         libc::ioctl(1, libc::TIOCGWINSZ, &mut ws);
     }
-    editor.rows = if ws.ws_row > 2 { ws.ws_row as usize - 2 } else { 22 };
-    editor.cols = if ws.ws_col > 0 { ws.ws_col as usize } else { 80 };
+    editor.rows = if ws.ws_row > 2 {
+        ws.ws_row as usize - 2
+    } else {
+        22
+    };
+    editor.cols = if ws.ws_col > 0 {
+        ws.ws_col as usize
+    } else {
+        80
+    };
 
     // Main loop
     editor.refresh_screen();
@@ -157,7 +165,11 @@ pub fn hexedit(argc: i32, argv: *const *const u8) -> i32 {
     unsafe {
         libc::ioctl(1, libc::TIOCGWINSZ, &mut ws);
     }
-    editor.rows = if ws.ws_row > 2 { ws.ws_row as usize - 2 } else { 22 };
+    editor.rows = if ws.ws_row > 2 {
+        ws.ws_row as usize - 2
+    } else {
+        22
+    };
 
     // Main loop
     editor.refresh();
@@ -237,10 +249,7 @@ impl Editor {
     }
 
     fn load_content(&mut self, content: &[u8]) {
-        self.lines = content
-            .split(|&c| c == b'\n')
-            .map(|l| l.to_vec())
-            .collect();
+        self.lines = content.split(|&c| c == b'\n').map(|l| l.to_vec()).collect();
 
         // Remove trailing empty line if content ended with newline
         if self.lines.len() > 1 && self.lines.last().map(|l| l.is_empty()).unwrap_or(false) {
@@ -342,25 +351,29 @@ impl Editor {
         self.message.clear();
 
         match c {
-            b'h' | 0x44 => { // Left
+            b'h' | 0x44 => {
+                // Left
                 if self.cursor_x > 0 {
                     self.cursor_x -= 1;
                 }
             }
-            b'l' | 0x43 => { // Right
+            b'l' | 0x43 => {
+                // Right
                 let line_len = self.current_line().len();
                 if self.cursor_x < line_len.saturating_sub(1) {
                     self.cursor_x += 1;
                 }
             }
-            b'j' | 0x42 => { // Down
+            b'j' | 0x42 => {
+                // Down
                 if self.cursor_y < self.lines.len().saturating_sub(1) {
                     self.cursor_y += 1;
                     self.adjust_cursor_x();
                     self.scroll_if_needed();
                 }
             }
-            b'k' | 0x41 => { // Up
+            b'k' | 0x41 => {
+                // Up
                 if self.cursor_y > 0 {
                     self.cursor_y -= 1;
                     self.adjust_cursor_x();
@@ -484,13 +497,15 @@ impl Editor {
 
     fn handle_insert_key(&mut self, c: u8) {
         match c {
-            27 => { // Escape
+            27 => {
+                // Escape
                 self.mode = Mode::Normal;
                 if self.cursor_x > 0 {
                     self.cursor_x -= 1;
                 }
             }
-            127 | 8 => { // Backspace
+            127 | 8 => {
+                // Backspace
                 let cursor_x = self.cursor_x;
                 let cursor_y = self.cursor_y;
                 if cursor_x > 0 {
@@ -506,7 +521,8 @@ impl Editor {
                     self.modified = true;
                 }
             }
-            13 | 10 => { // Enter
+            13 | 10 => {
+                // Enter
                 let cursor_x = self.cursor_x;
                 let cursor_y = self.cursor_y;
                 let rest = self.lines[cursor_y][cursor_x..].to_vec();
@@ -537,15 +553,18 @@ impl Editor {
 
     fn handle_command_key(&mut self, c: u8) {
         match c {
-            27 => { // Escape
+            27 => {
+                // Escape
                 self.mode = Mode::Normal;
                 self.command_buf.clear();
             }
-            13 | 10 => { // Enter
+            13 | 10 => {
+                // Enter
                 self.execute_command();
                 self.mode = Mode::Normal;
             }
-            127 | 8 => { // Backspace
+            127 | 8 => {
+                // Backspace
                 self.command_buf.pop();
                 if self.command_buf.is_empty() {
                     self.mode = Mode::Normal;
@@ -760,25 +779,29 @@ impl HexEditor {
     fn handle_key(&mut self, c: u8) -> bool {
         match c {
             b'q' | 27 => return false,
-            b'h' | 0x44 => { // Left
+            b'h' | 0x44 => {
+                // Left
                 if self.cursor > 0 {
                     self.cursor -= 1;
                     self.scroll_if_needed();
                 }
             }
-            b'l' | 0x43 => { // Right
+            b'l' | 0x43 => {
+                // Right
                 if self.cursor < self.data.len().saturating_sub(1) {
                     self.cursor += 1;
                     self.scroll_if_needed();
                 }
             }
-            b'j' | 0x42 => { // Down
+            b'j' | 0x42 => {
+                // Down
                 if self.cursor + 16 < self.data.len() {
                     self.cursor += 16;
                     self.scroll_if_needed();
                 }
             }
-            b'k' | 0x41 => { // Up
+            b'k' | 0x41 => {
+                // Up
                 if self.cursor >= 16 {
                     self.cursor -= 16;
                     self.scroll_if_needed();
@@ -786,7 +809,11 @@ impl HexEditor {
             }
             b'w' => {
                 // Write file
-                let fd = io::open(&self.filename, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+                let fd = io::open(
+                    &self.filename,
+                    libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                    0o644,
+                );
                 if fd >= 0 {
                     io::write_all(fd, &self.data);
                     io::close(fd);
@@ -822,7 +849,10 @@ impl HexEditor {
 // ============================================================================
 
 /// Read a key from stdin
-#[cfg(any(all(feature = "vi", feature = "alloc"), all(feature = "hexedit", feature = "alloc")))]
+#[cfg(any(
+    all(feature = "vi", feature = "alloc"),
+    all(feature = "hexedit", feature = "alloc")
+))]
 fn read_key() -> u8 {
     let mut c = [0u8; 1];
     let n = io::read(0, &mut c);
@@ -884,7 +914,10 @@ fn find_pattern(line: &[u8], pattern: &[u8], start: usize) -> Option<usize> {
     None
 }
 
-#[cfg(any(all(feature = "vi", feature = "alloc"), all(feature = "hexedit", feature = "alloc")))]
+#[cfg(any(
+    all(feature = "vi", feature = "alloc"),
+    all(feature = "hexedit", feature = "alloc")
+))]
 fn format_hex_addr(addr: usize) -> [u8; 8] {
     let mut result = [b'0'; 8];
     let mut tmp = [0u8; 16];

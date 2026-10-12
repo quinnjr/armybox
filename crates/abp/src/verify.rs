@@ -4,12 +4,12 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use crate::io;
-use crate::crypto::{sha256, key_id, PublicKey};
+use crate::crypto::{PublicKey, key_id, sha256};
 use crate::database::Database;
 use crate::format::{AbpPackage, ManifestEntry};
+use crate::io;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Verification result
 #[derive(Clone)]
@@ -195,7 +195,8 @@ pub fn verify_installed(packages: &[&[u8]]) -> i32 {
         db.list_packages().iter().map(|p| p.name.clone()).collect()
     } else {
         // Verify specified packages
-        packages.iter()
+        packages
+            .iter()
             .filter_map(|p| core::str::from_utf8(p).ok())
             .map(String::from)
             .collect()
@@ -277,11 +278,7 @@ pub fn verify_installed(packages: &[&[u8]]) -> i32 {
         io::write_str(1, b"\n");
     }
 
-    if errors > 0 {
-        1
-    } else {
-        0
-    }
+    if errors > 0 { 1 } else { 0 }
 }
 
 /// Verify files of an installed package

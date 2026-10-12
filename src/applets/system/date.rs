@@ -7,14 +7,30 @@ use crate::io;
 
 const WDAY_ABBR: [&[u8]; 7] = [b"Sun", b"Mon", b"Tue", b"Wed", b"Thu", b"Fri", b"Sat"];
 const WDAY_FULL: [&[u8]; 7] = [
-    b"Sunday", b"Monday", b"Tuesday", b"Wednesday", b"Thursday", b"Friday", b"Saturday",
+    b"Sunday",
+    b"Monday",
+    b"Tuesday",
+    b"Wednesday",
+    b"Thursday",
+    b"Friday",
+    b"Saturday",
 ];
 const MON_ABBR: [&[u8]; 12] = [
     b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun", b"Jul", b"Aug", b"Sep", b"Oct", b"Nov", b"Dec",
 ];
 const MON_FULL: [&[u8]; 12] = [
-    b"January", b"February", b"March", b"April", b"May", b"June", b"July", b"August", b"September",
-    b"October", b"November", b"December",
+    b"January",
+    b"February",
+    b"March",
+    b"April",
+    b"May",
+    b"June",
+    b"July",
+    b"August",
+    b"September",
+    b"October",
+    b"November",
+    b"December",
 ];
 
 fn pad2(fd: i32, n: i64) {
@@ -233,8 +249,8 @@ pub fn date(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -244,14 +260,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_date_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
         let output = Command::new(&armybox).args(["date"]).output().unwrap();
         assert_eq!(output.status.code(), Some(0));
     }
@@ -259,7 +279,9 @@ mod tests {
     #[test]
     fn test_date_default_has_time() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
         let output = Command::new(&armybox).args(["date"]).output().unwrap();
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // POSIX default format "%a %b %e %H:%M:%S %Z %Y" contains the time.
@@ -269,7 +291,9 @@ mod tests {
     #[test]
     fn test_date_default_has_current_year() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
         let output = Command::new(&armybox).args(["date"]).output().unwrap();
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Year is the trailing field in the POSIX default format.
@@ -279,8 +303,13 @@ mod tests {
     #[test]
     fn test_date_format_year() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
-        let output = Command::new(&armybox).args(["date", "+%Y"]).output().unwrap();
+        if !armybox.exists() {
+            return;
+        }
+        let output = Command::new(&armybox)
+            .args(["date", "+%Y"])
+            .output()
+            .unwrap();
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         let year = stdout.trim();
         assert_eq!(year.len(), 4);

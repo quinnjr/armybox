@@ -23,7 +23,9 @@ pub fn free(_argc: i32, _argv: *const *const u8) -> i32 {
         let mut buf = [0u8; 2048];
         let n = io::read(fd, &mut buf);
         io::close(fd);
-        if n > 0 { io::write_all(1, &buf[..n as usize]); }
+        if n > 0 {
+            io::write_all(1, &buf[..n as usize]);
+        }
     }
     0
 }
@@ -31,8 +33,8 @@ pub fn free(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -42,19 +44,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_free_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["free"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["free"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -62,12 +65,11 @@ mod tests {
     #[test]
     fn test_free_contains_memtotal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["free"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["free"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // /proc/meminfo should contain MemTotal
@@ -77,12 +79,11 @@ mod tests {
     #[test]
     fn test_free_contains_memfree() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["free"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["free"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("MemFree"));

@@ -9,8 +9,14 @@ const PRIME64_5: u64 = 0x27D4EB2F165667C5;
 #[inline]
 fn read64(data: &[u8], i: usize) -> u64 {
     u64::from_le_bytes([
-        data[i], data[i + 1], data[i + 2], data[i + 3],
-        data[i + 4], data[i + 5], data[i + 6], data[i + 7],
+        data[i],
+        data[i + 1],
+        data[i + 2],
+        data[i + 3],
+        data[i + 4],
+        data[i + 5],
+        data[i + 6],
+        data[i + 7],
     ])
 }
 
@@ -57,7 +63,8 @@ pub fn xxhash64_seed(data: &[u8], seed: u64) -> u64 {
             i += 32;
         }
 
-        h = v1.rotate_left(1)
+        h = v1
+            .rotate_left(1)
             .wrapping_add(v2.rotate_left(7))
             .wrapping_add(v3.rotate_left(12))
             .wrapping_add(v4.rotate_left(18));
@@ -77,14 +84,20 @@ pub fn xxhash64_seed(data: &[u8], seed: u64) -> u64 {
         let k = read64(data, i).wrapping_mul(PRIME64_2);
         let k = k.rotate_left(31).wrapping_mul(PRIME64_1);
         h ^= k;
-        h = h.rotate_left(27).wrapping_mul(PRIME64_1).wrapping_add(PRIME64_4);
+        h = h
+            .rotate_left(27)
+            .wrapping_mul(PRIME64_1)
+            .wrapping_add(PRIME64_4);
         i += 8;
     }
 
     // Process remaining 4-byte chunk
     if i + 4 <= len {
         h ^= read32(data, i).wrapping_mul(PRIME64_1);
-        h = h.rotate_left(23).wrapping_mul(PRIME64_2).wrapping_add(PRIME64_3);
+        h = h
+            .rotate_left(23)
+            .wrapping_mul(PRIME64_2)
+            .wrapping_add(PRIME64_3);
         i += 4;
     }
 

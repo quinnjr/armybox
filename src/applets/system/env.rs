@@ -77,7 +77,13 @@ pub fn env(argc: i32, argv: *const *const u8) -> i32 {
         if let Some(eq) = arg.iter().position(|&b| b == b'=') {
             let name = cstr(&arg[..eq]);
             let value = cstr(&arg[eq + 1..]);
-            unsafe { libc::setenv(name.as_ptr() as *const libc::c_char, value.as_ptr() as *const libc::c_char, 1) };
+            unsafe {
+                libc::setenv(
+                    name.as_ptr() as *const libc::c_char,
+                    value.as_ptr() as *const libc::c_char,
+                    1,
+                )
+            };
             i += 1;
         } else {
             break;
@@ -89,7 +95,12 @@ pub fn env(argc: i32, argv: *const *const u8) -> i32 {
         // Exec the utility with the remaining argv (already NUL-terminated by
         // the OS) in the (possibly modified) environment.
         let file = unsafe { *argv.add(i as usize) };
-        unsafe { libc::execvp(file as *const libc::c_char, argv.add(i as usize) as *const *const libc::c_char) };
+        unsafe {
+            libc::execvp(
+                file as *const libc::c_char,
+                argv.add(i as usize) as *const *const libc::c_char,
+            )
+        };
         // execvp only returns on failure.
         let err = crate::sys::errno();
         let name = unsafe { super::get_arg(argv, i) }.unwrap_or(b"");
@@ -115,8 +126,8 @@ pub fn env(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -126,19 +137,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_env_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["env"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["env"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -146,12 +158,11 @@ mod tests {
     #[test]
     fn test_env_contains_path() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["env"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["env"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Environment should contain PATH
@@ -161,12 +172,11 @@ mod tests {
     #[test]
     fn test_env_format() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["env"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["env"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Each line should contain = for variable assignments

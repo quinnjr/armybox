@@ -7,8 +7,8 @@
 //!
 //! It also contains the interactive loop and minimal shell implementations.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -36,7 +36,10 @@ pub fn sh(argc: i32, argv: *const *const u8) -> i32 {
         while i < argc {
             let arg = match unsafe { get_arg(argv, i) } {
                 Some(a) => a,
-                None => { i += 1; continue; }
+                None => {
+                    i += 1;
+                    continue;
+                }
             };
 
             // If we already found a script file, everything else is a
@@ -68,8 +71,12 @@ pub fn sh(argc: i32, argv: *const *const u8) -> i32 {
                 break;
             } else if arg == b"-l" || arg == b"--login" {
                 login_shell = true;
-            } else if arg == b"-s" || arg == b"-i" || arg == b"-e"
-                || arg == b"-x" || arg == b"-v" || arg == b"-n"
+            } else if arg == b"-s"
+                || arg == b"-i"
+                || arg == b"-e"
+                || arg == b"-x"
+                || arg == b"-v"
+                || arg == b"-n"
             {
                 // Known flags, skip
             } else if !arg.is_empty() && arg[0] == b'-' {
@@ -195,20 +202,28 @@ pub(super) fn minimal_shell() {
             let mut c = [0u8; 1];
             let n = io::read(0, &mut c);
             if n <= 0 {
-                if pos == 0 { return; }
+                if pos == 0 {
+                    return;
+                }
                 break;
             }
-            if c[0] == b'\n' { break; }
+            if c[0] == b'\n' {
+                break;
+            }
             if pos < line_buf.len() - 1 {
                 line_buf[pos] = c[0];
                 pos += 1;
             }
         }
 
-        if pos == 0 { continue; }
+        if pos == 0 {
+            continue;
+        }
 
         let line = &line_buf[..pos];
-        if line == b"exit" { return; }
+        if line == b"exit" {
+            return;
+        }
 
         // Handle cd
         if line.starts_with(b"cd ") {
@@ -247,7 +262,9 @@ pub(super) fn minimal_shell() {
             }
 
             if arg_count > 0 {
-                unsafe { libc::execvp(args[0], args.as_ptr()); }
+                unsafe {
+                    libc::execvp(args[0], args.as_ptr());
+                }
                 io::write_str(2, b"sh: command not found\n");
             }
             io::exit(127);
@@ -267,7 +284,9 @@ pub(super) fn interactive_loop(shell: &mut Shell) {
     let mut line_buf = Vec::new();
 
     loop {
-        if shell.should_exit { return; }
+        if shell.should_exit {
+            return;
+        }
 
         if shell.interactive {
             io::write_str(1, b"$ ");
@@ -284,11 +303,15 @@ pub(super) fn interactive_loop(shell: &mut Shell) {
                 }
                 break;
             }
-            if c[0] == b'\n' { break; }
+            if c[0] == b'\n' {
+                break;
+            }
             line_buf.push(c[0]);
         }
 
-        if line_buf.is_empty() { continue; }
+        if line_buf.is_empty() {
+            continue;
+        }
 
         execute_script(shell, &line_buf);
     }

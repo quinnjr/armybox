@@ -24,11 +24,11 @@
 
 extern crate alloc;
 
+use crate::crypto::{sha256, verify_signature};
+use crate::io;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::crypto::{sha256, verify_signature};
 
 /// ABP magic bytes
 pub const ABP_MAGIC: [u8; 4] = *b"ABP\x00";
@@ -92,28 +92,22 @@ impl AbpHeader {
             version_minor: u16::from_le_bytes([data[6], data[7]]),
             flags: u16::from_le_bytes([data[8], data[9]]),
             metadata_offset: u64::from_le_bytes([
-                data[10], data[11], data[12], data[13],
-                data[14], data[15], data[16], data[17],
+                data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17],
             ]),
             metadata_size: u64::from_le_bytes([
-                data[18], data[19], data[20], data[21],
-                data[22], data[23], data[24], data[25],
+                data[18], data[19], data[20], data[21], data[22], data[23], data[24], data[25],
             ]),
             manifest_offset: u64::from_le_bytes([
-                data[26], data[27], data[28], data[29],
-                data[30], data[31], data[32], data[33],
+                data[26], data[27], data[28], data[29], data[30], data[31], data[32], data[33],
             ]),
             manifest_size: u64::from_le_bytes([
-                data[34], data[35], data[36], data[37],
-                data[38], data[39], data[40], data[41],
+                data[34], data[35], data[36], data[37], data[38], data[39], data[40], data[41],
             ]),
             payload_offset: u64::from_le_bytes([
-                data[42], data[43], data[44], data[45],
-                data[46], data[47], data[48], data[49],
+                data[42], data[43], data[44], data[45], data[46], data[47], data[48], data[49],
             ]),
             payload_size: u64::from_le_bytes([
-                data[50], data[51], data[52], data[53],
-                data[54], data[55], data[56], data[57],
+                data[50], data[51], data[52], data[53], data[54], data[55], data[56], data[57],
             ]),
         })
     }
@@ -325,7 +319,12 @@ impl ManifestEntry {
         let mode = u32::from_str_radix(parts[2], 8).ok()?;
         let path = String::from(parts[3]);
 
-        Some(ManifestEntry { path, size, mode, checksum })
+        Some(ManifestEntry {
+            path,
+            size,
+            mode,
+            checksum,
+        })
     }
 
     /// Serialize to line
@@ -588,15 +587,16 @@ impl AbpPackage {
         let manifest_bytes = self.manifest.to_bytes();
 
         // Compress payload if not already compressed
-        let (payload_bytes, payload_compressed) = if self.header.flags & flags::COMPRESSED_PAYLOAD != 0 {
-            // Already compressed (e.g. loaded from file), use as-is
-            (self.payload.clone(), true)
-        } else if !self.payload.is_empty() {
-            // Compress with zstd (level 3)
-            (zstd_nostd::compress(&self.payload, 3), true)
-        } else {
-            (self.payload.clone(), false)
-        };
+        let (payload_bytes, payload_compressed) =
+            if self.header.flags & flags::COMPRESSED_PAYLOAD != 0 {
+                // Already compressed (e.g. loaded from file), use as-is
+                (self.payload.clone(), true)
+            } else if !self.payload.is_empty() {
+                // Compress with zstd (level 3)
+                (zstd_nostd::compress(&self.payload, 3), true)
+            } else {
+                (self.payload.clone(), false)
+            };
 
         let metadata_offset = ABP_HEADER_SIZE as u64;
         let manifest_offset = metadata_offset + meta_bytes.len() as u64;
@@ -727,7 +727,11 @@ impl Version {
             (String::from(rest), 0)
         };
 
-        Version { epoch, version, release }
+        Version {
+            epoch,
+            version,
+            release,
+        }
     }
 
     /// Compare versions
@@ -818,11 +822,11 @@ pub struct Dependency {
 
 #[derive(Clone, Debug)]
 pub enum VersionConstraint {
-    Eq(String),      // =version
-    Lt(String),      // <version
-    Le(String),      // <=version
-    Gt(String),      // >version
-    Ge(String),      // >=version
+    Eq(String), // =version
+    Lt(String), // <version
+    Le(String), // <=version
+    Gt(String), // >version
+    Ge(String), // >=version
 }
 
 impl Dependency {
@@ -850,7 +854,10 @@ impl Dependency {
 
             Dependency { name, constraint }
         } else {
-            Dependency { name: String::from(s), constraint: None }
+            Dependency {
+                name: String::from(s),
+                constraint: None,
+            }
         }
     }
 
@@ -892,9 +899,15 @@ mod tests {
     #[test]
     fn test_version_compare() {
         assert!(Version::parse("1.0").compare(&Version::parse("1.1")) == core::cmp::Ordering::Less);
-        assert!(Version::parse("2.0").compare(&Version::parse("1.9")) == core::cmp::Ordering::Greater);
-        assert!(Version::parse("1.0").compare(&Version::parse("1.0")) == core::cmp::Ordering::Equal);
-        assert!(Version::parse("1:1.0").compare(&Version::parse("2.0")) == core::cmp::Ordering::Greater);
+        assert!(
+            Version::parse("2.0").compare(&Version::parse("1.9")) == core::cmp::Ordering::Greater
+        );
+        assert!(
+            Version::parse("1.0").compare(&Version::parse("1.0")) == core::cmp::Ordering::Equal
+        );
+        assert!(
+            Version::parse("1:1.0").compare(&Version::parse("2.0")) == core::cmp::Ordering::Greater
+        );
     }
 
     #[test]
@@ -934,7 +947,9 @@ mod tests {
         meta.name = String::from("test-zstd");
         meta.version = String::from("1.0.0");
 
-        let manifest = Manifest { entries: Vec::new() };
+        let manifest = Manifest {
+            entries: Vec::new(),
+        };
 
         let pkg = AbpPackage {
             header: AbpHeader {
@@ -963,18 +978,26 @@ mod tests {
         let loaded = AbpPackage::from_bytes(&serialized).unwrap();
 
         // Verify the COMPRESSED_PAYLOAD flag is set
-        assert!(loaded.header.flags & flags::COMPRESSED_PAYLOAD != 0,
-            "COMPRESSED_PAYLOAD flag should be set");
+        assert!(
+            loaded.header.flags & flags::COMPRESSED_PAYLOAD != 0,
+            "COMPRESSED_PAYLOAD flag should be set"
+        );
 
         // Verify the compressed payload is smaller than original
-        assert!(loaded.payload.len() < payload.len(),
+        assert!(
+            loaded.payload.len() < payload.len(),
             "compressed payload ({}) should be smaller than original ({})",
-            loaded.payload.len(), payload.len());
+            loaded.payload.len(),
+            payload.len()
+        );
 
         // Decompress and verify roundtrip
         let decompressed = loaded.decompressed_payload().unwrap();
-        assert_eq!(&decompressed, &payload[..],
-            "decompressed payload should match original");
+        assert_eq!(
+            &decompressed,
+            &payload[..],
+            "decompressed payload should match original"
+        );
     }
 
     #[test]
@@ -987,7 +1010,9 @@ mod tests {
         meta.name = String::from("test-precompressed");
         meta.version = String::from("1.0.0");
 
-        let manifest = Manifest { entries: Vec::new() };
+        let manifest = Manifest {
+            entries: Vec::new(),
+        };
 
         let pkg = AbpPackage {
             header: AbpHeader {
@@ -1016,8 +1041,10 @@ mod tests {
         let loaded = AbpPackage::from_bytes(&serialized).unwrap();
 
         // Payload should be identical (not double-compressed)
-        assert_eq!(loaded.payload, compressed,
-            "already-compressed payload should not be re-compressed");
+        assert_eq!(
+            loaded.payload, compressed,
+            "already-compressed payload should not be re-compressed"
+        );
 
         // Decompress should give original
         let decompressed = loaded.decompressed_payload().unwrap();
@@ -1045,7 +1072,9 @@ mod tests {
                 payload_size: 0,
             },
             metadata: meta,
-            manifest: Manifest { entries: Vec::new() },
+            manifest: Manifest {
+                entries: Vec::new(),
+            },
             payload: b"hello payload contents".to_vec(),
             signature: None,
             key_id: None,
@@ -1055,9 +1084,11 @@ mod tests {
         let loaded = AbpPackage::from_bytes(&serialized).unwrap();
 
         // payload_end = payload_offset + payload_size, from the parsed header.
-        let payload_end =
-            (loaded.header.payload_offset + loaded.header.payload_size) as usize;
-        let region = loaded.signed_region.as_ref().expect("parsed package has a signed_region");
+        let payload_end = (loaded.header.payload_offset + loaded.header.payload_size) as usize;
+        let region = loaded
+            .signed_region
+            .as_ref()
+            .expect("parsed package has a signed_region");
         assert_eq!(
             region.as_slice(),
             &serialized[..payload_end],
@@ -1086,7 +1117,9 @@ mod tests {
                 payload_size: 0,
             },
             metadata: meta,
-            manifest: Manifest { entries: Vec::new() },
+            manifest: Manifest {
+                entries: Vec::new(),
+            },
             payload: Vec::new(),
             signature: Some([0u8; 64]),
             key_id: Some([0u8; 32]),

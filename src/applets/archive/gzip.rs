@@ -2,10 +2,10 @@
 //!
 //! GNU zip compression utility.
 
-use alloc::vec::Vec;
-use alloc::vec;
-use crate::io;
 use super::{get_arg, open_read, open_write_create};
+use crate::io;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// gzip - compress or decompress files
 ///
@@ -69,12 +69,18 @@ pub fn gzip(argc: i32, argv: *const *const u8) -> i32 {
                     gzip_stream(fd, 1)
                 };
                 io::close(fd);
-                if result != 0 { return result; }
+                if result != 0 {
+                    return result;
+                }
             } else {
                 if decompress {
-                    if gunzip_file(file, keep) != 0 { return 1; }
+                    if gunzip_file(file, keep) != 0 {
+                        return 1;
+                    }
                 } else {
-                    if gzip_file(file, keep) != 0 { return 1; }
+                    if gzip_file(file, keep) != 0 {
+                        return 1;
+                    }
                 }
             }
         }
@@ -116,7 +122,9 @@ fn gzip_stream(input_fd: i32, output_fd: i32) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         data.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -126,12 +134,12 @@ fn gzip_stream(input_fd: i32, output_fd: i32) -> i32 {
 
     // Write gzip header
     let header = [
-        0x1f, 0x8b,  // Magic
-        0x08,        // Compression method (deflate)
-        0x00,        // Flags
-        0, 0, 0, 0,  // Mtime
-        0x00,        // Extra flags
-        0xff,        // OS (unknown)
+        0x1f, 0x8b, // Magic
+        0x08, // Compression method (deflate)
+        0x00, // Flags
+        0, 0, 0, 0,    // Mtime
+        0x00, // Extra flags
+        0xff, // OS (unknown)
     ];
     io::write_all(output_fd, &header);
 
@@ -206,7 +214,9 @@ fn gunzip_stream(input_fd: i32, output_fd: i32) -> i32 {
         let mut b = [0u8; 1];
         loop {
             io::read(input_fd, &mut b);
-            if b[0] == 0 { break; }
+            if b[0] == 0 {
+                break;
+            }
         }
     }
     if flags & 0x10 != 0 {
@@ -214,7 +224,9 @@ fn gunzip_stream(input_fd: i32, output_fd: i32) -> i32 {
         let mut b = [0u8; 1];
         loop {
             io::read(input_fd, &mut b);
-            if b[0] == 0 { break; }
+            if b[0] == 0 {
+                break;
+            }
         }
     }
     if flags & 0x02 != 0 {
@@ -228,7 +240,9 @@ fn gunzip_stream(input_fd: i32, output_fd: i32) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         compressed.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -457,20 +471,19 @@ fn inflate_fixed_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8>)
     }
 
     let length_bases: [u16; 29] = [
-        3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
+        3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115,
+        131, 163, 195, 227, 258,
     ];
     let length_extra: [u8; 29] = [
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-        3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0,
     ];
     let dist_bases: [u16; 30] = [
-        1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-        257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577
+        1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537,
+        2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
     ];
     let dist_extra: [u8; 30] = [
-        0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
-        7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
+        0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12,
+        13, 13,
     ];
 
     loop {
@@ -496,14 +509,18 @@ fn inflate_fixed_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8>)
             break;
         } else {
             let length_idx = (symbol - 257) as usize;
-            if length_idx >= 29 { return Err(()); }
-            let length = length_bases[length_idx] as usize +
-                get_bits(data, bit_pos, length_extra[length_idx] as usize).ok_or(())? as usize;
+            if length_idx >= 29 {
+                return Err(());
+            }
+            let length = length_bases[length_idx] as usize
+                + get_bits(data, bit_pos, length_extra[length_idx] as usize).ok_or(())? as usize;
 
             let dist_code = get_bits_rev(data, bit_pos, 5).ok_or(())? as usize;
-            if dist_code >= 30 { return Err(()); }
-            let distance = dist_bases[dist_code] as usize +
-                get_bits(data, bit_pos, dist_extra[dist_code] as usize).ok_or(())? as usize;
+            if dist_code >= 30 {
+                return Err(());
+            }
+            let distance = dist_bases[dist_code] as usize
+                + get_bits(data, bit_pos, dist_extra[dist_code] as usize).ok_or(())? as usize;
 
             if distance == 0 || distance > output.len() {
                 return Err(());
@@ -519,7 +536,11 @@ fn inflate_fixed_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8>)
     Ok(())
 }
 
-fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8>) -> Result<(), ()> {
+fn inflate_dynamic_huffman(
+    data: &[u8],
+    bit_pos: &mut usize,
+    output: &mut Vec<u8>,
+) -> Result<(), ()> {
     fn get_bits(data: &[u8], bit_pos: &mut usize, count: usize) -> Option<u32> {
         let mut result = 0u32;
         for i in 0..count {
@@ -540,7 +561,9 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
     let hdist = get_bits(data, bit_pos, 5).ok_or(())? as usize + 1;
     let hclen = get_bits(data, bit_pos, 4).ok_or(())? as usize + 4;
 
-    let order: [usize; 19] = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+    let order: [usize; 19] = [
+        16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
+    ];
     let mut code_length_lengths = [0u8; 19];
     for i in 0..hclen {
         code_length_lengths[order[i]] = get_bits(data, bit_pos, 3).ok_or(())? as u8;
@@ -561,7 +584,9 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
                 let repeat = get_bits(data, bit_pos, 2).ok_or(())? as usize + 3;
                 let val = if i > 0 { lengths[i - 1] } else { 0 };
                 for _ in 0..repeat {
-                    if i >= lengths.len() { return Err(()); }
+                    if i >= lengths.len() {
+                        return Err(());
+                    }
                     lengths[i] = val;
                     i += 1;
                 }
@@ -569,7 +594,9 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
             17 => {
                 let repeat = get_bits(data, bit_pos, 3).ok_or(())? as usize + 3;
                 for _ in 0..repeat {
-                    if i >= lengths.len() { return Err(()); }
+                    if i >= lengths.len() {
+                        return Err(());
+                    }
                     lengths[i] = 0;
                     i += 1;
                 }
@@ -577,7 +604,9 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
             18 => {
                 let repeat = get_bits(data, bit_pos, 7).ok_or(())? as usize + 11;
                 for _ in 0..repeat {
-                    if i >= lengths.len() { return Err(()); }
+                    if i >= lengths.len() {
+                        return Err(());
+                    }
                     lengths[i] = 0;
                     i += 1;
                 }
@@ -590,20 +619,19 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
     let dist_tree = build_huffman_tree(&lengths[hlit..]);
 
     let length_bases: [u16; 29] = [
-        3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
+        3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115,
+        131, 163, 195, 227, 258,
     ];
     let length_extra: [u8; 29] = [
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-        3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0,
     ];
     let dist_bases: [u16; 30] = [
-        1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-        257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577
+        1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537,
+        2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
     ];
     let dist_extra: [u8; 30] = [
-        0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
-        7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
+        0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12,
+        13, 13,
     ];
 
     loop {
@@ -615,14 +643,18 @@ fn inflate_dynamic_huffman(data: &[u8], bit_pos: &mut usize, output: &mut Vec<u8
             break;
         } else {
             let length_idx = (symbol - 257) as usize;
-            if length_idx >= 29 { return Err(()); }
-            let length = length_bases[length_idx] as usize +
-                get_bits(data, bit_pos, length_extra[length_idx] as usize).ok_or(())? as usize;
+            if length_idx >= 29 {
+                return Err(());
+            }
+            let length = length_bases[length_idx] as usize
+                + get_bits(data, bit_pos, length_extra[length_idx] as usize).ok_or(())? as usize;
 
             let dist_code = decode_huffman(data, bit_pos, &dist_tree).ok_or(())? as usize;
-            if dist_code >= 30 { return Err(()); }
-            let distance = dist_bases[dist_code] as usize +
-                get_bits(data, bit_pos, dist_extra[dist_code] as usize).ok_or(())? as usize;
+            if dist_code >= 30 {
+                return Err(());
+            }
+            let distance = dist_bases[dist_code] as usize
+                + get_bits(data, bit_pos, dist_extra[dist_code] as usize).ok_or(())? as usize;
 
             if distance == 0 || distance > output.len() {
                 return Err(());
@@ -646,7 +678,10 @@ struct HuffmanTree {
 fn build_huffman_tree(lengths: &[u8]) -> HuffmanTree {
     let max_bits = *lengths.iter().max().unwrap_or(&0);
     if max_bits == 0 {
-        return HuffmanTree { codes: Vec::new(), max_bits: 0 };
+        return HuffmanTree {
+            codes: Vec::new(),
+            max_bits: 0,
+        };
     }
 
     let mut bl_count = vec![0u16; max_bits as usize + 1];
@@ -734,8 +769,8 @@ pub fn crc32(data: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -745,14 +780,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_gzip_not_gzip_format() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;
@@ -778,7 +817,9 @@ mod tests {
     #[test]
     fn test_gunzip_alias() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // gunzip should work like gzip -d
         use std::io::Write;
@@ -803,7 +844,9 @@ mod tests {
     #[test]
     fn test_zcat_alias() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;

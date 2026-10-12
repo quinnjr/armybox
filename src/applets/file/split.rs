@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
-use alloc::vec;
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// split - split a file into pieces
 ///
@@ -143,9 +143,9 @@ fn parse_size(s: &[u8]) -> Option<usize> {
     }
 
     let (num_part, multiplier) = match s.last() {
-        Some(b'K') | Some(b'k') => (&s[..s.len()-1], 1024),
-        Some(b'M') | Some(b'm') => (&s[..s.len()-1], 1024 * 1024),
-        Some(b'G') | Some(b'g') => (&s[..s.len()-1], 1024 * 1024 * 1024),
+        Some(b'K') | Some(b'k') => (&s[..s.len() - 1], 1024),
+        Some(b'M') | Some(b'm') => (&s[..s.len() - 1], 1024 * 1024),
+        Some(b'G') | Some(b'g') => (&s[..s.len() - 1], 1024 * 1024 * 1024),
         _ => (s, 1),
     };
 
@@ -178,7 +178,11 @@ fn split_by_lines(fd: i32, prefix: &[u8], lines_per_file: usize, suffix_len: usi
                     }
 
                     let filename = make_filename(prefix, suffix.next());
-                    out_fd = io::open(&filename, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+                    out_fd = io::open(
+                        &filename,
+                        libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                        0o644,
+                    );
                     if out_fd < 0 {
                         io::write_str(2, b"split: cannot create output file\n");
                         return 1;
@@ -200,7 +204,11 @@ fn split_by_lines(fd: i32, prefix: &[u8], lines_per_file: usize, suffix_len: usi
                 io::close(out_fd);
             }
             let filename = make_filename(prefix, suffix.next());
-            out_fd = io::open(&filename, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+            out_fd = io::open(
+                &filename,
+                libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                0o644,
+            );
             if out_fd < 0 {
                 io::write_str(2, b"split: cannot create output file\n");
                 return 1;
@@ -240,7 +248,11 @@ fn split_by_bytes(fd: i32, prefix: &[u8], bytes_per_file: usize, suffix_len: usi
                 }
 
                 let filename = make_filename(prefix, suffix.next());
-                out_fd = io::open(&filename, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+                out_fd = io::open(
+                    &filename,
+                    libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                    0o644,
+                );
                 if out_fd < 0 {
                     io::write_str(2, b"split: cannot create output file\n");
                     return 1;
@@ -321,10 +333,19 @@ fn print_help() {
     io::write_str(1, b"Output pieces of FILE to PREFIXaa, PREFIXab, ...\n\n");
     io::write_str(1, b"Options:\n");
     io::write_str(1, b"  -l N, --lines=N       put N lines per output file\n");
-    io::write_str(1, b"  -b N, --bytes=N       put N bytes per output file (K, M, G suffixes)\n");
-    io::write_str(1, b"  -a N, --suffix-length=N  use suffixes of length N (default 2)\n");
+    io::write_str(
+        1,
+        b"  -b N, --bytes=N       put N bytes per output file (K, M, G suffixes)\n",
+    );
+    io::write_str(
+        1,
+        b"  -a N, --suffix-length=N  use suffixes of length N (default 2)\n",
+    );
     io::write_str(1, b"  --help                display this help and exit\n\n");
-    io::write_str(1, b"With no FILE, or when FILE is -, read standard input.\n");
+    io::write_str(
+        1,
+        b"With no FILE, or when FILE is -, read standard input.\n",
+    );
 }
 
 #[cfg(test)]
@@ -333,9 +354,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -345,13 +366,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_split_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_split_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -364,7 +391,9 @@ mod tests {
     #[test]
     fn test_split_by_lines() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let input = dir.join("input.txt");
@@ -394,7 +423,9 @@ mod tests {
     #[test]
     fn test_split_by_bytes() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let input = dir.join("input.txt");
@@ -419,7 +450,9 @@ mod tests {
     #[test]
     fn test_split_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["split", "/nonexistent/file"])

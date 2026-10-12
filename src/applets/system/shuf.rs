@@ -2,9 +2,9 @@
 //!
 //! Write a random permutation of the input lines to standard output.
 
-use alloc::vec::Vec;
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// shuf - generate random permutations
 ///
@@ -26,15 +26,26 @@ pub fn shuf(argc: i32, argv: *const *const u8) -> i32 {
         let path = unsafe { get_arg(argv, 1).unwrap() };
         if path[0] != b'-' {
             io::open(path, libc::O_RDONLY, 0)
-        } else { 0 }
-    } else { 0 };
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
-    if fd < 0 { return 1; }
+    if fd < 0 {
+        return 1;
+    }
 
     let content = io::read_all(fd);
-    if fd > 0 { io::close(fd); }
+    if fd > 0 {
+        io::close(fd);
+    }
 
-    let mut lines: Vec<&[u8]> = content.split(|&c| c == b'\n').filter(|l| !l.is_empty()).collect();
+    let mut lines: Vec<&[u8]> = content
+        .split(|&c| c == b'\n')
+        .filter(|l| !l.is_empty())
+        .collect();
 
     // Fisher-Yates shuffle using simple PRNG seeded from time
     let mut seed = unsafe { libc::time(core::ptr::null_mut()) } as u64;
@@ -60,10 +71,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::{Command, Stdio};
-    use std::path::PathBuf;
-    use std::io::Write;
     use std::fs;
+    use std::io::Write;
+    use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -73,14 +84,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_shuf_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let pid = std::process::id();
         let test_file = std::env::temp_dir().join(std::format!("armybox_shuf_test_{}", pid));
@@ -105,7 +120,9 @@ mod tests {
     #[test]
     fn test_shuf_stdin() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["shuf"])

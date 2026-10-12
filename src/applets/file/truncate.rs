@@ -2,9 +2,9 @@
 //!
 //! GNU coreutils compatible implementation.
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// truncate - shrink or extend the size of a file
 ///
@@ -117,9 +117,9 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -129,13 +129,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_truncate_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_truncate_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -148,7 +154,9 @@ mod tests {
     #[test]
     fn test_truncate_shrink() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -169,7 +177,9 @@ mod tests {
     #[test]
     fn test_truncate_extend() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -189,7 +199,9 @@ mod tests {
     #[test]
     fn test_truncate_to_zero() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -208,7 +220,9 @@ mod tests {
     #[test]
     fn test_truncate_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["truncate", "-s", "10", "/nonexistent/file"])
@@ -221,7 +235,9 @@ mod tests {
     #[test]
     fn test_truncate_creates_missing_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("new.txt");
@@ -239,7 +255,9 @@ mod tests {
     #[test]
     fn test_truncate_no_create_skips_missing_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let existing = dir.join("existing.txt");
@@ -248,7 +266,14 @@ mod tests {
         for flag in ["-c", "--no-create"] {
             let missing = dir.join("missing.txt");
             let output = Command::new(&armybox)
-                .args(["truncate", flag, "-s", "5", missing.to_str().unwrap(), existing.to_str().unwrap()])
+                .args([
+                    "truncate",
+                    flag,
+                    "-s",
+                    "5",
+                    missing.to_str().unwrap(),
+                    existing.to_str().unwrap(),
+                ])
                 .output()
                 .unwrap();
 

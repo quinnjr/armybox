@@ -3,9 +3,9 @@
 //! Activate a network interface based on /etc/network/interfaces.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// ifup - bring a network interface up
 ///
@@ -124,7 +124,7 @@ pub fn ifup(argc: i32, argv: *const *const u8) -> i32 {
 struct InterfaceConfig {
     name: Vec<u8>,
     auto: bool,
-    method: Vec<u8>,  // static, dhcp, loopback, manual
+    method: Vec<u8>, // static, dhcp, loopback, manual
     address: Option<Vec<u8>>,
     netmask: Option<Vec<u8>>,
     gateway: Option<Vec<u8>>,
@@ -170,7 +170,8 @@ fn parse_interfaces_file() -> Option<Vec<InterfaceConfig>> {
             continue;
         }
 
-        let parts: Vec<&[u8]> = line.split(|&c| c == b' ' || c == b'\t')
+        let parts: Vec<&[u8]> = line
+            .split(|&c| c == b' ' || c == b'\t')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -321,9 +322,11 @@ fn configure_loopback(iface: &[u8], verbose: bool) -> i32 {
     // Set address
     let addr_in = create_sockaddr_in(0x0100007F); // 127.0.0.1 in network byte order
     unsafe {
-        core::ptr::copy_nonoverlapping(&addr_in as *const _ as *const u8,
-                                        &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
-                                        core::mem::size_of::<libc::sockaddr_in>());
+        core::ptr::copy_nonoverlapping(
+            &addr_in as *const _ as *const u8,
+            &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
+            core::mem::size_of::<libc::sockaddr_in>(),
+        );
     }
 
     if unsafe { libc::ioctl(fd, libc::SIOCSIFADDR as _, &ifr) } < 0 {
@@ -334,9 +337,11 @@ fn configure_loopback(iface: &[u8], verbose: bool) -> i32 {
     // Set netmask 255.0.0.0
     let mask_in = create_sockaddr_in(0x000000FF);
     unsafe {
-        core::ptr::copy_nonoverlapping(&mask_in as *const _ as *const u8,
-                                        &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
-                                        core::mem::size_of::<libc::sockaddr_in>());
+        core::ptr::copy_nonoverlapping(
+            &mask_in as *const _ as *const u8,
+            &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
+            core::mem::size_of::<libc::sockaddr_in>(),
+        );
     }
 
     if unsafe { libc::ioctl(fd, libc::SIOCSIFNETMASK as _, &ifr) } < 0 {
@@ -410,9 +415,11 @@ fn configure_static(config: &InterfaceConfig, verbose: bool) -> i32 {
         if let Some(ip) = parse_ipv4(addr) {
             let addr_in = create_sockaddr_in(ip);
             unsafe {
-                core::ptr::copy_nonoverlapping(&addr_in as *const _ as *const u8,
-                                                &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
-                                                core::mem::size_of::<libc::sockaddr_in>());
+                core::ptr::copy_nonoverlapping(
+                    &addr_in as *const _ as *const u8,
+                    &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
+                    core::mem::size_of::<libc::sockaddr_in>(),
+                );
             }
 
             if unsafe { libc::ioctl(fd, libc::SIOCSIFADDR as _, &ifr) } < 0 {
@@ -433,9 +440,11 @@ fn configure_static(config: &InterfaceConfig, verbose: bool) -> i32 {
         if let Some(ip) = parse_ipv4(mask) {
             let mask_in = create_sockaddr_in(ip);
             unsafe {
-                core::ptr::copy_nonoverlapping(&mask_in as *const _ as *const u8,
-                                                &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
-                                                core::mem::size_of::<libc::sockaddr_in>());
+                core::ptr::copy_nonoverlapping(
+                    &mask_in as *const _ as *const u8,
+                    &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
+                    core::mem::size_of::<libc::sockaddr_in>(),
+                );
             }
 
             if unsafe { libc::ioctl(fd, libc::SIOCSIFNETMASK as _, &ifr) } < 0 {
@@ -450,9 +459,11 @@ fn configure_static(config: &InterfaceConfig, verbose: bool) -> i32 {
         if let Some(ip) = parse_ipv4(bcast) {
             let bcast_in = create_sockaddr_in(ip);
             unsafe {
-                core::ptr::copy_nonoverlapping(&bcast_in as *const _ as *const u8,
-                                                &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
-                                                core::mem::size_of::<libc::sockaddr_in>());
+                core::ptr::copy_nonoverlapping(
+                    &bcast_in as *const _ as *const u8,
+                    &mut ifr.ifr_ifru.ifru_addr as *mut _ as *mut u8,
+                    core::mem::size_of::<libc::sockaddr_in>(),
+                );
             }
             unsafe { libc::ioctl(fd, libc::SIOCSIFBRDADDR as _, &ifr) };
         }
@@ -490,8 +501,11 @@ fn configure_static(config: &InterfaceConfig, verbose: bool) -> i32 {
 fn configure_interface_direct(iface: &[u8], up: bool, verbose: bool) -> i32 {
     if verbose {
         io::write_str(1, b"  Bringing interface ");
-        if up { io::write_str(1, b"up\n"); }
-        else { io::write_str(1, b"down\n"); }
+        if up {
+            io::write_str(1, b"up\n");
+        } else {
+            io::write_str(1, b"down\n");
+        }
     }
 
     let fd = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
@@ -589,25 +603,31 @@ fn add_default_route(gateway: &[u8]) -> i32 {
     // Destination: 0.0.0.0
     let dst = create_sockaddr_in(0);
     unsafe {
-        core::ptr::copy_nonoverlapping(&dst as *const _ as *const u8,
-                                        &mut rt.rt_dst as *mut _ as *mut u8,
-                                        core::mem::size_of::<libc::sockaddr_in>());
+        core::ptr::copy_nonoverlapping(
+            &dst as *const _ as *const u8,
+            &mut rt.rt_dst as *mut _ as *mut u8,
+            core::mem::size_of::<libc::sockaddr_in>(),
+        );
     }
 
     // Gateway
     let gw = create_sockaddr_in(gw_ip);
     unsafe {
-        core::ptr::copy_nonoverlapping(&gw as *const _ as *const u8,
-                                        &mut rt.rt_gateway as *mut _ as *mut u8,
-                                        core::mem::size_of::<libc::sockaddr_in>());
+        core::ptr::copy_nonoverlapping(
+            &gw as *const _ as *const u8,
+            &mut rt.rt_gateway as *mut _ as *mut u8,
+            core::mem::size_of::<libc::sockaddr_in>(),
+        );
     }
 
     // Netmask: 0.0.0.0
     let mask = create_sockaddr_in(0);
     unsafe {
-        core::ptr::copy_nonoverlapping(&mask as *const _ as *const u8,
-                                        &mut rt.rt_genmask as *mut _ as *mut u8,
-                                        core::mem::size_of::<libc::sockaddr_in>());
+        core::ptr::copy_nonoverlapping(
+            &mask as *const _ as *const u8,
+            &mut rt.rt_genmask as *mut _ as *mut u8,
+            core::mem::size_of::<libc::sockaddr_in>(),
+        );
     }
 
     rt.rt_flags = crate::sys::RTF_UP as u16 | crate::sys::RTF_GATEWAY as u16;
@@ -673,8 +693,8 @@ pub fn ifup(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -684,14 +704,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_ifup_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ifup", "-h"])

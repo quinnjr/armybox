@@ -42,7 +42,9 @@ pub(super) fn eval_arith_expr_with_shell(shell: &Shell, expr: &[u8], pos: usize)
 
     loop {
         pos = skip_arith_ws(expr, pos);
-        if pos >= expr.len() { break; }
+        if pos >= expr.len() {
+            break;
+        }
 
         let op = expr[pos];
         if op == b'+' {
@@ -70,7 +72,9 @@ pub(super) fn eval_arith_term_with_shell(shell: &Shell, expr: &[u8], pos: usize)
 
     loop {
         pos = skip_arith_ws(expr, pos);
-        if pos >= expr.len() { break; }
+        if pos >= expr.len() {
+            break;
+        }
 
         let op = expr[pos];
         if op == b'*' {
@@ -79,11 +83,15 @@ pub(super) fn eval_arith_term_with_shell(shell: &Shell, expr: &[u8], pos: usize)
             pos = new_pos;
         } else if op == b'/' {
             let (right, new_pos) = eval_arith_factor_with_shell(shell, expr, pos + 1);
-            if right != 0 { left /= right; }
+            if right != 0 {
+                left /= right;
+            }
             pos = new_pos;
         } else if op == b'%' {
             let (right, new_pos) = eval_arith_factor_with_shell(shell, expr, pos + 1);
-            if right != 0 { left %= right; }
+            if right != 0 {
+                left %= right;
+            }
             pos = new_pos;
         } else {
             break;
@@ -100,13 +108,17 @@ pub(super) fn eval_arith_term_with_shell(shell: &Shell, expr: &[u8], pos: usize)
 #[cfg(feature = "alloc")]
 pub(super) fn eval_arith_factor_with_shell(shell: &Shell, expr: &[u8], pos: usize) -> (i64, usize) {
     let mut pos = skip_arith_ws(expr, pos);
-    if pos >= expr.len() { return (0, pos); }
+    if pos >= expr.len() {
+        return (0, pos);
+    }
 
     // Handle parentheses
     if expr[pos] == b'(' {
         let (val, new_pos) = eval_arith_expr_with_shell(shell, expr, pos + 1);
         let mut pos = skip_arith_ws(expr, new_pos);
-        if pos < expr.len() && expr[pos] == b')' { pos += 1; }
+        if pos < expr.len() && expr[pos] == b')' {
+            pos += 1;
+        }
         return (val, pos);
     }
 
@@ -155,7 +167,9 @@ pub(super) fn eval_arith_expr(expr: &[u8], pos: usize) -> (i64, usize) {
 
     loop {
         pos = skip_arith_ws(expr, pos);
-        if pos >= expr.len() { break; }
+        if pos >= expr.len() {
+            break;
+        }
 
         let op = expr[pos];
         if op == b'+' {
@@ -184,7 +198,9 @@ pub(super) fn eval_arith_term(expr: &[u8], pos: usize) -> (i64, usize) {
 
     loop {
         pos = skip_arith_ws(expr, pos);
-        if pos >= expr.len() { break; }
+        if pos >= expr.len() {
+            break;
+        }
 
         let op = expr[pos];
         if op == b'*' {
@@ -193,11 +209,15 @@ pub(super) fn eval_arith_term(expr: &[u8], pos: usize) -> (i64, usize) {
             pos = new_pos;
         } else if op == b'/' {
             let (right, new_pos) = eval_arith_factor(expr, pos + 1);
-            if right != 0 { left /= right; }
+            if right != 0 {
+                left /= right;
+            }
             pos = new_pos;
         } else if op == b'%' {
             let (right, new_pos) = eval_arith_factor(expr, pos + 1);
-            if right != 0 { left %= right; }
+            if right != 0 {
+                left %= right;
+            }
             pos = new_pos;
         } else {
             break;
@@ -215,13 +235,17 @@ pub(super) fn eval_arith_term(expr: &[u8], pos: usize) -> (i64, usize) {
 #[allow(dead_code)]
 pub(super) fn eval_arith_factor(expr: &[u8], pos: usize) -> (i64, usize) {
     let mut pos = skip_arith_ws(expr, pos);
-    if pos >= expr.len() { return (0, pos); }
+    if pos >= expr.len() {
+        return (0, pos);
+    }
 
     // Handle parentheses
     if expr[pos] == b'(' {
         let (val, new_pos) = eval_arith_expr(expr, pos + 1);
         let mut pos = skip_arith_ws(expr, new_pos);
-        if pos < expr.len() && expr[pos] == b')' { pos += 1; }
+        if pos < expr.len() && expr[pos] == b')' {
+            pos += 1;
+        }
         return (val, pos);
     }
 

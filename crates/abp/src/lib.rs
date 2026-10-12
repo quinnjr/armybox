@@ -44,31 +44,31 @@ pub mod io;
 pub mod util;
 
 #[allow(dead_code)]
-pub mod crypto;
+pub mod config;
 #[allow(dead_code)]
-pub mod format;
+pub mod crypto;
 #[allow(dead_code)]
 pub mod database;
 #[allow(dead_code)]
+pub mod fetch;
+#[allow(dead_code)]
+pub mod format;
+#[allow(dead_code)]
 pub mod install;
+#[allow(dead_code)]
+pub mod list;
+pub mod makepkg;
+pub mod pkgindex;
 #[allow(dead_code)]
 pub mod remove;
 #[allow(dead_code)]
-pub mod list;
-#[allow(dead_code)]
 pub mod repo;
-#[allow(dead_code)]
-pub mod fetch;
 #[allow(dead_code)]
 pub mod resolver;
 #[allow(dead_code)]
 pub mod transaction;
 #[allow(dead_code)]
 pub mod verify;
-#[allow(dead_code)]
-pub mod config;
-pub mod makepkg;
-pub mod pkgindex;
 
 /// ABP command entry point
 ///
@@ -131,7 +131,10 @@ fn cmd_add(args: &[&[u8]]) -> i32 {
             io::write_str(1, b"Usage: abp add [options] <package>...\n\n");
             io::write_str(1, b"Install packages.\n\n");
             io::write_str(1, b"Options:\n");
-            io::write_str(1, b"  -f, --force   Force installation (overwrite conflicts)\n");
+            io::write_str(
+                1,
+                b"  -f, --force   Force installation (overwrite conflicts)\n",
+            );
             io::write_str(1, b"  --no-deps     Skip dependency resolution\n");
             io::write_str(1, b"  -h, --help    Show this help\n");
             return 0;
@@ -228,7 +231,10 @@ fn cmd_list(args: &[&[u8]]) -> i32 {
             io::write_str(1, b"List packages.\n\n");
             io::write_str(1, b"Options:\n");
             io::write_str(1, b"  -v, --verbose     Show version information\n");
-            io::write_str(1, b"  -a, --available   List available (not just installed)\n");
+            io::write_str(
+                1,
+                b"  -a, --available   List available (not just installed)\n",
+            );
             io::write_str(1, b"  -h, --help        Show this help\n");
             return 0;
         }
@@ -258,7 +264,10 @@ fn cmd_verify(args: &[&[u8]]) -> i32 {
         if arg == b"-h" || arg == b"--help" {
             io::write_str(1, b"Usage: abp verify [package]\n\n");
             io::write_str(1, b"Verify package integrity.\n\n");
-            io::write_str(1, b"If no package is specified, verify all installed packages.\n");
+            io::write_str(
+                1,
+                b"If no package is specified, verify all installed packages.\n",
+            );
             return 0;
         } else if !arg.starts_with(b"-") {
             package = Some(arg);
@@ -323,7 +332,10 @@ fn print_usage() {
     io::write_str(1, b"Other:\n");
     io::write_str(1, b"  help             Show this help\n");
     io::write_str(1, b"  version          Show version\n\n");
-    io::write_str(1, b"Run 'abp <command> --help' for command-specific help.\n");
+    io::write_str(
+        1,
+        b"Run 'abp <command> --help' for command-specific help.\n",
+    );
 }
 
 fn print_version() {

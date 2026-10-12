@@ -10,8 +10,8 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// A value in `expr` is always a string; numeric operators parse it as i64.
 type Value = Vec<u8>;
@@ -36,7 +36,11 @@ fn int_to_value(n: i64) -> Value {
     let mut buf = [0u8; 24];
     let neg = n < 0;
     // Use u64 to safely handle i64::MIN.
-    let mut m: u64 = if neg { (n as i128).unsigned_abs() as u64 } else { n as u64 };
+    let mut m: u64 = if neg {
+        (n as i128).unsigned_abs() as u64
+    } else {
+        n as u64
+    };
     let mut i = buf.len();
     if m == 0 {
         i -= 1;
@@ -66,7 +70,11 @@ fn to_int(v: &[u8]) -> Option<i64> {
     if v.is_empty() {
         return None;
     }
-    let (neg, digits) = if v[0] == b'-' { (true, &v[1..]) } else { (false, v) };
+    let (neg, digits) = if v[0] == b'-' {
+        (true, &v[1..])
+    } else {
+        (false, v)
+    };
     if digits.is_empty() {
         return None;
     }
@@ -77,7 +85,11 @@ fn to_int(v: &[u8]) -> Option<i64> {
         }
         let d = (c - b'0') as i64;
         acc = acc.checked_mul(10)?;
-        acc = if neg { acc.checked_sub(d)? } else { acc.checked_add(d)? };
+        acc = if neg {
+            acc.checked_sub(d)?
+        } else {
+            acc.checked_add(d)?
+        };
     }
     Some(acc)
 }
@@ -173,7 +185,11 @@ impl<'a> Parser<'a> {
             let right = self.parse_mul()?;
             let a = to_int(&left).ok_or(E_MATH)?;
             let b = to_int(&right).ok_or(E_MATH)?;
-            let r = if sub { a.checked_sub(b) } else { a.checked_add(b) };
+            let r = if sub {
+                a.checked_sub(b)
+            } else {
+                a.checked_add(b)
+            };
             let r = match r {
                 Some(r) => r,
                 None => {
@@ -207,7 +223,11 @@ impl<'a> Parser<'a> {
                         io::write_str(2, b"expr: division by zero\n");
                         return Err(E_MATH);
                     }
-                    if kind == 1 { a.checked_div(b) } else { a.checked_rem(b) }
+                    if kind == 1 {
+                        a.checked_div(b)
+                    } else {
+                        a.checked_rem(b)
+                    }
                 }
             };
             let r = match checked {
@@ -393,7 +413,11 @@ fn skip_bracket(pattern: &[u8], start: usize) -> usize {
 fn regex_match(s: &[u8], pattern: &[u8]) -> Result<Value, i32> {
     use crate::applets::regex::{Regex, Syntax};
 
-    let syntax = Syntax { ere: false, icase: false, translate_escapes: false };
+    let syntax = Syntax {
+        ere: false,
+        icase: false,
+        translate_escapes: false,
+    };
     let re = Regex::compile(pattern, syntax).map_err(|()| E_SYNTAX)?;
 
     let has_group = pattern_has_group(pattern);
@@ -444,7 +468,10 @@ pub fn expr(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    let mut parser = Parser { toks: &toks, pos: 0 };
+    let mut parser = Parser {
+        toks: &toks,
+        pos: 0,
+    };
     match parser.parse_or() {
         Ok(v) => {
             if parser.pos != parser.toks.len() {
@@ -464,8 +491,8 @@ pub fn expr(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -475,14 +502,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_expr_addition() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["expr", "5", "+", "3"])
@@ -497,7 +528,9 @@ mod tests {
     #[test]
     fn test_expr_subtraction() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["expr", "10", "-", "3"])
@@ -512,7 +545,9 @@ mod tests {
     #[test]
     fn test_expr_multiplication() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["expr", "6", "*", "7"])
@@ -527,7 +562,9 @@ mod tests {
     #[test]
     fn test_expr_division() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["expr", "20", "/", "4"])
@@ -542,7 +579,9 @@ mod tests {
     #[test]
     fn test_expr_single_value() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["expr", "42"])

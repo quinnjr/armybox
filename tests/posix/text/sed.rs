@@ -92,7 +92,10 @@ fn posix_sed_last_line() {
 /// POSIX: sed regex address
 #[test]
 fn posix_sed_regex_address() {
-    let result = run_with_stdin(&["sed", "/^hello/s/world/there/"], b"hello world\ngoodbye world");
+    let result = run_with_stdin(
+        &["sed", "/^hello/s/world/there/"],
+        b"hello world\ngoodbye world",
+    );
     assert_success(&result);
     assert_eq!(result.1, "hello there\ngoodbye world\n");
 }

@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec::Vec;
 
 /// dmesg - print or control the kernel ring buffer
 ///
@@ -150,7 +150,10 @@ fn get_boot_time() -> Option<i64> {
         if line.starts_with(b"btime ") {
             // Extract just the digits
             let time_str = &line[6..];
-            let end = time_str.iter().position(|&c| c < b'0' || c > b'9').unwrap_or(time_str.len());
+            let end = time_str
+                .iter()
+                .position(|&c| c < b'0' || c > b'9')
+                .unwrap_or(time_str.len());
             let digits = &time_str[..end];
             if !digits.is_empty() {
                 return sys::parse_u64(digits).map(|t| t as i64);
@@ -249,8 +252,8 @@ fn format_human_time(timestamp: i64) {
 
     // Format: [Mon Jan  2 15:04:05 2006]
     const MONTHS: [&[u8]; 12] = [
-        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun",
-        b"Jul", b"Aug", b"Sep", b"Oct", b"Nov", b"Dec",
+        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun", b"Jul", b"Aug", b"Sep", b"Oct", b"Nov",
+        b"Dec",
     ];
     const DAYS: [&[u8]; 7] = [b"Sun", b"Mon", b"Tue", b"Wed", b"Thu", b"Fri", b"Sat"];
 
@@ -308,8 +311,8 @@ fn format_human_time(timestamp: i64) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -319,14 +322,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_dmesg_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dmesg", "-h"])

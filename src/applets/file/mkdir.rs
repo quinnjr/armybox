@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/mkdir.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// mkdir - make directories
 ///
@@ -38,7 +38,9 @@ pub fn mkdir(argc: i32, argv: *const *const u8) -> i32 {
 
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b'p') { parents = true; }
+                if has_opt(arg, b'p') {
+                    parents = true;
+                }
                 if has_opt(arg, b'm') && i + 1 < argc {
                     if let Some(m) = unsafe { get_arg(argv, i + 1) } {
                         mode = sys::parse_octal(m).unwrap_or(0o755);
@@ -105,22 +107,28 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_mkdir_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_mkdir_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -133,7 +141,9 @@ mod tests {
     #[test]
     fn test_mkdir_single_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let new_dir = dir.join("newdir");
@@ -152,7 +162,9 @@ mod tests {
     #[test]
     fn test_mkdir_multiple_directories() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let dir1 = dir.join("dir1");
@@ -172,7 +184,9 @@ mod tests {
     #[test]
     fn test_mkdir_parents() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let nested = dir.join("a/b/c/d");
@@ -191,7 +205,9 @@ mod tests {
     #[test]
     fn test_mkdir_existing_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let existing = dir.join("existing");
@@ -210,7 +226,9 @@ mod tests {
     #[test]
     fn test_mkdir_parents_existing() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let existing = dir.join("existing");
@@ -229,7 +247,9 @@ mod tests {
     #[test]
     fn test_mkdir_mode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let new_dir = dir.join("modedir");
@@ -253,7 +273,9 @@ mod tests {
     #[test]
     fn test_mkdir_no_permission() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Skip test if running as root (can create dirs anywhere)
         if std::env::var("USER").map(|u| u == "root").unwrap_or(false) {
@@ -273,7 +295,9 @@ mod tests {
     #[test]
     fn test_mkdir_parents_partial_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         // Create partial path

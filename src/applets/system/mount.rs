@@ -2,9 +2,9 @@
 //!
 //! Mount a filesystem or show mounted filesystems.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// mount - mount a filesystem
 ///
@@ -29,7 +29,9 @@ pub fn mount(argc: i32, argv: *const *const u8) -> i32 {
             let mut buf = [0u8; 4096];
             loop {
                 let n = io::read(fd, &mut buf);
-                if n <= 0 { break; }
+                if n <= 0 {
+                    break;
+                }
                 io::write_all(1, &buf[..n as usize]);
             }
             io::close(fd);
@@ -54,14 +56,19 @@ pub fn mount(argc: i32, argv: *const *const u8) -> i32 {
             core::ptr::null(),
         )
     };
-    if ret != 0 { sys::perror(b"mount"); 1 } else { 0 }
+    if ret != 0 {
+        sys::perror(b"mount");
+        1
+    } else {
+        0
+    }
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -71,19 +78,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_mount_show_mounts() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["mount"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["mount"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         // Should contain some mount information
@@ -95,7 +103,9 @@ mod tests {
     #[test]
     fn test_mount_invalid_source() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // This should fail without root privileges
         let output = Command::new(&armybox)

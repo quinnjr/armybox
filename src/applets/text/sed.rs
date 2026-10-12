@@ -8,12 +8,11 @@
 //! addresses (line, `$`, `/re/`, ranges, `0,/re/`, `!`), address-scoped `{ }`
 //! blocks, and the commands `s y d p a i c q n N g G h H x = b t : { }`.
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
-use alloc::vec::Vec;
 use crate::applets::regex::{Captures, Regex, Syntax};
-
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------------------
 // Replacement text
@@ -162,7 +161,9 @@ enum Cmd {
     Exchange, // x: swap pattern and hold
     // `{ ... }` address-scoped grouping. `BlockStart` carries the index of its
     // matching `BlockEnd`; the enclosing address/negate live on the Command.
-    BlockStart { end: usize },
+    BlockStart {
+        end: usize,
+    },
     BlockEnd,
 }
 
@@ -216,7 +217,9 @@ fn parse_addr(b: &[u8], pos: &mut usize, ere: bool) -> Result<Option<Addr>, ()> 
     if c.is_ascii_digit() {
         let mut n = 0usize;
         while *pos < b.len() && b[*pos].is_ascii_digit() {
-            n = n.saturating_mul(10).saturating_add((b[*pos] - b'0') as usize);
+            n = n
+                .saturating_mul(10)
+                .saturating_add((b[*pos] - b'0') as usize);
             *pos += 1;
         }
         Ok(Some(Addr::Line(n)))
@@ -414,7 +417,9 @@ fn parse_script(src: &[u8], ere: bool) -> Result<Vec<Command>, ()> {
                         b'0'..=b'9' => {
                             let mut n = 0usize;
                             while pos < b.len() && b[pos].is_ascii_digit() {
-                                n = n.saturating_mul(10).saturating_add((b[pos] - b'0') as usize);
+                                n = n
+                                    .saturating_mul(10)
+                                    .saturating_add((b[pos] - b'0') as usize);
                                 pos += 1;
                             }
                             nth = n;
@@ -1091,9 +1096,9 @@ pub fn sed(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -1103,14 +1108,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_sed_substitute() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sed", "s/foo/bar/"])
@@ -1133,7 +1142,9 @@ mod tests {
     #[test]
     fn test_sed_substitute_global() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sed", "s/foo/bar/g"])
@@ -1156,7 +1167,9 @@ mod tests {
     #[test]
     fn test_sed_multiple_lines() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sed", "s/old/new/"])
@@ -1180,7 +1193,9 @@ mod tests {
     #[test]
     fn test_sed_no_match() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sed", "s/notfound/replaced/"])
@@ -1203,7 +1218,9 @@ mod tests {
     #[test]
     fn test_sed_with_e_flag() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["sed", "-e", "s/a/b/"])

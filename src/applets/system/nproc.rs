@@ -20,7 +20,8 @@ use crate::io;
 pub fn nproc(argc: i32, argv: *const *const u8) -> i32 {
     let _ = argc;
     let _ = argv;
-    io::write_num(1, unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) } as u64);
+    io::write_num(1, unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) }
+        as u64);
     io::write_str(1, b"\n");
     0
 }
@@ -28,8 +29,8 @@ pub fn nproc(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -39,19 +40,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_nproc_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["nproc"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["nproc"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

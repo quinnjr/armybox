@@ -2,9 +2,9 @@
 //!
 //! Change the I/O scheduling class and priority of a process.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // ioprio syscall numbers
 const SYS_IOPRIO_GET: i64 = 252;
@@ -54,9 +54,9 @@ pub fn iorenice(argc: i32, argv: *const *const u8) -> i32 {
 
     if argc < 3 {
         // Just show current priority
-        let ioprio = unsafe {
-            libc::syscall(SYS_IOPRIO_GET as libc::c_long, IOPRIO_WHO_PROCESS, pid)
-        } as i32;
+        let ioprio =
+            unsafe { libc::syscall(SYS_IOPRIO_GET as libc::c_long, IOPRIO_WHO_PROCESS, pid) }
+                as i32;
 
         if ioprio < 0 {
             sys::perror(b"ioprio_get");
@@ -109,7 +109,12 @@ pub fn iorenice(argc: i32, argv: *const *const u8) -> i32 {
     let ioprio = (class << 13) | (priority & 0x7);
 
     let result = unsafe {
-        libc::syscall(SYS_IOPRIO_SET as libc::c_long, IOPRIO_WHO_PROCESS, pid, ioprio)
+        libc::syscall(
+            SYS_IOPRIO_SET as libc::c_long,
+            IOPRIO_WHO_PROCESS,
+            pid,
+            ioprio,
+        )
     };
 
     if result < 0 {
@@ -126,8 +131,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -137,19 +142,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_iorenice_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["iorenice"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["iorenice"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -159,7 +165,9 @@ mod tests {
     #[test]
     fn test_iorenice_show_self() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let pid = std::process::id();
         let output = Command::new(&armybox)

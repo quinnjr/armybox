@@ -2,9 +2,9 @@
 //!
 //! Configure 802.1Q VLANs.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // VLAN ioctl commands
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -130,7 +130,10 @@ pub fn vconfig(argc: i32, argv: *const *const u8) -> i32 {
         set_vlan_flag(vlan_iface, flag, value)
     } else if cmd == b"set_egress_map" {
         if argc < 5 {
-            io::write_str(2, b"Usage: vconfig set_egress_map IFACE.VID SKB_PRIO VLAN_QOS\n");
+            io::write_str(
+                2,
+                b"Usage: vconfig set_egress_map IFACE.VID SKB_PRIO VLAN_QOS\n",
+            );
             return 1;
         }
         let vlan_iface = match unsafe { get_arg(argv, 2) } {
@@ -151,7 +154,10 @@ pub fn vconfig(argc: i32, argv: *const *const u8) -> i32 {
         set_egress_map(vlan_iface, skb_prio, vlan_qos)
     } else if cmd == b"set_ingress_map" {
         if argc < 5 {
-            io::write_str(2, b"Usage: vconfig set_ingress_map IFACE.VID SKB_PRIO VLAN_QOS\n");
+            io::write_str(
+                2,
+                b"Usage: vconfig set_ingress_map IFACE.VID SKB_PRIO VLAN_QOS\n",
+            );
             return 1;
         }
         let vlan_iface = match unsafe { get_arg(argv, 2) } {
@@ -422,7 +428,10 @@ fn set_name_type(name_type: &[u8]) -> i32 {
         return 1;
     }
 
-    io::write_str(1, b"Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config\n");
+    io::write_str(
+        1,
+        b"Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config\n",
+    );
 
     0
 }
@@ -430,19 +439,37 @@ fn set_name_type(name_type: &[u8]) -> i32 {
 fn print_usage() {
     io::write_str(1, b"Usage: vconfig COMMAND [OPTIONS]\n\n");
     io::write_str(1, b"Commands:\n");
-    io::write_str(1, b"  add IFACE VID                         Add VLAN device\n");
-    io::write_str(1, b"  rem IFACE.VID                         Remove VLAN device\n");
-    io::write_str(1, b"  set_flag IFACE.VID FLAG VALUE         Set VLAN flag\n");
-    io::write_str(1, b"  set_egress_map IFACE.VID SKB VLAN     Set egress priority\n");
-    io::write_str(1, b"  set_ingress_map IFACE.VID SKB VLAN    Set ingress priority\n");
-    io::write_str(1, b"  set_name_type NAME_TYPE               Set naming convention\n");
+    io::write_str(
+        1,
+        b"  add IFACE VID                         Add VLAN device\n",
+    );
+    io::write_str(
+        1,
+        b"  rem IFACE.VID                         Remove VLAN device\n",
+    );
+    io::write_str(
+        1,
+        b"  set_flag IFACE.VID FLAG VALUE         Set VLAN flag\n",
+    );
+    io::write_str(
+        1,
+        b"  set_egress_map IFACE.VID SKB VLAN     Set egress priority\n",
+    );
+    io::write_str(
+        1,
+        b"  set_ingress_map IFACE.VID SKB VLAN    Set ingress priority\n",
+    );
+    io::write_str(
+        1,
+        b"  set_name_type NAME_TYPE               Set naming convention\n",
+    );
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -452,19 +479,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_vconfig_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["vconfig"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["vconfig"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

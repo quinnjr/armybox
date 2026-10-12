@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/basename.html
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// basename - strip directory and suffix from filenames
 ///
@@ -35,7 +35,11 @@ pub fn basename(argc: i32, argv: *const *const u8) -> i32 {
         }
     };
 
-    let suffix = if argc > 2 { unsafe { get_arg(argv, 2) } } else { None };
+    let suffix = if argc > 2 {
+        unsafe { get_arg(argv, 2) }
+    } else {
+        None
+    };
 
     // Handle empty path
     if path.is_empty() {
@@ -83,22 +87,26 @@ pub fn basename(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     #[test]
     fn test_basename_simple() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["basename", "/usr/bin/sort"])
@@ -106,13 +114,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "sort");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "sort"
+        );
     }
 
     #[test]
     fn test_basename_with_suffix() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["basename", "/path/to/file.txt", ".txt"])
@@ -120,13 +133,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "file");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "file"
+        );
     }
 
     #[test]
     fn test_basename_no_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["basename", "file.txt"])
@@ -134,13 +152,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "file.txt");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "file.txt"
+        );
     }
 
     #[test]
     fn test_basename_trailing_slash() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["basename", "/path/to/dir/"])
@@ -148,13 +171,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "dir");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "dir"
+        );
     }
 
     #[test]
     fn test_basename_root() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["basename", "/"])
@@ -162,18 +190,20 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "/");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "/"
+        );
     }
 
     #[test]
     fn test_basename_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["basename"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["basename"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }

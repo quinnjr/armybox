@@ -2,8 +2,8 @@
 //!
 //! Wake up machines via Wake-on-LAN.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// ether-wake - send Wake-on-LAN magic packet
 ///
@@ -231,8 +231,8 @@ fn format_hex_byte(val: u8, buf: &mut [u8; 3]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -242,14 +242,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_ether_wake_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ether-wake"])

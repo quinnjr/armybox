@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// statfs structure
 #[repr(C)]
@@ -93,13 +93,19 @@ pub fn df(argc: i32, argv: *const *const u8) -> i32 {
         if show_type {
             io::write_str(1, b"Filesystem           Type        Inodes       IUsed       IFree IUse% Mounted on\n");
         } else {
-            io::write_str(1, b"Filesystem                Inodes       IUsed       IFree IUse% Mounted on\n");
+            io::write_str(
+                1,
+                b"Filesystem                Inodes       IUsed       IFree IUse% Mounted on\n",
+            );
         }
     } else {
         if show_type {
             io::write_str(1, b"Filesystem           Type      1K-blocks         Used    Available Use% Mounted on\n");
         } else {
-            io::write_str(1, b"Filesystem              1K-blocks         Used    Available Use% Mounted on\n");
+            io::write_str(
+                1,
+                b"Filesystem              1K-blocks         Used    Available Use% Mounted on\n",
+            );
         }
     }
 
@@ -107,7 +113,15 @@ pub fn df(argc: i32, argv: *const *const u8) -> i32 {
 
     if paths.is_empty() {
         // Show all mounted filesystems
-        show_all_mounts(human_readable, si_units, show_inodes, show_type, show_all, posix_format, base);
+        show_all_mounts(
+            human_readable,
+            si_units,
+            show_inodes,
+            show_type,
+            show_all,
+            posix_format,
+            base,
+        );
     } else {
         // Show specific paths
         for path in &paths {
@@ -119,7 +133,15 @@ pub fn df(argc: i32, argv: *const *const u8) -> i32 {
 }
 
 /// Show all mounted filesystems
-fn show_all_mounts(human: bool, si: bool, inodes: bool, show_type: bool, show_all: bool, _posix: bool, base: u64) {
+fn show_all_mounts(
+    human: bool,
+    si: bool,
+    inodes: bool,
+    show_type: bool,
+    show_all: bool,
+    _posix: bool,
+    base: u64,
+) {
     let fd = io::open(b"/proc/mounts", libc::O_RDONLY, 0);
     if fd < 0 {
         // Fallback to /etc/mtab
@@ -151,11 +173,29 @@ fn show_all_mounts(human: bool, si: bool, inodes: bool, show_type: bool, show_al
         // Skip pseudo filesystems unless -a
         if !show_all {
             let skip_types = [
-                b"proc" as &[u8], b"sysfs", b"devtmpfs", b"devpts", b"tmpfs",
-                b"cgroup", b"cgroup2", b"securityfs", b"debugfs", b"pstore",
-                b"bpf", b"tracefs", b"hugetlbfs", b"mqueue", b"fusectl",
-                b"configfs", b"ramfs", b"efivarfs", b"binfmt_misc", b"autofs",
-                b"rpc_pipefs", b"nfsd", b"overlay",
+                b"proc" as &[u8],
+                b"sysfs",
+                b"devtmpfs",
+                b"devpts",
+                b"tmpfs",
+                b"cgroup",
+                b"cgroup2",
+                b"securityfs",
+                b"debugfs",
+                b"pstore",
+                b"bpf",
+                b"tracefs",
+                b"hugetlbfs",
+                b"mqueue",
+                b"fusectl",
+                b"configfs",
+                b"ramfs",
+                b"efivarfs",
+                b"binfmt_misc",
+                b"autofs",
+                b"rpc_pipefs",
+                b"nfsd",
+                b"overlay",
             ];
             if skip_types.iter().any(|&t| t == fstype) {
                 continue;
@@ -166,12 +206,23 @@ fn show_all_mounts(human: bool, si: bool, inodes: bool, show_type: bool, show_al
             }
         }
 
-        show_mount_entry(device, mountpoint, fstype, human, si, inodes, show_type, base);
+        show_mount_entry(
+            device, mountpoint, fstype, human, si, inodes, show_type, base,
+        );
     }
 }
 
 /// Show a single mount entry
-fn show_mount_entry(device: &[u8], mountpoint: &[u8], fstype: &[u8], human: bool, si: bool, inodes: bool, show_type: bool, base: u64) {
+fn show_mount_entry(
+    device: &[u8],
+    mountpoint: &[u8],
+    fstype: &[u8],
+    human: bool,
+    si: bool,
+    inodes: bool,
+    show_type: bool,
+    base: u64,
+) {
     // Create null-terminated path
     let mut path_buf = [0u8; 512];
     let mp_len = core::cmp::min(mountpoint.len(), path_buf.len() - 1);
@@ -185,7 +236,11 @@ fn show_mount_entry(device: &[u8], mountpoint: &[u8], fstype: &[u8], human: bool
         return;
     }
 
-    let block_size = if stat_buf.f_frsize > 0 { stat_buf.f_frsize } else { stat_buf.f_bsize };
+    let block_size = if stat_buf.f_frsize > 0 {
+        stat_buf.f_frsize
+    } else {
+        stat_buf.f_bsize
+    };
 
     // Print device name (left-aligned, 20 chars)
     io::write_all(1, device);
@@ -290,7 +345,16 @@ fn show_filesystem(path: &[u8], human: bool, si: bool, inodes: bool, show_type: 
 
     // Find the mount entry for this path
     let (device, mountpoint, fstype) = find_mount_for_path(path);
-    show_mount_entry(&device, &mountpoint, &fstype, human, si, inodes, show_type, base);
+    show_mount_entry(
+        &device,
+        &mountpoint,
+        &fstype,
+        human,
+        si,
+        inodes,
+        show_type,
+        base,
+    );
 }
 
 /// Find mount entry for a given path
@@ -323,9 +387,10 @@ fn find_mount_for_path(target: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
         // Check if target starts with this mountpoint
         if target.starts_with(mountpoint) && mountpoint.len() > best_len {
             // Make sure it's a proper path match
-            if mountpoint.len() == target.len() ||
-               (target.len() > mountpoint.len() && target[mountpoint.len()] == b'/') ||
-               mountpoint == b"/" {
+            if mountpoint.len() == target.len()
+                || (target.len() > mountpoint.len() && target[mountpoint.len()] == b'/')
+                || mountpoint == b"/"
+            {
                 best_len = mountpoint.len();
                 best_match = Some((device.to_vec(), mountpoint.to_vec(), fstype.to_vec()));
             }
@@ -359,11 +424,20 @@ fn print_size_padded(size_kb: u64, human: bool, _si: bool, base: u64, width: usi
 /// Convert bytes to human-readable with suffix
 fn humanize(bytes: u64, base: u64) -> (u64, &'static [u8]) {
     if bytes >= base * base * base * base {
-        (bytes / (base * base * base * base), if base == 1000 { b"T" } else { b"T" })
+        (
+            bytes / (base * base * base * base),
+            if base == 1000 { b"T" } else { b"T" },
+        )
     } else if bytes >= base * base * base {
-        (bytes / (base * base * base), if base == 1000 { b"G" } else { b"G" })
+        (
+            bytes / (base * base * base),
+            if base == 1000 { b"G" } else { b"G" },
+        )
     } else if bytes >= base * base {
-        (bytes / (base * base), if base == 1000 { b"M" } else { b"M" })
+        (
+            bytes / (base * base),
+            if base == 1000 { b"M" } else { b"M" },
+        )
     } else if bytes >= base {
         (bytes / base, if base == 1000 { b"K" } else { b"K" })
     } else {
@@ -375,8 +449,14 @@ fn print_help() {
     io::write_str(1, b"Usage: df [OPTIONS] [FILE...]\n\n");
     io::write_str(1, b"Show disk space usage for file systems.\n\n");
     io::write_str(1, b"Options:\n");
-    io::write_str(1, b"  -h, --human-readable  Human-readable sizes (1K=1024)\n");
-    io::write_str(1, b"  -H, --si              Human-readable sizes (1K=1000)\n");
+    io::write_str(
+        1,
+        b"  -h, --human-readable  Human-readable sizes (1K=1024)\n",
+    );
+    io::write_str(
+        1,
+        b"  -H, --si              Human-readable sizes (1K=1000)\n",
+    );
     io::write_str(1, b"  -i, --inodes          Show inode information\n");
     io::write_str(1, b"  -T, --print-type      Show filesystem type\n");
     io::write_str(1, b"  -a, --all             Include pseudo filesystems\n");
@@ -388,8 +468,8 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -399,19 +479,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_df_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -419,12 +500,11 @@ mod tests {
     #[test]
     fn test_df_has_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("Filesystem"));
@@ -434,12 +514,11 @@ mod tests {
     #[test]
     fn test_df_human_readable() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df", "-h"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df", "-h"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -450,12 +529,11 @@ mod tests {
     #[test]
     fn test_df_show_type() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df", "-T"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df", "-T"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -465,12 +543,11 @@ mod tests {
     #[test]
     fn test_df_inodes() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df", "-i"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df", "-i"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -480,12 +557,11 @@ mod tests {
     #[test]
     fn test_df_specific_path() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["df", "/"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["df", "/"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -496,7 +572,9 @@ mod tests {
     #[test]
     fn test_df_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["df", "--help"])

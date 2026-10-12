@@ -6,13 +6,13 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
+use crate::bitstream::BitReader;
 use crate::common::ZstdError;
 use crate::fse::FseTable;
-use crate::bitstream::BitReader;
 
 /// Maximum Huffman weight / code length
 const MAX_BITS: u8 = 11;
@@ -100,7 +100,13 @@ impl HuffTable {
         let implied_weight = (32 - remainder.leading_zeros()) as u8; // log2(remainder) + 1
         // Table size = 1 << max_bits
         let table_size = 1usize << max_bits;
-        let mut table = vec![HuffDecEntry { symbol: 0, num_bits: 0 }; table_size];
+        let mut table = vec![
+            HuffDecEntry {
+                symbol: 0,
+                num_bits: 0
+            };
+            table_size
+        ];
 
         // Build full weight array including implied last symbol
         let implied_sym = weights.len();
@@ -202,11 +208,7 @@ impl HuffTable {
             let mut weights = Vec::with_capacity(num_symbols);
             for i in 0..num_symbols {
                 let byte = data[1 + i / 2];
-                let w = if i % 2 == 0 {
-                    byte >> 4
-                } else {
-                    byte & 0x0F
-                };
+                let w = if i % 2 == 0 { byte >> 4 } else { byte & 0x0F };
                 weights.push(w);
             }
 
@@ -418,7 +420,11 @@ pub fn build_huff_enc_table(histogram: &[u32; 256]) -> Option<HuffEncTable> {
                 break;
             }
         }
-        return Some(HuffEncTable { codes, max_bits: 1, weights });
+        return Some(HuffEncTable {
+            codes,
+            max_bits: 1,
+            weights,
+        });
     }
 
     // Build Huffman tree using simple length-limited approach
@@ -479,7 +485,11 @@ pub fn build_huff_enc_table(histogram: &[u32; 256]) -> Option<HuffEncTable> {
         }
     }
 
-    Some(HuffEncTable { codes, max_bits, weights })
+    Some(HuffEncTable {
+        codes,
+        max_bits,
+        weights,
+    })
 }
 
 /// Assign code lengths to symbols using a simple heuristic
@@ -546,7 +556,8 @@ fn assign_code_lengths(symbols: &[(usize, u32)], lengths: &mut [u8], max_bits: u
     // Adjust to satisfy Kraft inequality: sum(2^(-len_i)) <= 1
     // Which in integer form: sum(2^(max_bits - len_i)) <= 2^max_bits
     loop {
-        let kraft_sum: u64 = lengths.iter()
+        let kraft_sum: u64 = lengths
+            .iter()
             .filter(|&&l| l > 0)
             .map(|&l| 1u64 << (max_bits - l))
             .sum();
@@ -607,7 +618,11 @@ pub fn write_weights(weights: &[u8]) -> Vec<u8> {
 
     for i in (0..num_symbols).step_by(2) {
         let hi = weights[i];
-        let lo = if i + 1 < num_symbols { weights[i + 1] } else { 0 };
+        let lo = if i + 1 < num_symbols {
+            weights[i + 1]
+        } else {
+            0
+        };
         out.push((hi << 4) | lo);
     }
 
@@ -663,7 +678,9 @@ fn encode_1stream(table: &HuffEncTable, data: &[u8]) -> Vec<u8> {
 
     for &byte in data.iter().rev() {
         let (code, len) = table.codes[byte as usize];
-        if len == 0 { continue; }
+        if len == 0 {
+            continue;
+        }
 
         // Reverse the code bits for our forward writer
         let reversed = reverse_bits(code, len);

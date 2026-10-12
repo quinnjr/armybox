@@ -255,11 +255,7 @@ fn posix_ls_multiple_dirs() {
     fs::write(dir1.join("file1"), "a").unwrap();
     fs::write(dir2.join("file2"), "b").unwrap();
 
-    let result = run(&[
-        "ls",
-        dir1.to_str().unwrap(),
-        dir2.to_str().unwrap(),
-    ]);
+    let result = run(&["ls", dir1.to_str().unwrap(), dir2.to_str().unwrap()]);
     assert_success(&result);
     assert!(result.1.contains("file1"));
     assert!(result.1.contains("file2"));

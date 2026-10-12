@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/printf.html
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 use alloc::vec::Vec;
 
 /// Maximum field width we will honor (guards against runaway allocation).
@@ -35,14 +35,38 @@ fn decode_escape(s: &[u8], mut i: usize, out: &mut Vec<u8>) -> (usize, bool) {
     }
     let c = s[i];
     match c {
-        b'\\' => { out.push(b'\\'); (i + 1, false) }
-        b'a' => { out.push(0x07); (i + 1, false) }
-        b'b' => { out.push(0x08); (i + 1, false) }
-        b'f' => { out.push(0x0c); (i + 1, false) }
-        b'n' => { out.push(b'\n'); (i + 1, false) }
-        b'r' => { out.push(b'\r'); (i + 1, false) }
-        b't' => { out.push(b'\t'); (i + 1, false) }
-        b'v' => { out.push(0x0b); (i + 1, false) }
+        b'\\' => {
+            out.push(b'\\');
+            (i + 1, false)
+        }
+        b'a' => {
+            out.push(0x07);
+            (i + 1, false)
+        }
+        b'b' => {
+            out.push(0x08);
+            (i + 1, false)
+        }
+        b'f' => {
+            out.push(0x0c);
+            (i + 1, false)
+        }
+        b'n' => {
+            out.push(b'\n');
+            (i + 1, false)
+        }
+        b'r' => {
+            out.push(b'\r');
+            (i + 1, false)
+        }
+        b't' => {
+            out.push(b'\t');
+            (i + 1, false)
+        }
+        b'v' => {
+            out.push(0x0b);
+            (i + 1, false)
+        }
         b'c' => (i + 1, true),
         b'x' => {
             i += 1;
@@ -526,8 +550,8 @@ pub fn printf(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -537,14 +561,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_printf_string() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["printf", "%s", "hello"])
@@ -552,13 +580,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "hello");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout),
+            "hello"
+        );
     }
 
     #[test]
     fn test_printf_integer() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["printf", "%d", "42"])
@@ -572,7 +605,9 @@ mod tests {
     #[test]
     fn test_printf_newline() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["printf", "hello\\n"])
@@ -580,13 +615,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "hello\n");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout),
+            "hello\n"
+        );
     }
 
     #[test]
     fn test_printf_multiple_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["printf", "%s %d\\n", "count:", "5"])
@@ -594,6 +634,9 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout), "count: 5\n");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout),
+            "count: 5\n"
+        );
     }
 }

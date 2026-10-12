@@ -2,8 +2,8 @@
 //!
 //! Simplified implementation of the file command.
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// file - determine file type
 ///
@@ -23,7 +23,9 @@ pub fn file(argc: i32, argv: *const *const u8) -> i32 {
 
     for i in 1..argc {
         if let Some(path) = unsafe { get_arg(argv, i) } {
-            if path.len() > 0 && path[0] == b'-' { continue; }
+            if path.len() > 0 && path[0] == b'-' {
+                continue;
+            }
 
             io::write_all(1, path);
             io::write_str(1, b": ");
@@ -36,12 +38,24 @@ pub fn file(argc: i32, argv: *const *const u8) -> i32 {
             }
 
             match st.st_mode as u32 & libc::S_IFMT as u32 {
-                t if t == libc::S_IFDIR as u32 => { io::write_str(1, b"directory\n"); }
-                t if t == libc::S_IFLNK as u32 => { io::write_str(1, b"symbolic link\n"); }
-                t if t == libc::S_IFIFO as u32 => { io::write_str(1, b"fifo (named pipe)\n"); }
-                t if t == libc::S_IFSOCK as u32 => { io::write_str(1, b"socket\n"); }
-                t if t == libc::S_IFBLK as u32 => { io::write_str(1, b"block special\n"); }
-                t if t == libc::S_IFCHR as u32 => { io::write_str(1, b"character special\n"); }
+                t if t == libc::S_IFDIR as u32 => {
+                    io::write_str(1, b"directory\n");
+                }
+                t if t == libc::S_IFLNK as u32 => {
+                    io::write_str(1, b"symbolic link\n");
+                }
+                t if t == libc::S_IFIFO as u32 => {
+                    io::write_str(1, b"fifo (named pipe)\n");
+                }
+                t if t == libc::S_IFSOCK as u32 => {
+                    io::write_str(1, b"socket\n");
+                }
+                t if t == libc::S_IFBLK as u32 => {
+                    io::write_str(1, b"block special\n");
+                }
+                t if t == libc::S_IFCHR as u32 => {
+                    io::write_str(1, b"character special\n");
+                }
                 t if t == libc::S_IFREG as u32 => {
                     // Check magic bytes
                     let fd = io::open(path, libc::O_RDONLY, 0);
@@ -71,7 +85,9 @@ pub fn file(argc: i32, argv: *const *const u8) -> i32 {
                         io::write_str(1, b"regular file\n");
                     }
                 }
-                _ => { io::write_str(1, b"unknown\n"); }
+                _ => {
+                    io::write_str(1, b"unknown\n");
+                }
             }
         }
     }
@@ -84,10 +100,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
-    use std::path::PathBuf;
     use std::os::unix::fs::symlink;
+    use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -97,13 +113,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_file_cmd_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_file_cmd_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -116,7 +138,9 @@ mod tests {
     #[test]
     fn test_file_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
 
@@ -134,7 +158,9 @@ mod tests {
     #[test]
     fn test_file_regular() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("regular.txt");
@@ -154,7 +180,9 @@ mod tests {
     #[test]
     fn test_file_empty() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("empty.txt");
@@ -174,7 +202,9 @@ mod tests {
     #[test]
     fn test_file_symlink() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -196,7 +226,9 @@ mod tests {
     #[test]
     fn test_file_script() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let script = dir.join("script.sh");
@@ -216,7 +248,9 @@ mod tests {
     #[test]
     fn test_file_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["file", "/nonexistent/path"])

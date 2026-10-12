@@ -2,9 +2,9 @@
 //!
 //! TUN/TAP device management.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // TUN/TAP ioctl constants
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -137,7 +137,8 @@ pub fn tunctl(argc: i32, argv: *const *const u8) -> i32 {
 
     if delete {
         // Delete: set not persistent
-        let ret = unsafe { libc::ioctl(fd, TUNSETPERSIST as crate::io::IoctlReq, 0 as libc::c_int) };
+        let ret =
+            unsafe { libc::ioctl(fd, TUNSETPERSIST as crate::io::IoctlReq, 0 as libc::c_int) };
         if ret < 0 {
             io::write_str(2, b"tunctl: cannot delete interface\n");
             io::close(fd);
@@ -150,7 +151,8 @@ pub fn tunctl(argc: i32, argv: *const *const u8) -> i32 {
     } else {
         // Create: set owner if specified
         if let Some(u) = uid {
-            let ret = unsafe { libc::ioctl(fd, TUNSETOWNER as crate::io::IoctlReq, u as libc::c_int) };
+            let ret =
+                unsafe { libc::ioctl(fd, TUNSETOWNER as crate::io::IoctlReq, u as libc::c_int) };
             if ret < 0 {
                 io::write_str(2, b"tunctl: cannot set owner\n");
                 io::close(fd);
@@ -160,7 +162,8 @@ pub fn tunctl(argc: i32, argv: *const *const u8) -> i32 {
 
         // Set group if specified
         if let Some(g) = gid {
-            let ret = unsafe { libc::ioctl(fd, TUNSETGROUP as crate::io::IoctlReq, g as libc::c_int) };
+            let ret =
+                unsafe { libc::ioctl(fd, TUNSETGROUP as crate::io::IoctlReq, g as libc::c_int) };
             if ret < 0 {
                 io::write_str(2, b"tunctl: cannot set group\n");
                 io::close(fd);
@@ -169,7 +172,8 @@ pub fn tunctl(argc: i32, argv: *const *const u8) -> i32 {
         }
 
         // Make persistent
-        let ret = unsafe { libc::ioctl(fd, TUNSETPERSIST as crate::io::IoctlReq, 1 as libc::c_int) };
+        let ret =
+            unsafe { libc::ioctl(fd, TUNSETPERSIST as crate::io::IoctlReq, 1 as libc::c_int) };
         if ret < 0 {
             io::write_str(2, b"tunctl: cannot make persistent\n");
             io::close(fd);
@@ -225,8 +229,8 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -236,14 +240,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_tunctl_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["tunctl", "-h"])

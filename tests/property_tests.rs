@@ -4,8 +4,8 @@
 //! for all inputs, helping catch edge cases.
 
 use proptest::prelude::*;
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::NamedTempFile;
 
 fn armybox() -> String {

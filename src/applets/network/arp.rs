@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// arp - manipulate the system ARP cache
 ///
@@ -65,7 +65,10 @@ pub fn arp(argc: i32, argv: *const *const u8) -> i32 {
     let _ = verbose;
 
     // Print header matching system arp format
-    io::write_str(1, b"Address                  HWtype  HWaddress           Flags Mask            Iface\n");
+    io::write_str(
+        1,
+        b"Address                  HWtype  HWaddress           Flags Mask            Iface\n",
+    );
 
     let fd = io::open(b"/proc/net/arp", libc::O_RDONLY, 0);
     if fd < 0 {
@@ -84,7 +87,8 @@ pub fn arp(argc: i32, argv: *const *const u8) -> i32 {
         // Parse /proc/net/arp format:
         // IP address       HW type     Flags       HW address            Mask     Device
         // 192.168.1.1      0x1         0x2         00:11:22:33:44:55     *        eth0
-        let fields: Vec<&[u8]> = line.split(|&c| c == b' ')
+        let fields: Vec<&[u8]> = line
+            .split(|&c| c == b' ')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -186,8 +190,8 @@ fn pad_to(fd: i32, current: usize, target: usize) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -197,19 +201,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_arp_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["arp"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["arp"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -220,12 +225,11 @@ mod tests {
     #[test]
     fn test_arp_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["arp", "-h"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["arp", "-h"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

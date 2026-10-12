@@ -5,11 +5,11 @@
 #![allow(dead_code)]
 
 extern crate alloc;
-use alloc::vec::Vec;
-use alloc::vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec;
+use alloc::vec::Vec;
 
 // I2C ioctl commands
 const I2C_RDWR: crate::io::IoctlReq = 0x0707u32 as crate::io::IoctlReq;
@@ -25,10 +25,10 @@ const I2C_M_STOP: u16 = 0x8000;
 /// i2c_msg structure (matches kernel definition)
 #[repr(C)]
 struct I2cMsg {
-    addr: u16,      // slave address
-    flags: u16,     // message flags
-    len: u16,       // message length
-    buf: *mut u8,   // pointer to data buffer
+    addr: u16,    // slave address
+    flags: u16,   // message flags
+    len: u16,     // message length
+    buf: *mut u8, // pointer to data buffer
 }
 
 /// i2c_rdwr_ioctl_data structure
@@ -215,7 +215,14 @@ pub fn i2ctransfer(argc: i32, argv: *const *const u8) -> i32 {
             io::write_str(1, b"msg ");
             let mut num_buf = [0u8; 8];
             io::write_all(1, sys::format_u64(i as u64, &mut num_buf));
-            io::write_str(1, if desc.is_read { b": read " } else { b": write " });
+            io::write_str(
+                1,
+                if desc.is_read {
+                    b": read "
+                } else {
+                    b": write "
+                },
+            );
             io::write_all(1, sys::format_u64(desc.length as u64, &mut num_buf));
             io::write_str(1, b" bytes at 0x");
             let addr = desc.addr.unwrap_or(0);
@@ -316,12 +323,18 @@ fn parse_hex_byte(s: &[u8]) -> Option<u8> {
 
 fn print_hex(fd: i32, val: u8) {
     let hex_chars = b"0123456789abcdef";
-    let buf = [hex_chars[(val >> 4) as usize], hex_chars[(val & 0x0f) as usize]];
+    let buf = [
+        hex_chars[(val >> 4) as usize],
+        hex_chars[(val & 0x0f) as usize],
+    ];
     io::write_all(fd, &buf);
 }
 
 fn print_usage() {
-    io::write_str(1, b"Usage: i2ctransfer [-y] [-v] BUS DESC [DATA...] ...\n\n");
+    io::write_str(
+        1,
+        b"Usage: i2ctransfer [-y] [-v] BUS DESC [DATA...] ...\n\n",
+    );
     io::write_str(1, b"Execute I2C message transfers.\n\n");
     io::write_str(1, b"DESC format: {r|w}LENGTH[@ADDRESS]\n");
     io::write_str(1, b"  r: read operation\n");
@@ -345,8 +358,8 @@ pub fn i2ctransfer(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -356,14 +369,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_i2ctransfer_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["i2ctransfer", "-h"])
@@ -378,7 +395,9 @@ mod tests {
     #[test]
     fn test_i2ctransfer_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["i2ctransfer"])

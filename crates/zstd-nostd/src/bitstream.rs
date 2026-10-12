@@ -7,9 +7,9 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 use crate::common::ZstdError;
 
@@ -100,7 +100,11 @@ impl<'a> BitReader<'a> {
 
     /// Remaining bits in the stream
     pub fn remaining(&self) -> u32 {
-        if self.bit_pos < 0 { 0 } else { self.bit_pos as u32 }
+        if self.bit_pos < 0 {
+            0
+        } else {
+            self.bit_pos as u32
+        }
     }
 }
 

@@ -2,8 +2,8 @@
 //!
 //! Simple HTTP file downloader.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// wget - retrieve files via HTTP
 ///
@@ -44,7 +44,7 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
 
     // Parse host:port
     let (host, port) = if let Some(pos) = host_port.iter().position(|&c| c == b':') {
-        (&host_port[..pos], &host_port[pos+1..])
+        (&host_port[..pos], &host_port[pos + 1..])
     } else {
         (host_port, b"80".as_slice())
     };
@@ -60,7 +60,15 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
     hints.ai_socktype = libc::SOCK_STREAM;
     let mut res: *mut libc::addrinfo = core::ptr::null_mut();
 
-    if unsafe { libc::getaddrinfo(host_buf.as_ptr() as *const libc::c_char, port_buf.as_ptr() as *const libc::c_char, &hints, &mut res) } != 0 {
+    if unsafe {
+        libc::getaddrinfo(
+            host_buf.as_ptr() as *const libc::c_char,
+            port_buf.as_ptr() as *const libc::c_char,
+            &hints,
+            &mut res,
+        )
+    } != 0
+    {
         io::write_str(2, b"wget: cannot resolve host\n");
         return 1;
     }
@@ -73,7 +81,10 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
 
     let info = unsafe { &*res };
     if unsafe { libc::connect(sock, info.ai_addr, info.ai_addrlen) } < 0 {
-        unsafe { libc::close(sock); libc::freeaddrinfo(res) };
+        unsafe {
+            libc::close(sock);
+            libc::freeaddrinfo(res)
+        };
         io::write_str(2, b"wget: connection failed\n");
         return 1;
     }
@@ -83,20 +94,45 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
     // Send HTTP request
     let mut request = [0u8; 1024];
     let mut ri = 0;
-    for &c in b"GET " { request[ri] = c; ri += 1; }
-    for &c in path { request[ri] = c; ri += 1; }
-    for &c in b" HTTP/1.0\r\nHost: " { request[ri] = c; ri += 1; }
-    for &c in host { request[ri] = c; ri += 1; }
-    for &c in b"\r\nConnection: close\r\n\r\n" { request[ri] = c; ri += 1; }
+    for &c in b"GET " {
+        request[ri] = c;
+        ri += 1;
+    }
+    for &c in path {
+        request[ri] = c;
+        ri += 1;
+    }
+    for &c in b" HTTP/1.0\r\nHost: " {
+        request[ri] = c;
+        ri += 1;
+    }
+    for &c in host {
+        request[ri] = c;
+        ri += 1;
+    }
+    for &c in b"\r\nConnection: close\r\n\r\n" {
+        request[ri] = c;
+        ri += 1;
+    }
 
     let _ = unsafe { libc::send(sock, request.as_ptr() as *const libc::c_void, ri, 0) };
 
     // Determine output filename
     let filename = if let Some(pos) = path.iter().rposition(|&c| c == b'/') {
-        if pos + 1 < path.len() { &path[pos+1..] } else { b"index.html" }
-    } else { b"index.html" };
+        if pos + 1 < path.len() {
+            &path[pos + 1..]
+        } else {
+            b"index.html"
+        }
+    } else {
+        b"index.html"
+    };
 
-    let out_fd = io::open(filename, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+    let out_fd = io::open(
+        filename,
+        libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+        0o644,
+    );
     if out_fd < 0 {
         unsafe { libc::close(sock) };
         io::write_str(2, b"wget: cannot create output file\n");
@@ -110,7 +146,9 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
 
     loop {
         let n = unsafe { libc::recv(sock, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let data = &buf[..n as usize];
 
@@ -143,8 +181,8 @@ pub fn wget(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -154,19 +192,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_wget_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["wget"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["wget"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -176,7 +215,9 @@ mod tests {
     #[test]
     fn test_wget_https_not_supported() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["wget", "https://example.com"])
@@ -191,7 +232,9 @@ mod tests {
     #[test]
     fn test_wget_invalid_url() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["wget", "ftp://example.com"])

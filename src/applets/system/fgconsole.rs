@@ -30,7 +30,10 @@ pub fn fgconsole(_argc: i32, _argv: *const *const u8) -> i32 {
             let content = &buf[..n as usize];
             if content.starts_with(b"tty") {
                 let num_start = 3;
-                let num_end = content.iter().position(|&c| c == b'\n' || c == 0).unwrap_or(n as usize);
+                let num_end = content
+                    .iter()
+                    .position(|&c| c == b'\n' || c == 0)
+                    .unwrap_or(n as usize);
                 if num_end > num_start {
                     io::write_all(1, &content[num_start..num_end]);
                     io::write_str(1, b"\n");
@@ -48,8 +51,8 @@ pub fn fgconsole(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -59,19 +62,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_fgconsole_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["fgconsole"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["fgconsole"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         // Should output a number

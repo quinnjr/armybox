@@ -14,10 +14,10 @@
 
 extern crate alloc;
 
+use crate::format::{Manifest, PackageMetadata};
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::format::{PackageMetadata, Manifest};
 
 /// Database paths
 pub const DB_PATH: &[u8] = b"/var/lib/abp/abp.db";
@@ -119,14 +119,26 @@ impl PackageRecord {
         }
 
         let install_time = u64::from_le_bytes([
-            data[pos], data[pos+1], data[pos+2], data[pos+3],
-            data[pos+4], data[pos+5], data[pos+6], data[pos+7],
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
         ]);
         pos += 8;
 
         let install_size = u64::from_le_bytes([
-            data[pos], data[pos+1], data[pos+2], data[pos+3],
-            data[pos+4], data[pos+5], data[pos+6], data[pos+7],
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
         ]);
         pos += 8;
 
@@ -160,7 +172,8 @@ fn read_checksum_list(data: &[u8], pos: &mut usize) -> Vec<[u8; 32]> {
     if *pos + 4 > data.len() {
         return Vec::new();
     }
-    let count = u32::from_le_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+    let count =
+        u32::from_le_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]]) as usize;
     *pos += 4;
 
     let mut list = Vec::with_capacity(count);
@@ -193,7 +206,8 @@ fn read_string_list(data: &[u8], pos: &mut usize) -> Option<Vec<String>> {
     if *pos + 4 > data.len() {
         return None;
     }
-    let count = u32::from_le_bytes([data[*pos], data[*pos+1], data[*pos+2], data[*pos+3]]) as usize;
+    let count =
+        u32::from_le_bytes([data[*pos], data[*pos + 1], data[*pos + 2], data[*pos + 3]]) as usize;
     *pos += 4;
 
     let mut list = Vec::with_capacity(count);
@@ -201,13 +215,13 @@ fn read_string_list(data: &[u8], pos: &mut usize) -> Option<Vec<String>> {
         if *pos + 2 > data.len() {
             return None;
         }
-        let len = u16::from_le_bytes([data[*pos], data[*pos+1]]) as usize;
+        let len = u16::from_le_bytes([data[*pos], data[*pos + 1]]) as usize;
         *pos += 2;
 
         if *pos + len > data.len() {
             return None;
         }
-        let s = core::str::from_utf8(&data[*pos..*pos+len]).ok()?;
+        let s = core::str::from_utf8(&data[*pos..*pos + len]).ok()?;
         list.push(String::from(s));
         *pos += len;
     }
@@ -248,11 +262,22 @@ impl RepoRecord {
         pos += 1;
 
         let last_update = u64::from_le_bytes([
-            data[pos], data[pos+1], data[pos+2], data[pos+3],
-            data[pos+4], data[pos+5], data[pos+6], data[pos+7],
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
         ]);
 
-        Some(RepoRecord { name, url, enabled, last_update })
+        Some(RepoRecord {
+            name,
+            url,
+            enabled,
+            last_update,
+        })
     }
 }
 
@@ -305,15 +330,29 @@ impl AvailablePackage {
         }
 
         let size = u64::from_le_bytes([
-            data[pos], data[pos+1], data[pos+2], data[pos+3],
-            data[pos+4], data[pos+5], data[pos+6], data[pos+7],
+            data[pos],
+            data[pos + 1],
+            data[pos + 2],
+            data[pos + 3],
+            data[pos + 4],
+            data[pos + 5],
+            data[pos + 6],
+            data[pos + 7],
         ]);
         pos += 8;
 
         let mut checksum = [0u8; 32];
-        checksum.copy_from_slice(&data[pos..pos+32]);
+        checksum.copy_from_slice(&data[pos..pos + 32]);
 
-        Some(AvailablePackage { name, version, description, repo, depends, size, checksum })
+        Some(AvailablePackage {
+            name,
+            version,
+            description,
+            repo,
+            depends,
+            size,
+            checksum,
+        })
     }
 }
 
@@ -350,7 +389,9 @@ impl Database {
         available_dir.extend_from_slice(b"/available");
         ensure_dir(&available_dir);
 
-        Some(Database { path: DB_DIR.to_vec() })
+        Some(Database {
+            path: DB_DIR.to_vec(),
+        })
     }
 
     /// Get a package record by name
@@ -441,7 +482,11 @@ impl Database {
         let mut idx_path = self.path.clone();
         idx_path.extend_from_slice(b"/files.idx");
 
-        let fd = io::open(&idx_path, libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND, 0o644);
+        let fd = io::open(
+            &idx_path,
+            libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
+            0o644,
+        );
         if fd < 0 {
             return false;
         }
@@ -741,7 +786,8 @@ impl Database {
         for pkg in self.list_packages() {
             for dep in &pkg.depends {
                 // Parse dependency and check if it matches
-                let dep_name = dep.split(|c| c == '>' || c == '<' || c == '=')
+                let dep_name = dep
+                    .split(|c| c == '>' || c == '<' || c == '=')
                     .next()
                     .unwrap_or(dep);
                 if dep_name == package {
@@ -780,11 +826,7 @@ fn valid_pkg_name(name: &[u8]) -> bool {
         return false;
     }
     for (i, &c) in name.iter().enumerate() {
-        let ok = c.is_ascii_alphanumeric()
-            || c == b'.'
-            || c == b'_'
-            || c == b'+'
-            || c == b'-';
+        let ok = c.is_ascii_alphanumeric() || c == b'.' || c == b'_' || c == b'+' || c == b'-';
         if !ok {
             return false;
         }
@@ -854,8 +896,8 @@ pub fn current_time() -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::valid_pkg_name;
+    use super::*;
 
     #[test]
     fn test_record_checksum_roundtrip() {

@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/rmdir.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// rmdir - remove directories
 ///
@@ -31,7 +31,9 @@ pub fn rmdir(argc: i32, argv: *const *const u8) -> i32 {
     for i in 1..argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b'p') { parents = true; }
+                if has_opt(arg, b'p') {
+                    parents = true;
+                }
             } else {
                 // This is a directory path
                 let result = if parents {
@@ -105,22 +107,28 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_rmdir_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_rmdir_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -133,7 +141,9 @@ mod tests {
     #[test]
     fn test_rmdir_empty_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let empty_dir = dir.join("empty");
@@ -152,7 +162,9 @@ mod tests {
     #[test]
     fn test_rmdir_multiple_directories() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let dir1 = dir.join("dir1");
@@ -174,7 +186,9 @@ mod tests {
     #[test]
     fn test_rmdir_nonempty_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let nonempty = dir.join("nonempty");
@@ -195,7 +209,9 @@ mod tests {
     #[test]
     fn test_rmdir_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rmdir", "/nonexistent/directory"])
@@ -208,7 +224,9 @@ mod tests {
     #[test]
     fn test_rmdir_parents() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let nested = dir.join("a/b/c");
@@ -229,7 +247,9 @@ mod tests {
     #[test]
     fn test_rmdir_parents_partial() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let nested = dir.join("a/b/c");
@@ -255,7 +275,9 @@ mod tests {
     #[test]
     fn test_rmdir_file_not_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");

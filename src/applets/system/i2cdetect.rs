@@ -2,9 +2,9 @@
 //!
 //! Detect I2C devices on a bus.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // I2C ioctl commands
 const I2C_SLAVE: crate::io::IoctlReq = 0x0703u32 as crate::io::IoctlReq;
@@ -98,9 +98,7 @@ pub fn i2cdetect(argc: i32, argv: *const *const u8) -> i32 {
 
             // Try a simple read to detect device
             let mut buf = [0u8; 1];
-            let result = unsafe {
-                libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, 1)
-            };
+            let result = unsafe { libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, 1) };
 
             if result >= 0 {
                 // Device responded
@@ -126,8 +124,8 @@ pub fn i2cdetect(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -137,19 +135,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_i2cdetect_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["i2cdetect"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["i2cdetect"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -159,7 +158,9 @@ mod tests {
     #[test]
     fn test_i2cdetect_no_bus() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["i2cdetect", "-y"])
@@ -172,7 +173,9 @@ mod tests {
     #[test]
     fn test_i2cdetect_nonexistent_bus() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["i2cdetect", "-y", "99"])

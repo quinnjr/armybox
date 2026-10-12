@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
+use super::get_arg;
+use crate::io;
 use alloc::collections::BTreeMap;
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
-use crate::io;
-use super::get_arg;
 
 /// tsort - topological sort (POSIX compliant)
 ///
@@ -60,7 +60,12 @@ pub fn tsort(argc: i32, argv: *const *const u8) -> i32 {
     let mut i = 0;
     while i < content.len() {
         // Skip whitespace
-        while i < content.len() && (content[i] == b' ' || content[i] == b'\t' || content[i] == b'\n' || content[i] == b'\r') {
+        while i < content.len()
+            && (content[i] == b' '
+                || content[i] == b'\t'
+                || content[i] == b'\n'
+                || content[i] == b'\r')
+        {
             i += 1;
         }
         if i >= content.len() {
@@ -69,7 +74,8 @@ pub fn tsort(argc: i32, argv: *const *const u8) -> i32 {
 
         // Read first word
         let start1 = i;
-        while i < content.len() && content[i] != b' ' && content[i] != b'\t' && content[i] != b'\n' {
+        while i < content.len() && content[i] != b' ' && content[i] != b'\t' && content[i] != b'\n'
+        {
             i += 1;
         }
         let word1: Vec<u8> = content[start1..i].to_vec();
@@ -81,7 +87,8 @@ pub fn tsort(argc: i32, argv: *const *const u8) -> i32 {
 
         // Read second word (if present on same line)
         let start2 = i;
-        while i < content.len() && content[i] != b' ' && content[i] != b'\t' && content[i] != b'\n' {
+        while i < content.len() && content[i] != b' ' && content[i] != b'\t' && content[i] != b'\n'
+        {
             i += 1;
         }
         let word2: Vec<u8> = content[start2..i].to_vec();
@@ -181,9 +188,9 @@ pub fn tsort(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -193,14 +200,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_tsort_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["tsort"])

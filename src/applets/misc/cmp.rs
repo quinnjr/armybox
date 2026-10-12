@@ -2,9 +2,9 @@
 //!
 //! Compare two files and report the first difference.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// cmp - compare two files
 ///
@@ -217,9 +217,9 @@ pub fn cmp(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
     use std::fs;
+    use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -229,14 +229,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_cmp_identical() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_test_cmp");
         let _ = fs::create_dir_all(&dir);
@@ -244,9 +248,11 @@ mod tests {
         fs::write(dir.join("file2.txt"), "hello world").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cmp",
+            .args([
+                "cmp",
                 dir.join("file1.txt").to_str().unwrap(),
-                dir.join("file2.txt").to_str().unwrap()])
+                dir.join("file2.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -257,7 +263,9 @@ mod tests {
     #[test]
     fn test_cmp_different() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_test_cmp2");
         let _ = fs::create_dir_all(&dir);
@@ -265,9 +273,11 @@ mod tests {
         fs::write(dir.join("file2.txt"), "world").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cmp",
+            .args([
+                "cmp",
                 dir.join("file1.txt").to_str().unwrap(),
-                dir.join("file2.txt").to_str().unwrap()])
+                dir.join("file2.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 

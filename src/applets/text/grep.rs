@@ -10,8 +10,8 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use crate::applets::regex::{Regex, Syntax};
 use crate::applets::get_arg;
+use crate::applets::regex::{Regex, Syntax};
 use crate::io;
 
 // ===========================================================================
@@ -57,11 +57,7 @@ impl Opts {
 
 #[inline]
 fn to_lower(c: u8) -> u8 {
-    if c.is_ascii_uppercase() {
-        c + 32
-    } else {
-        c
-    }
+    if c.is_ascii_uppercase() { c + 32 } else { c }
 }
 
 #[inline]

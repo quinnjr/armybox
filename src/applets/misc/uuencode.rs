@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// uuencode - encode binary to ASCII (POSIX compliant)
 ///
@@ -267,7 +267,11 @@ pub fn uudecode(argc: i32, argv: *const *const u8) -> i32 {
     if out_name == b"-" || out_name == b"/dev/stdout" {
         io::write_all(1, &decoded);
     } else {
-        let fd = io::open(out_name, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, mode);
+        let fd = io::open(
+            out_name,
+            libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+            mode,
+        );
         if fd < 0 {
             io::write_str(2, b"uudecode: ");
             io::write_all(2, out_name);
@@ -314,12 +318,15 @@ fn encode_uuencode(data: &[u8]) {
             let c2 = ((b1 << 2) | (b2 >> 6)) & 0x3F;
             let c3 = b2 & 0x3F;
 
-            io::write_all(1, &[
-                uu_encode_char(c0),
-                uu_encode_char(c1),
-                uu_encode_char(c2),
-                uu_encode_char(c3),
-            ]);
+            io::write_all(
+                1,
+                &[
+                    uu_encode_char(c0),
+                    uu_encode_char(c1),
+                    uu_encode_char(c2),
+                    uu_encode_char(c3),
+                ],
+            );
 
             i += 3;
         }
@@ -339,8 +346,16 @@ fn encode_base64(data: &[u8]) {
 
     while pos < data.len() {
         let b0 = data[pos];
-        let b1 = if pos + 1 < data.len() { data[pos + 1] } else { 0 };
-        let b2 = if pos + 2 < data.len() { data[pos + 2] } else { 0 };
+        let b1 = if pos + 1 < data.len() {
+            data[pos + 1]
+        } else {
+            0
+        };
+        let b2 = if pos + 2 < data.len() {
+            data[pos + 2]
+        } else {
+            0
+        };
 
         let c0 = BASE64[((b0 >> 2) & 0x3F) as usize];
         let c1 = BASE64[(((b0 << 4) | (b1 >> 4)) & 0x3F) as usize];
@@ -465,7 +480,10 @@ fn decode_base64_line(line: &[u8], output: &mut Vec<u8>) {
     while pos + 3 < line.len() {
         let c0 = match base64_decode_char(line[pos]) {
             Some(v) => v,
-            None => { pos += 1; continue; }
+            None => {
+                pos += 1;
+                continue;
+            }
         };
         let c1 = match base64_decode_char(line[pos + 1]) {
             Some(v) => v,
@@ -493,9 +511,9 @@ fn decode_base64_line(line: &[u8], output: &mut Vec<u8>) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::io::Write;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -505,14 +523,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_uuencode_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["uuencode", "test"])

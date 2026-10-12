@@ -11,9 +11,9 @@
 use alloc::vec::Vec;
 
 #[cfg(feature = "alloc")]
-use super::state::Shell;
-#[cfg(feature = "alloc")]
 use super::arithmetic::eval_arithmetic;
+#[cfg(feature = "alloc")]
+use super::state::Shell;
 use crate::io;
 
 #[cfg(feature = "alloc")]
@@ -148,17 +148,22 @@ pub(super) fn expand_dollar(shell: &Shell, input: &[u8], start: usize) -> (Vec<u
         let brace_start = pos;
 
         // Special: ${#VAR} for string length
-        let length_op = pos < input.len() && input[pos] == b'#'
-            && pos + 1 < input.len() && input[pos + 1] != b'}';
+        let length_op = pos < input.len()
+            && input[pos] == b'#'
+            && pos + 1 < input.len()
+            && input[pos + 1] != b'}';
 
         if length_op {
             pos += 1; // skip #
         }
 
         // Read variable name
-        while pos < input.len() && input[pos] != b'}'
-            && input[pos] != b':' && input[pos] != b'-'
-            && input[pos] != b'+' && input[pos] != b'='
+        while pos < input.len()
+            && input[pos] != b'}'
+            && input[pos] != b':'
+            && input[pos] != b'-'
+            && input[pos] != b'+'
+            && input[pos] != b'='
             && !(input[pos] == b'?' && !var_name.is_empty())
         {
             var_name.push(input[pos]);
@@ -185,10 +190,13 @@ pub(super) fn expand_dollar(shell: &Shell, input: &[u8], start: usize) -> (Vec<u
             let mut operand = Vec::new();
             let mut depth = 1;
             while pos < input.len() && depth > 0 {
-                if input[pos] == b'{' { depth += 1; }
-                else if input[pos] == b'}' {
+                if input[pos] == b'{' {
+                    depth += 1;
+                } else if input[pos] == b'}' {
                     depth -= 1;
-                    if depth == 0 { break; }
+                    if depth == 0 {
+                        break;
+                    }
                 }
                 operand.push(input[pos]);
                 pos += 1;

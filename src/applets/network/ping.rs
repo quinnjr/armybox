@@ -2,9 +2,9 @@
 //!
 //! Send ICMP ECHO_REQUEST packets to network hosts.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// ping - send ICMP ECHO_REQUEST to network hosts
 ///
@@ -32,7 +32,7 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
     let mut count = 4i32;
 
     // Parse -c option
-    for i in 1..argc-1 {
+    for i in 1..argc - 1 {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg == b"-c" && i + 1 < argc - 1 {
                 if let Some(c) = unsafe { get_arg(argv, i + 1) } {
@@ -61,7 +61,15 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
     hints.ai_family = libc::AF_INET;
     let mut res: *mut libc::addrinfo = core::ptr::null_mut();
 
-    if unsafe { libc::getaddrinfo(host_buf.as_ptr() as *const libc::c_char, core::ptr::null(), &hints, &mut res) } != 0 {
+    if unsafe {
+        libc::getaddrinfo(
+            host_buf.as_ptr() as *const libc::c_char,
+            core::ptr::null(),
+            &hints,
+            &mut res,
+        )
+    } != 0
+    {
         io::write_str(2, b"ping: unknown host\n");
         unsafe { libc::close(sock) };
         return 1;
@@ -79,13 +87,15 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
         packet[0] = 8; // ICMP Echo Request
         packet[1] = 0; // Code
         // Checksum at 2-3, will compute
-        packet[4] = 0; packet[5] = 1; // ID
-        packet[6] = (seq >> 8) as u8; packet[7] = seq as u8; // Sequence
+        packet[4] = 0;
+        packet[5] = 1; // ID
+        packet[6] = (seq >> 8) as u8;
+        packet[7] = seq as u8; // Sequence
 
         // Compute checksum
         let mut sum: u32 = 0;
         for i in (0..64).step_by(2) {
-            sum += ((packet[i] as u32) << 8) | (packet[i+1] as u32);
+            sum += ((packet[i] as u32) << 8) | (packet[i + 1] as u32);
         }
         while sum >> 16 != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
@@ -111,8 +121,19 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
             sent += 1;
 
             // Set receive timeout
-            let tv = libc::timeval { tv_sec: 1, tv_usec: 0 };
-            unsafe { libc::setsockopt(sock, libc::SOL_SOCKET, libc::SO_RCVTIMEO, &tv as *const _ as *const libc::c_void, core::mem::size_of::<libc::timeval>() as libc::socklen_t) };
+            let tv = libc::timeval {
+                tv_sec: 1,
+                tv_usec: 0,
+            };
+            unsafe {
+                libc::setsockopt(
+                    sock,
+                    libc::SOL_SOCKET,
+                    libc::SO_RCVTIMEO,
+                    &tv as *const _ as *const libc::c_void,
+                    core::mem::size_of::<libc::timeval>() as libc::socklen_t,
+                )
+            };
 
             let mut recv_buf = [0u8; 128];
             let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
@@ -161,7 +182,11 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
     io::write_str(1, b" packets transmitted, ");
     io::write_all(1, sys::format_u64(received as u64, &mut num_buf));
     io::write_str(1, b" received, ");
-    let loss = if sent > 0 { ((sent - received) * 100 / sent) as u64 } else { 100 };
+    let loss = if sent > 0 {
+        ((sent - received) * 100 / sent) as u64
+    } else {
+        100
+    };
     io::write_all(1, sys::format_u64(loss, &mut num_buf));
     io::write_str(1, b"% packet loss\n");
 
@@ -171,8 +196,8 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -182,19 +207,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_ping_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ping"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ping"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -204,7 +230,9 @@ mod tests {
     #[test]
     fn test_ping_requires_root() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Without root, should fail with permission error
         let output = Command::new(&armybox)

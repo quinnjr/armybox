@@ -2,8 +2,8 @@
 //!
 //! Check whether a directory is a mountpoint.
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// mountpoint - check if a directory is a mountpoint
 ///
@@ -20,7 +20,9 @@ use crate::applets::get_arg;
 /// - 0: The path is a mountpoint
 /// - 1: The path is not a mountpoint or an error occurred
 pub fn mountpoint(argc: i32, argv: *const *const u8) -> i32 {
-    if argc < 2 { return 1; }
+    if argc < 2 {
+        return 1;
+    }
     let path = unsafe { get_arg(argv, 1).unwrap() };
 
     let mut path_buf = [0u8; 4096];
@@ -37,9 +39,12 @@ pub fn mountpoint(argc: i32, argv: *const *const u8) -> i32 {
     let mut parent = [0u8; 4096];
     parent[..path.len()].copy_from_slice(path);
     let mut plen = path.len();
-    parent[plen] = b'/'; plen += 1;
-    parent[plen] = b'.'; plen += 1;
-    parent[plen] = b'.'; plen += 1;
+    parent[plen] = b'/';
+    plen += 1;
+    parent[plen] = b'.';
+    plen += 1;
+    parent[plen] = b'.';
+    plen += 1;
     parent[plen] = 0;
 
     if unsafe { libc::stat(parent.as_ptr() as *const libc::c_char, &mut st2) } != 0 {
@@ -63,8 +68,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -74,14 +79,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_mountpoint_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["mountpoint"])
@@ -94,7 +103,9 @@ mod tests {
     #[test]
     fn test_mountpoint_root() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["mountpoint", "/"])
@@ -111,7 +122,9 @@ mod tests {
     #[test]
     fn test_mountpoint_tmp() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["mountpoint", "/tmp"])
@@ -127,11 +140,17 @@ mod tests {
     #[test]
     fn test_mountpoint_regular_dir() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Create a temp directory
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let test_dir = std::env::temp_dir().join(format!("armybox_mountpoint_test_{}_{}",  std::process::id(), counter));
+        let test_dir = std::env::temp_dir().join(format!(
+            "armybox_mountpoint_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = std::fs::create_dir_all(&test_dir);
 
         let output = Command::new(&armybox)

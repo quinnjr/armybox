@@ -2,9 +2,9 @@
 //!
 //! Report information about processes, memory, paging, etc.
 
-use alloc::vec::Vec;
 use crate::io;
 use crate::sys;
+use alloc::vec::Vec;
 
 /// vmstat - report virtual memory statistics
 ///
@@ -84,8 +84,14 @@ pub fn vmstat(argc: i32, argv: *const *const u8) -> i32 {
 }
 
 fn print_header() {
-    io::write_str(1, b"procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----\n");
-    io::write_str(1, b" r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st\n");
+    io::write_str(
+        1,
+        b"procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----\n",
+    );
+    io::write_str(
+        1,
+        b" r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st\n",
+    );
 }
 
 /// Memory statistics from /proc/meminfo
@@ -210,7 +216,8 @@ fn read_stat() -> CpuStats {
     for line in content.split(|&c| c == b'\n') {
         if line.starts_with(b"cpu ") {
             // cpu user nice system idle iowait irq softirq steal guest guest_nice
-            let parts: Vec<&[u8]> = line.split(|&c| c == b' ')
+            let parts: Vec<&[u8]> = line
+                .split(|&c| c == b' ')
                 .filter(|p| !p.is_empty())
                 .collect();
             if parts.len() >= 9 {
@@ -227,7 +234,8 @@ fn read_stat() -> CpuStats {
             }
         } else if line.starts_with(b"intr ") {
             // First number after "intr " is total interrupts
-            let parts: Vec<&[u8]> = line.split(|&c| c == b' ')
+            let parts: Vec<&[u8]> = line
+                .split(|&c| c == b' ')
                 .filter(|p| !p.is_empty())
                 .collect();
             if parts.len() >= 2 {
@@ -274,7 +282,8 @@ fn read_proc_stats() -> ProcStats {
 
 /// Parse value from meminfo line like "MemFree:      1234 kB"
 fn parse_meminfo_value(line: &[u8]) -> u64 {
-    let parts: Vec<&[u8]> = line.split(|&c| c == b' ')
+    let parts: Vec<&[u8]> = line
+        .split(|&c| c == b' ')
         .filter(|p| !p.is_empty())
         .collect();
     if parts.len() >= 2 {
@@ -286,7 +295,8 @@ fn parse_meminfo_value(line: &[u8]) -> u64 {
 
 /// Parse value from stat line like "ctxt 12345"
 fn parse_stat_value(line: &[u8]) -> u64 {
-    let parts: Vec<&[u8]> = line.split(|&c| c == b' ')
+    let parts: Vec<&[u8]> = line
+        .split(|&c| c == b' ')
         .filter(|p| !p.is_empty())
         .collect();
     if parts.len() >= 2 {
@@ -300,8 +310,14 @@ fn print_stats(mem: &MemInfo, cpu: &CpuStats, proc_stats: &ProcStats) {
     let mut buf = [0u8; 16];
 
     // Calculate CPU percentages
-    let total_cpu = cpu.user + cpu.nice + cpu.system + cpu.idle +
-                    cpu.iowait + cpu.irq + cpu.softirq + cpu.steal;
+    let total_cpu = cpu.user
+        + cpu.nice
+        + cpu.system
+        + cpu.idle
+        + cpu.iowait
+        + cpu.irq
+        + cpu.softirq
+        + cpu.steal;
 
     let (us, sy, id, wa, st) = if total_cpu > 0 {
         let us = ((cpu.user + cpu.nice) * 100 / total_cpu) as u32;
@@ -384,8 +400,8 @@ fn print_field(value: u64, width: usize, buf: &mut [u8; 16]) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -395,19 +411,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_vmstat_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["vmstat"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["vmstat"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -418,7 +435,9 @@ mod tests {
     #[test]
     fn test_vmstat_with_header_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["vmstat", "-n"])

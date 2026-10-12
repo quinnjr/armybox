@@ -13,9 +13,9 @@
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// Compare two files line by line using LCS algorithm
 ///
@@ -227,11 +227,7 @@ pub fn diff(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    if has_diff {
-        1
-    } else {
-        0
-    }
+    if has_diff { 1 } else { 0 }
 }
 
 /// Stub implementation for non-alloc builds

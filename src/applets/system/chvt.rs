@@ -2,9 +2,9 @@
 //!
 //! Change the foreground virtual terminal.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 // VT_ACTIVATE ioctl
 const VT_ACTIVATE: crate::io::IoctlReq = 0x5606u32 as crate::io::IoctlReq;
@@ -71,8 +71,8 @@ pub fn chvt(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -82,19 +82,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_chvt_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["chvt"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["chvt"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -104,12 +105,11 @@ mod tests {
     #[test]
     fn test_chvt_invalid() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["chvt", "0"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["chvt", "0"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }

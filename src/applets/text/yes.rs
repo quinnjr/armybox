@@ -3,8 +3,8 @@
 //! Non-POSIX utility (common in Unix systems).
 //! Repeatedly outputs a string (default "y").
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// yes - output a string repeatedly
 ///
@@ -36,9 +36,9 @@ pub fn yes(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Read;
     use std::path::PathBuf;
+    use std::process::{Command, Stdio};
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -48,14 +48,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_yes_default() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["yes"])
@@ -81,7 +85,9 @@ mod tests {
     #[test]
     fn test_yes_custom_string() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["yes", "hello"])
@@ -107,7 +113,9 @@ mod tests {
     #[test]
     fn test_yes_with_head() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Use head to limit output
         let output = Command::new("sh")

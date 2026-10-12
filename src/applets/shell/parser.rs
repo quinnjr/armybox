@@ -17,8 +17,8 @@ use super::state::Shell;
 pub(super) enum Token {
     Word(Vec<u8>),
     Pipe,
-    AndIf,      // &&
-    OrIf,       // ||
+    AndIf, // &&
+    OrIf,  // ||
     RedirectOut,
     RedirectAppend,
     RedirectIn,
@@ -91,7 +91,9 @@ pub(super) fn parse_assignment_value(s: &[u8]) -> (Vec<u8>, &[u8]) {
             value.push(c);
             pos += 1;
         } else if c == b')' {
-            if paren_depth > 0 { paren_depth -= 1; }
+            if paren_depth > 0 {
+                paren_depth -= 1;
+            }
             value.push(c);
             pos += 1;
         } else if (c == b' ' || c == b'\t') && paren_depth == 0 {
@@ -119,7 +121,9 @@ pub(super) fn tokenize(shell: &Shell, input: &[u8]) -> Vec<Token> {
             continue;
         }
 
-        if c == b'#' { break; }
+        if c == b'#' {
+            break;
+        }
 
         if c == b'|' {
             if pos + 1 < input.len() && input[pos + 1] == b'|' {
@@ -186,7 +190,16 @@ pub(super) fn parse_word(shell: &Shell, input: &[u8], start: usize) -> (Vec<u8>,
     while pos < input.len() {
         let c = input[pos];
 
-        if c == b' ' || c == b'\t' || c == b'\n' || c == b';' || c == b'|' || c == b'&' || c == b'>' || c == b'<' || c == b'#' {
+        if c == b' '
+            || c == b'\t'
+            || c == b'\n'
+            || c == b';'
+            || c == b'|'
+            || c == b'&'
+            || c == b'>'
+            || c == b'<'
+            || c == b'#'
+        {
             break;
         }
 
@@ -197,7 +210,9 @@ pub(super) fn parse_word(shell: &Shell, input: &[u8], start: usize) -> (Vec<u8>,
                 word.push(input[pos]);
                 pos += 1;
             }
-            if pos < input.len() { pos += 1; }
+            if pos < input.len() {
+                pos += 1;
+            }
         } else if c == b'"' {
             // Double quote - allow expansions
             pos += 1;
@@ -215,7 +230,9 @@ pub(super) fn parse_word(shell: &Shell, input: &[u8], start: usize) -> (Vec<u8>,
                     pos += 1;
                 }
             }
-            if pos < input.len() { pos += 1; }
+            if pos < input.len() {
+                pos += 1;
+            }
         } else if c == b'\\' && pos + 1 < input.len() {
             pos += 1;
             word.push(input[pos]);

@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/cp.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// Hard cap on recursive-copy depth. Symlink cycles are already broken by
 /// recreating links instead of following them; this bounds genuinely deep real
@@ -50,14 +50,32 @@ pub fn cp(argc: i32, argv: *const *const u8) -> i32 {
     for i in 1..argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b'r') || has_opt(arg, b'R') { recursive = true; }
-                if has_opt(arg, b'f') { force = true; }
-                if has_opt(arg, b'i') { _interactive = true; }
-                if has_opt(arg, b'p') { preserve = true; }
-                if has_opt(arg, b'P') { no_deref = true; deref_specified = true; }
-                if has_opt(arg, b'L') { no_deref = false; deref_specified = true; }
-                if has_opt(arg, b'H') { deref_specified = true; }
-                if has_opt(arg, b'n') { no_clobber = true; }
+                if has_opt(arg, b'r') || has_opt(arg, b'R') {
+                    recursive = true;
+                }
+                if has_opt(arg, b'f') {
+                    force = true;
+                }
+                if has_opt(arg, b'i') {
+                    _interactive = true;
+                }
+                if has_opt(arg, b'p') {
+                    preserve = true;
+                }
+                if has_opt(arg, b'P') {
+                    no_deref = true;
+                    deref_specified = true;
+                }
+                if has_opt(arg, b'L') {
+                    no_deref = false;
+                    deref_specified = true;
+                }
+                if has_opt(arg, b'H') {
+                    deref_specified = true;
+                }
+                if has_opt(arg, b'n') {
+                    no_clobber = true;
+                }
                 files_start = i + 1;
             } else {
                 break;
@@ -104,9 +122,20 @@ pub fn cp(argc: i32, argv: *const *const u8) -> i32 {
                 // Copy into directory
                 let mut dest_path = [0u8; 4096];
                 let dest_len = build_dest_path(dest, src, &mut dest_path);
-                copy_item(src, &dest_path[..dest_len], recursive, force, preserve, no_deref, no_clobber, 0)
+                copy_item(
+                    src,
+                    &dest_path[..dest_len],
+                    recursive,
+                    force,
+                    preserve,
+                    no_deref,
+                    no_clobber,
+                    0,
+                )
             } else {
-                copy_item(src, dest, recursive, force, preserve, no_deref, no_clobber, 0)
+                copy_item(
+                    src, dest, recursive, force, preserve, no_deref, no_clobber, 0,
+                )
             };
 
             if result != 0 {
@@ -148,7 +177,11 @@ fn build_dest_path(dest_dir: &[u8], src: &[u8], buf: &mut [u8]) -> usize {
     }
 
     // Find basename of source
-    let basename_start = src.iter().rposition(|&c| c == b'/').map(|p| p + 1).unwrap_or(0);
+    let basename_start = src
+        .iter()
+        .rposition(|&c| c == b'/')
+        .map(|p| p + 1)
+        .unwrap_or(0);
 
     // Append basename
     for &c in &src[basename_start..] {
@@ -185,7 +218,9 @@ fn copy_item(
     // links instead of being followed.
     if no_deref {
         let mut lst: libc::stat = unsafe { core::mem::zeroed() };
-        if io::lstat(src, &mut lst) == 0 && (lst.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFLNK as u32 {
+        if io::lstat(src, &mut lst) == 0
+            && (lst.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFLNK as u32
+        {
             return copy_symlink(src, dest, force);
         }
     }
@@ -251,7 +286,8 @@ fn copy_file_opts(src: &[u8], dest: &[u8], force: bool, preserve: bool) -> i32 {
     // inode), report the error and skip the copy without truncating.
     let mut dest_st: libc::stat = unsafe { core::mem::zeroed() };
     let dest_has_stat = io::stat(dest, &mut dest_st) == 0;
-    if has_stat && dest_has_stat
+    if has_stat
+        && dest_has_stat
         && src_st.st_dev == dest_st.st_dev
         && src_st.st_ino == dest_st.st_ino
     {
@@ -275,7 +311,11 @@ fn copy_file_opts(src: &[u8], dest: &[u8], force: bool, preserve: bool) -> i32 {
         0o644
     };
 
-    let dest_fd = io::open(dest, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, create_mode);
+    let dest_fd = io::open(
+        dest,
+        libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+        create_mode,
+    );
     if dest_fd < 0 {
         io::close(src_fd);
         sys::perror(dest);
@@ -285,7 +325,9 @@ fn copy_file_opts(src: &[u8], dest: &[u8], force: bool, preserve: bool) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(src_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         if io::write_all(dest_fd, &buf[..n as usize]) < 0 {
             io::close(src_fd);
             io::close(dest_fd);
@@ -370,7 +412,9 @@ fn copy_directory(
 
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let mut offset = 0;
         while offset < n as usize {
@@ -392,7 +436,17 @@ fn copy_directory(
                 dest_path.push(b'/');
                 dest_path.extend_from_slice(name);
 
-                if copy_item(&src_path, &dest_path, true, force, preserve, no_deref, no_clobber, depth + 1) != 0 {
+                if copy_item(
+                    &src_path,
+                    &dest_path,
+                    true,
+                    force,
+                    preserve,
+                    no_deref,
+                    no_clobber,
+                    depth + 1,
+                ) != 0
+                {
                     exit_code = 1;
                 }
             }
@@ -409,11 +463,21 @@ fn copy_directory(
         if io::stat(src, &mut src_st) == 0 {
             io::chmod(dest, src_st.st_mode & 0o7777);
             unsafe {
-                libc::chown(dest.as_ptr() as *const libc::c_char, src_st.st_uid, src_st.st_gid);
+                libc::chown(
+                    dest.as_ptr() as *const libc::c_char,
+                    src_st.st_uid,
+                    src_st.st_gid,
+                );
             }
             let times = [
-                libc::timeval { tv_sec: src_st.st_atime, tv_usec: 0 },
-                libc::timeval { tv_sec: src_st.st_mtime, tv_usec: 0 },
+                libc::timeval {
+                    tv_sec: src_st.st_atime,
+                    tv_usec: 0,
+                },
+                libc::timeval {
+                    tv_sec: src_st.st_mtime,
+                    tv_usec: 0,
+                },
             ];
             unsafe {
                 libc::utimes(dest.as_ptr() as *const libc::c_char, times.as_ptr());
@@ -432,22 +496,28 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
         }
         let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         PathBuf::from("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_cp_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_cp_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -460,37 +530,48 @@ mod tests {
     #[test]
     fn test_cp_single_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("source.txt"), "hello world").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp",
+            .args([
+                "cp",
                 dir.join("source.txt").to_str().unwrap(),
-                dir.join("dest.txt").to_str().unwrap()])
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         assert!(dir.join("dest.txt").exists());
-        assert_eq!(fs::read_to_string(dir.join("dest.txt")).unwrap(), "hello world");
+        assert_eq!(
+            fs::read_to_string(dir.join("dest.txt")).unwrap(),
+            "hello world"
+        );
         cleanup(&dir);
     }
 
     #[test]
     fn test_cp_to_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("source.txt"), "content").unwrap();
         fs::create_dir(dir.join("destdir")).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp",
+            .args([
+                "cp",
                 dir.join("source.txt").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -502,7 +583,9 @@ mod tests {
     #[test]
     fn test_cp_multiple_files_to_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "content1").unwrap();
@@ -510,10 +593,12 @@ mod tests {
         fs::create_dir(dir.join("destdir")).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp",
+            .args([
+                "cp",
                 dir.join("file1.txt").to_str().unwrap(),
                 dir.join("file2.txt").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -526,12 +611,18 @@ mod tests {
     #[test]
     fn test_cp_nonexistent_source() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
 
         let output = Command::new(&armybox)
-            .args(["cp", "/nonexistent/file", dir.join("dest.txt").to_str().unwrap()])
+            .args([
+                "cp",
+                "/nonexistent/file",
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -542,7 +633,9 @@ mod tests {
     #[test]
     fn test_cp_recursive_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir_all(dir.join("srcdir/subdir")).unwrap();
@@ -550,9 +643,12 @@ mod tests {
         fs::write(dir.join("srcdir/subdir/nested.txt"), "nested").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp", "-r",
+            .args([
+                "cp",
+                "-r",
                 dir.join("srcdir").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -565,15 +661,19 @@ mod tests {
     #[test]
     fn test_cp_directory_without_recursive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("srcdir")).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp",
+            .args([
+                "cp",
                 dir.join("srcdir").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -585,12 +685,11 @@ mod tests {
     #[test]
     fn test_cp_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["cp"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["cp"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
         assert!(std::string::String::from_utf8_lossy(&output.stderr).contains("missing operand"));
@@ -599,37 +698,49 @@ mod tests {
     #[test]
     fn test_cp_force_overwrite() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("source.txt"), "new content").unwrap();
         fs::write(dir.join("dest.txt"), "old content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp", "-f",
+            .args([
+                "cp",
+                "-f",
                 dir.join("source.txt").to_str().unwrap(),
-                dir.join("dest.txt").to_str().unwrap()])
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(fs::read_to_string(dir.join("dest.txt")).unwrap(), "new content");
+        assert_eq!(
+            fs::read_to_string(dir.join("dest.txt")).unwrap(),
+            "new content"
+        );
         cleanup(&dir);
     }
 
     #[test]
     fn test_cp_preserves_content() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let binary_data: Vec<u8> = (0..=255).collect();
         fs::write(dir.join("binary.bin"), &binary_data).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["cp",
+            .args([
+                "cp",
                 dir.join("binary.bin").to_str().unwrap(),
-                dir.join("copy.bin").to_str().unwrap()])
+                dir.join("copy.bin").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 

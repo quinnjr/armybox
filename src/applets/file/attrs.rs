@@ -4,8 +4,8 @@
 //! setfattr for extended attributes, fstype for filesystem detection,
 //! and makedevs for device node creation.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 // Linux ext2/ext3/ext4 attribute flags
 const EXT2_SECRM_FL: u32 = 0x00000001; // Secure deletion
@@ -112,7 +112,11 @@ pub fn chattr(argc: i32, argv: *const *const u8) -> i32 {
         // Get current flags
         let mut flags: u32 = 0;
         let ret = unsafe {
-            libc::ioctl(fd, FS_IOC_GETFLAGS as crate::io::IoctlReq, &mut flags as *mut u32)
+            libc::ioctl(
+                fd,
+                FS_IOC_GETFLAGS as crate::io::IoctlReq,
+                &mut flags as *mut u32,
+            )
         };
 
         if ret < 0 {
@@ -134,7 +138,11 @@ pub fn chattr(argc: i32, argv: *const *const u8) -> i32 {
 
         // Set new flags
         let ret = unsafe {
-            libc::ioctl(fd, FS_IOC_SETFLAGS as crate::io::IoctlReq, &flags as *const u32)
+            libc::ioctl(
+                fd,
+                FS_IOC_SETFLAGS as crate::io::IoctlReq,
+                &flags as *const u32,
+            )
         };
 
         if ret < 0 {
@@ -223,7 +231,11 @@ fn list_attrs(path: &[u8], long_format: bool) {
 
     let mut flags: u32 = 0;
     let ret = unsafe {
-        libc::ioctl(fd, FS_IOC_GETFLAGS as crate::io::IoctlReq, &mut flags as *mut u32)
+        libc::ioctl(
+            fd,
+            FS_IOC_GETFLAGS as crate::io::IoctlReq,
+            &mut flags as *mut u32,
+        )
     };
     io::close(fd);
 
@@ -269,16 +281,36 @@ fn list_attrs(path: &[u8], long_format: bool) {
         // Short format: show attribute letters
         let mut attr_str = [b'-'; 13];
 
-        if flags & EXT2_SECRM_FL != 0 { attr_str[0] = b's'; }
-        if flags & EXT2_UNRM_FL != 0 { attr_str[1] = b'u'; }
-        if flags & EXT2_SYNC_FL != 0 { attr_str[2] = b'S'; }
-        if flags & EXT4_DIRSYNC_FL != 0 { attr_str[3] = b'D'; }
-        if flags & EXT2_IMMUTABLE_FL != 0 { attr_str[4] = b'i'; }
-        if flags & EXT2_APPEND_FL != 0 { attr_str[5] = b'a'; }
-        if flags & EXT2_NODUMP_FL != 0 { attr_str[6] = b'd'; }
-        if flags & EXT2_NOATIME_FL != 0 { attr_str[7] = b'A'; }
-        if flags & EXT2_COMPR_FL != 0 { attr_str[8] = b'c'; }
-        if flags & EXT4_EXTENTS_FL != 0 { attr_str[9] = b'e'; }
+        if flags & EXT2_SECRM_FL != 0 {
+            attr_str[0] = b's';
+        }
+        if flags & EXT2_UNRM_FL != 0 {
+            attr_str[1] = b'u';
+        }
+        if flags & EXT2_SYNC_FL != 0 {
+            attr_str[2] = b'S';
+        }
+        if flags & EXT4_DIRSYNC_FL != 0 {
+            attr_str[3] = b'D';
+        }
+        if flags & EXT2_IMMUTABLE_FL != 0 {
+            attr_str[4] = b'i';
+        }
+        if flags & EXT2_APPEND_FL != 0 {
+            attr_str[5] = b'a';
+        }
+        if flags & EXT2_NODUMP_FL != 0 {
+            attr_str[6] = b'd';
+        }
+        if flags & EXT2_NOATIME_FL != 0 {
+            attr_str[7] = b'A';
+        }
+        if flags & EXT2_COMPR_FL != 0 {
+            attr_str[8] = b'c';
+        }
+        if flags & EXT4_EXTENTS_FL != 0 {
+            attr_str[9] = b'e';
+        }
         // Positions 10-12 for other flags
 
         io::write_all(1, &attr_str);
@@ -340,13 +372,14 @@ fn detect_filesystem(data: &[u8]) -> &'static [u8] {
     if data.len() > 0x439 && data[0x438] == 0x53 && data[0x439] == 0xEF {
         // Check for ext4 features
         if data.len() > 0x464 {
-            let feature_incompat = u32::from_le_bytes([
-                data[0x460], data[0x461], data[0x462], data[0x463]
-            ]);
-            if feature_incompat & 0x40 != 0 { // EXT4_FEATURE_INCOMPAT_EXTENTS
+            let feature_incompat =
+                u32::from_le_bytes([data[0x460], data[0x461], data[0x462], data[0x463]]);
+            if feature_incompat & 0x40 != 0 {
+                // EXT4_FEATURE_INCOMPAT_EXTENTS
                 return b"ext4";
             }
-            if feature_incompat & 0x04 != 0 { // EXT3_FEATURE_INCOMPAT_JOURNAL_DEV
+            if feature_incompat & 0x04 != 0 {
+                // EXT3_FEATURE_INCOMPAT_JOURNAL_DEV
                 return b"ext3";
             }
         }
@@ -396,7 +429,8 @@ fn detect_filesystem(data: &[u8]) -> &'static [u8] {
     // squashfs: magic at offset 0
     if data.len() > 4 {
         let magic = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-        if magic == 0x73717368 { // "hsqs"
+        if magic == 0x73717368 {
+            // "hsqs"
             return b"squashfs";
         }
     }
@@ -412,8 +446,8 @@ fn detect_filesystem(data: &[u8]) -> &'static [u8] {
 /// Creates device nodes based on a device table or command line arguments.
 #[cfg(feature = "alloc")]
 pub fn makedevs(argc: i32, argv: *const *const u8) -> i32 {
-    use alloc::vec::Vec;
     use crate::sys;
+    use alloc::vec::Vec;
 
     if argc < 2 {
         io::write_str(2, b"Usage: makedevs [-d device_table] rootdir\n");
@@ -505,13 +539,11 @@ pub fn makedevs(argc: i32, argv: *const *const u8) -> i32 {
         }
         path.push(0);
 
-        let ret = unsafe {
-            libc::mknod(path.as_ptr() as *const libc::c_char, mode, dev)
-        };
+        let ret = unsafe { libc::mknod(path.as_ptr() as *const libc::c_char, mode, dev) };
 
         if ret < 0 {
             io::write_str(2, b"makedevs: failed to create ");
-            io::write_all(2, &path[..path.len()-1]);
+            io::write_all(2, &path[..path.len() - 1]);
             io::write_str(2, b"\n");
         }
     }
@@ -528,8 +560,8 @@ pub fn makedevs(_argc: i32, _argv: *const *const u8) -> i32 {
 /// Process device table file
 #[cfg(feature = "alloc")]
 fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
-    use alloc::vec::Vec;
     use crate::sys;
+    use alloc::vec::Vec;
 
     let fd = io::open(table_path, libc::O_RDONLY, 0);
     if fd < 0 {
@@ -550,7 +582,8 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
         }
 
         // Parse: <name> <type> <mode> <uid> <gid> <major> <minor> <start> <inc> <count>
-        let parts: Vec<&[u8]> = line.split(|&c| c == b' ' || c == b'\t')
+        let parts: Vec<&[u8]> = line
+            .split(|&c| c == b' ' || c == b'\t')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -603,12 +636,21 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
                 if parts.len() >= 7 {
                     let major = sys::parse_u64(parts[5]).unwrap_or(0) as u32;
                     let minor = sys::parse_u64(parts[6]).unwrap_or(0) as u32;
-                    let dev_mode = mode | if dtype == b"c" { libc::S_IFCHR as u32 } else { libc::S_IFBLK as u32 };
+                    let dev_mode = mode
+                        | if dtype == b"c" {
+                            libc::S_IFCHR as u32
+                        } else {
+                            libc::S_IFBLK as u32
+                        };
                     let dev = sys::makedev(major, minor);
 
                     path.push(0);
                     unsafe {
-                        libc::mknod(path.as_ptr() as *const libc::c_char, dev_mode as libc::mode_t, dev);
+                        libc::mknod(
+                            path.as_ptr() as *const libc::c_char,
+                            dev_mode as libc::mode_t,
+                            dev,
+                        );
                         libc::chown(path.as_ptr() as *const libc::c_char, uid, gid);
                     }
                 }
@@ -626,7 +668,10 @@ fn process_device_table(table_path: &[u8], rootdir: &[u8]) -> i32 {
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn setfattr(argc: i32, argv: *const *const u8) -> i32 {
     if argc < 2 {
-        io::write_str(2, b"Usage: setfattr [-n name] [-v value] [-x name] file...\n");
+        io::write_str(
+            2,
+            b"Usage: setfattr [-n name] [-v value] [-x name] file...\n",
+        );
         return 1;
     }
 
@@ -728,8 +773,8 @@ pub fn setfattr(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -739,19 +784,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_chattr_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["chattr"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["chattr"]).output().unwrap();
 
         // Returns 1 for usage error (no arguments)
         assert_eq!(output.status.code(), Some(1));
@@ -762,12 +808,11 @@ mod tests {
     #[test]
     fn test_lsattr_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["lsattr"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["lsattr"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -775,12 +820,11 @@ mod tests {
     #[test]
     fn test_fstype_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["fstype"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["fstype"]).output().unwrap();
 
         // Returns 1 for usage error (no device specified)
         assert_eq!(output.status.code(), Some(1));
@@ -791,12 +835,11 @@ mod tests {
     #[test]
     fn test_makedevs_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["makedevs"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["makedevs"]).output().unwrap();
 
         // Returns 1 for usage error (no arguments)
         assert_eq!(output.status.code(), Some(1));
@@ -807,12 +850,11 @@ mod tests {
     #[test]
     fn test_setfattr_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["setfattr"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["setfattr"]).output().unwrap();
 
         // Returns 1 for usage error (no arguments)
         assert_eq!(output.status.code(), Some(1));

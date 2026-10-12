@@ -28,11 +28,7 @@ fn posix_cp_to_directory() {
     fs::write(&src, "content").unwrap();
     fs::create_dir(&target_dir).unwrap();
 
-    let result = run(&[
-        "cp",
-        src.to_str().unwrap(),
-        target_dir.to_str().unwrap(),
-    ]);
+    let result = run(&["cp", src.to_str().unwrap(), target_dir.to_str().unwrap()]);
     assert_success(&result);
     assert_eq!(
         fs::read_to_string(target_dir.join("source")).unwrap(),
@@ -67,7 +63,12 @@ fn posix_cp_recursive() {
     fs::create_dir(src_dir.join("subdir")).unwrap();
     fs::write(src_dir.join("subdir/file2"), "content2").unwrap();
 
-    let result = run(&["cp", "-R", src_dir.to_str().unwrap(), dst_dir.to_str().unwrap()]);
+    let result = run(&[
+        "cp",
+        "-R",
+        src_dir.to_str().unwrap(),
+        dst_dir.to_str().unwrap(),
+    ]);
     assert_success(&result);
     assert!(dst_dir.join("file1").exists());
     assert!(dst_dir.join("subdir/file2").exists());
@@ -167,7 +168,12 @@ fn posix_cp_lowercase_r() {
     fs::create_dir(&src_dir).unwrap();
     fs::write(src_dir.join("file"), "content").unwrap();
 
-    let result = run(&["cp", "-r", src_dir.to_str().unwrap(), dst_dir.to_str().unwrap()]);
+    let result = run(&[
+        "cp",
+        "-r",
+        src_dir.to_str().unwrap(),
+        dst_dir.to_str().unwrap(),
+    ]);
     assert_success(&result);
     assert!(dst_dir.join("file").exists());
 }
@@ -214,7 +220,13 @@ fn posix_cp_preserve_symlinks() {
     fs::write(&target, "content").unwrap();
     std::os::unix::fs::symlink("target", &link).unwrap();
 
-    let result = run(&["cp", "-R", "-P", src_dir.to_str().unwrap(), dst_dir.to_str().unwrap()]);
+    let result = run(&[
+        "cp",
+        "-R",
+        "-P",
+        src_dir.to_str().unwrap(),
+        dst_dir.to_str().unwrap(),
+    ]);
     assert_success(&result);
     assert!(dst_dir.join("link").is_symlink());
 }

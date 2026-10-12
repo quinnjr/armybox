@@ -1,14 +1,13 @@
 //! Benchmarks for compression applets
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::{NamedTempFile, TempDir};
 
 fn armybox_path() -> String {
-    std::env::var("ARMYBOX_PATH")
-        .unwrap_or_else(|_| "./target/release/armybox".to_string())
+    std::env::var("ARMYBOX_PATH").unwrap_or_else(|_| "./target/release/armybox".to_string())
 }
 
 /// Generate test data with varying compressibility
@@ -71,24 +70,20 @@ fn bench_gzip_compress(c: &mut Criterion) {
         let path = temp.path().to_str().unwrap().to_string();
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(
-            BenchmarkId::new(compressibility, size),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    // Copy file since gzip removes original
-                    let temp_copy = NamedTempFile::new().unwrap();
-                    std::fs::copy(path, temp_copy.path()).unwrap();
-                    let copy_path = temp_copy.path().to_str().unwrap();
+        group.bench_with_input(BenchmarkId::new(compressibility, size), &path, |b, path| {
+            b.iter(|| {
+                // Copy file since gzip removes original
+                let temp_copy = NamedTempFile::new().unwrap();
+                std::fs::copy(path, temp_copy.path()).unwrap();
+                let copy_path = temp_copy.path().to_str().unwrap();
 
-                    Command::new(&armybox)
-                        .args(["gzip", "-f", copy_path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+                Command::new(&armybox)
+                    .args(["gzip", "-f", copy_path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -118,24 +113,20 @@ fn bench_gzip_decompress(c: &mut Criterion) {
         let gz_size = std::fs::metadata(&gz_path).unwrap().len();
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &gz_path,
-            |b, gz_path| {
-                b.iter(|| {
-                    // Copy compressed file
-                    let temp_copy = NamedTempFile::new().unwrap();
-                    let copy_path = format!("{}.gz", temp_copy.path().to_str().unwrap());
-                    std::fs::copy(gz_path, &copy_path).unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(size), &gz_path, |b, gz_path| {
+            b.iter(|| {
+                // Copy compressed file
+                let temp_copy = NamedTempFile::new().unwrap();
+                let copy_path = format!("{}.gz", temp_copy.path().to_str().unwrap());
+                std::fs::copy(gz_path, &copy_path).unwrap();
 
-                    Command::new(&armybox)
-                        .args(["gunzip", "-f", &copy_path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+                Command::new(&armybox)
+                    .args(["gunzip", "-f", &copy_path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -155,23 +146,19 @@ fn bench_bzip2_compress(c: &mut Criterion) {
         let path = temp.path().to_str().unwrap().to_string();
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    let temp_copy = NamedTempFile::new().unwrap();
-                    std::fs::copy(path, temp_copy.path()).unwrap();
-                    let copy_path = temp_copy.path().to_str().unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(size), &path, |b, path| {
+            b.iter(|| {
+                let temp_copy = NamedTempFile::new().unwrap();
+                std::fs::copy(path, temp_copy.path()).unwrap();
+                let copy_path = temp_copy.path().to_str().unwrap();
 
-                    Command::new(&armybox)
-                        .args(["bzip2", "-f", copy_path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+                Command::new(&armybox)
+                    .args(["bzip2", "-f", copy_path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();
@@ -191,23 +178,19 @@ fn bench_xz_compress(c: &mut Criterion) {
         let path = temp.path().to_str().unwrap().to_string();
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &path,
-            |b, path| {
-                b.iter(|| {
-                    let temp_copy = NamedTempFile::new().unwrap();
-                    std::fs::copy(path, temp_copy.path()).unwrap();
-                    let copy_path = temp_copy.path().to_str().unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(size), &path, |b, path| {
+            b.iter(|| {
+                let temp_copy = NamedTempFile::new().unwrap();
+                std::fs::copy(path, temp_copy.path()).unwrap();
+                let copy_path = temp_copy.path().to_str().unwrap();
 
-                    Command::new(&armybox)
-                        .args(["xz", "-f", copy_path])
-                        .stdout(Stdio::null())
-                        .status()
-                        .unwrap()
-                })
-            },
-        );
+                Command::new(&armybox)
+                    .args(["xz", "-f", copy_path])
+                    .stdout(Stdio::null())
+                    .status()
+                    .unwrap()
+            })
+        });
     }
 
     group.finish();

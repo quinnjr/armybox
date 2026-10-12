@@ -92,32 +92,27 @@ pub enum ZstdError {
 /// Literal length code baselines and extra bits (codes 0-35)
 /// Per RFC 8878 Table 15
 pub const LL_BASELINES: [u32; 36] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-    16, 18, 20, 22, 24, 28, 32, 40, 48, 64, 128, 256,
-    512, 1024, 2048, 4096, 8192, 16384, 32768, 65536,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 40, 48, 64,
+    128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536,
 ];
 
 pub const LL_EXTRA_BITS: [u8; 36] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 2, 2, 3, 3, 4, 6, 7, 8,
-    9, 10, 11, 12, 13, 14, 15, 16,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4, 6, 7, 8, 9, 10, 11,
+    12, 13, 14, 15, 16,
 ];
 
 /// Match length code baselines and extra bits (codes 0-52)
 /// Per RFC 8878 and reference zstd implementation
 /// Note: After code 42 (bits=5), bits jump to 7 and then increment by 1
 pub const ML_BASELINES: [u32; 53] = [
-    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-    19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-    33, 34, 35, 37, 39, 41, 43, 47, 51, 59, 67, 83, 99, 131,
-    259, 515, 1027, 2051, 4099, 8195, 16387, 32771, 65539,
+    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+    28, 29, 30, 31, 32, 33, 34, 35, 37, 39, 41, 43, 47, 51, 59, 67, 83, 99, 131, 259, 515, 1027,
+    2051, 4099, 8195, 16387, 32771, 65539,
 ];
 
 pub const ML_EXTRA_BITS: [u8; 53] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 7,
-    8, 9, 10, 11, 12, 13, 14, 15, 16,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 ];
 
 /// Offset codes extra bits (code N uses N extra bits)
@@ -125,25 +120,21 @@ pub const ML_EXTRA_BITS: [u8; 53] = [
 
 /// Predefined FSE distribution for literal lengths (accuracy log 6)
 pub const LL_DEFAULT_DIST: [i16; 36] = [
-    4, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 1, 1, 1, 1, 1,
+    4, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 1, 1, 1, 1, 1,
     -1, -1, -1, -1,
 ];
 pub const LL_DEFAULT_AL: u8 = 6;
 
 /// Predefined FSE distribution for match lengths (accuracy log 6)
 pub const ML_DEFAULT_DIST: [i16; 53] = [
-    1, 4, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1,
-    -1, -1, -1, -1, -1,
+    1, 4, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1,
 ];
 pub const ML_DEFAULT_AL: u8 = 6;
 
 /// Predefined FSE distribution for offsets (accuracy log 5)
 pub const OF_DEFAULT_DIST: [i16; 29] = [
-    1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1,
+    1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1,
 ];
 pub const OF_DEFAULT_AL: u8 = 5;
 
@@ -198,23 +189,40 @@ pub fn ml_code(ml: u32) -> u8 {
 
 /// Get offset code for a given offset value
 pub fn of_code(offset: u32) -> u8 {
-    if offset == 0 { return 0; }
+    if offset == 0 {
+        return 0;
+    }
     (32 - offset.leading_zeros() - 1) as u8
 }
 
 /// Helper to read a little-endian u32 from a byte slice
 #[inline]
 pub fn read_le32(data: &[u8], offset: usize) -> u32 {
-    if offset + 4 > data.len() { return 0; }
-    u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
+    if offset + 4 > data.len() {
+        return 0;
+    }
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
 }
 
 /// Helper to read a little-endian u64 from a byte slice
 #[inline]
 pub fn read_le64(data: &[u8], offset: usize) -> u64 {
-    if offset + 8 > data.len() { return 0; }
+    if offset + 8 > data.len() {
+        return 0;
+    }
     u64::from_le_bytes([
-        data[offset], data[offset + 1], data[offset + 2], data[offset + 3],
-        data[offset + 4], data[offset + 5], data[offset + 6], data[offset + 7],
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
     ])
 }

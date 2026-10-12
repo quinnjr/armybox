@@ -12,7 +12,12 @@ fn posix_nohup_basic() {
     let output = dir.path().join("output.txt");
 
     let result = run_in_dir(
-        &["nohup", "sh", "-c", &format!("echo hello > {}", output.to_str().unwrap())],
+        &[
+            "nohup",
+            "sh",
+            "-c",
+            &format!("echo hello > {}", output.to_str().unwrap()),
+        ],
         dir.path(),
     );
 

@@ -5,6 +5,14 @@
 use super::get_arg;
 
 // Individual utility modules
+#[cfg(any(
+    feature = "chattr",
+    feature = "lsattr",
+    feature = "fstype",
+    feature = "makedevs",
+    feature = "setfattr"
+))]
+mod attrs;
 #[cfg(feature = "basename")]
 mod basename;
 #[cfg(feature = "cat")]
@@ -63,14 +71,6 @@ mod shred;
 mod split;
 #[cfg(feature = "stat")]
 mod stat;
-#[cfg(any(
-    feature = "chattr",
-    feature = "lsattr",
-    feature = "fstype",
-    feature = "makedevs",
-    feature = "setfattr"
-))]
-mod attrs;
 #[cfg(feature = "sync")]
 mod sync_cmd;
 #[cfg(feature = "touch")]
@@ -83,6 +83,16 @@ mod unlink;
 mod xargs;
 
 // Re-export utilities
+#[cfg(feature = "chattr")]
+pub use attrs::chattr;
+#[cfg(feature = "fstype")]
+pub use attrs::fstype;
+#[cfg(feature = "lsattr")]
+pub use attrs::lsattr;
+#[cfg(feature = "makedevs")]
+pub use attrs::makedevs;
+#[cfg(feature = "setfattr")]
+pub use attrs::setfattr;
 #[cfg(feature = "basename")]
 pub use basename::basename;
 #[cfg(feature = "cat")]
@@ -141,16 +151,6 @@ pub use shred::shred;
 pub use split::split;
 #[cfg(feature = "stat")]
 pub use stat::stat;
-#[cfg(feature = "chattr")]
-pub use attrs::chattr;
-#[cfg(feature = "lsattr")]
-pub use attrs::lsattr;
-#[cfg(feature = "fstype")]
-pub use attrs::fstype;
-#[cfg(feature = "makedevs")]
-pub use attrs::makedevs;
-#[cfg(feature = "setfattr")]
-pub use attrs::setfattr;
 #[cfg(feature = "sync")]
 pub use sync_cmd::sync_cmd;
 #[cfg(feature = "touch")]

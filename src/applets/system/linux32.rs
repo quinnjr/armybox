@@ -2,8 +2,8 @@
 //!
 //! Run a program in 32-bit personality mode.
 
-use crate::sys;
 use super::get_arg;
+use crate::sys;
 
 // Personality constants
 const PER_LINUX32: u64 = 0x0008;
@@ -35,7 +35,10 @@ pub fn linux32(argc: i32, argv: *const *const u8) -> i32 {
         let shell = b"/bin/sh\0";
         let args: [*const u8; 2] = [shell.as_ptr(), core::ptr::null()];
         unsafe {
-            libc::execv(shell.as_ptr() as *const libc::c_char, args.as_ptr() as *const *const libc::c_char);
+            libc::execv(
+                shell.as_ptr() as *const libc::c_char,
+                args.as_ptr() as *const *const libc::c_char,
+            );
         }
         sys::perror(b"/bin/sh");
         return 1;
@@ -64,8 +67,8 @@ pub fn linux32(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -75,14 +78,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_linux32_with_command() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["linux32", "true"])
@@ -95,7 +102,9 @@ mod tests {
     #[test]
     fn test_linux32_uname() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["linux32", "uname", "-m"])

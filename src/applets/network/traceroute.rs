@@ -2,9 +2,9 @@
 //!
 //! Trace the route to a network host using UDP or ICMP probes.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// traceroute - print the route packets trace to network host
 ///
@@ -113,14 +113,20 @@ pub fn traceroute(argc: i32, argv: *const *const u8) -> i32 {
     };
 
     if send_sock < 0 {
-        io::write_str(2, b"traceroute: cannot create send socket (need CAP_NET_RAW or root)\n");
+        io::write_str(
+            2,
+            b"traceroute: cannot create send socket (need CAP_NET_RAW or root)\n",
+        );
         return 1;
     }
 
     // Create receive socket for ICMP responses
     let recv_sock = unsafe { libc::socket(libc::AF_INET, libc::SOCK_RAW, libc::IPPROTO_ICMP) };
     if recv_sock < 0 {
-        io::write_str(2, b"traceroute: cannot create receive socket (need CAP_NET_RAW or root)\n");
+        io::write_str(
+            2,
+            b"traceroute: cannot create receive socket (need CAP_NET_RAW or root)\n",
+        );
         unsafe { libc::close(send_sock) };
         return 1;
     }
@@ -221,7 +227,8 @@ pub fn traceroute(argc: i32, argv: *const *const u8) -> i32 {
             // Wait for ICMP response
             let mut recv_buf = [0u8; 512];
             let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-            let mut from_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
+            let mut from_len: libc::socklen_t =
+                core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
             let n = unsafe {
                 libc::recvfrom(
@@ -258,8 +265,8 @@ pub fn traceroute(argc: i32, argv: *const *const u8) -> i32 {
                 }
 
                 // Calculate and print RTT
-                let rtt_us = ((end_tv.tv_sec - start_tv.tv_sec) * 1_000_000 +
-                             (end_tv.tv_usec - start_tv.tv_usec)) as u64;
+                let rtt_us = ((end_tv.tv_sec - start_tv.tv_sec) * 1_000_000
+                    + (end_tv.tv_usec - start_tv.tv_usec)) as u64;
                 let rtt_ms = rtt_us / 1000;
                 let rtt_frac = (rtt_us % 1000) / 100;
 
@@ -396,10 +403,12 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     }
     parts[3] = current as u8;
 
-    Some(((parts[0] as u32) << 24) |
-         ((parts[1] as u32) << 16) |
-         ((parts[2] as u32) << 8) |
-         (parts[3] as u32))
+    Some(
+        ((parts[0] as u32) << 24)
+            | ((parts[1] as u32) << 16)
+            | ((parts[2] as u32) << 8)
+            | (parts[3] as u32),
+    )
 }
 
 /// Print IPv4 address
@@ -445,8 +454,8 @@ fn icmp_checksum(data: &[u8]) -> u16 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -456,14 +465,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_traceroute_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["traceroute"])

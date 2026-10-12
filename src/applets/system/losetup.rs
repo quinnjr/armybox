@@ -2,10 +2,10 @@
 //!
 //! Associate loop devices with regular files.
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 // Loop device ioctl commands
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -136,11 +136,7 @@ pub fn losetup(argc: i32, argv: *const *const u8) -> i32 {
 
     // Handle setup: either losetup -f file or losetup loopdev file
     if let Some(f) = file {
-        let dev = if find_free {
-            None
-        } else {
-            loopdev
-        };
+        let dev = if find_free { None } else { loopdev };
         return setup_loop(dev, f, offset, read_only, partscan);
     } else if let Some(dev) = loopdev {
         // Just show info for this device
@@ -170,7 +166,8 @@ fn show_loops() -> i32 {
         let fd = io::open(&path, libc::O_RDONLY, 0);
         if fd >= 0 {
             let mut info: LoopInfo64 = unsafe { core::mem::zeroed() };
-            let ret = unsafe { libc::ioctl(fd, LOOP_GET_STATUS64 as crate::io::IoctlReq, &mut info) };
+            let ret =
+                unsafe { libc::ioctl(fd, LOOP_GET_STATUS64 as crate::io::IoctlReq, &mut info) };
             io::close(fd);
 
             if ret >= 0 {
@@ -273,7 +270,13 @@ fn find_free_loop() -> i32 {
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-fn setup_loop(device: Option<&[u8]>, file: &[u8], offset: u64, read_only: bool, partscan: bool) -> i32 {
+fn setup_loop(
+    device: Option<&[u8]>,
+    file: &[u8],
+    offset: u64,
+    read_only: bool,
+    partscan: bool,
+) -> i32 {
     // Get device path
     let dev_path = if let Some(d) = device {
         let mut p = Vec::new();
@@ -305,7 +308,11 @@ fn setup_loop(device: Option<&[u8]>, file: &[u8], offset: u64, read_only: bool, 
     };
 
     // Open the backing file
-    let file_flags = if read_only { libc::O_RDONLY } else { libc::O_RDWR };
+    let file_flags = if read_only {
+        libc::O_RDONLY
+    } else {
+        libc::O_RDWR
+    };
     let mut file_path = Vec::new();
     file_path.extend_from_slice(file);
     file_path.push(0);
@@ -319,7 +326,11 @@ fn setup_loop(device: Option<&[u8]>, file: &[u8], offset: u64, read_only: bool, 
     }
 
     // Open the loop device
-    let loop_flags = if read_only { libc::O_RDONLY } else { libc::O_RDWR };
+    let loop_flags = if read_only {
+        libc::O_RDONLY
+    } else {
+        libc::O_RDWR
+    };
     let loop_fd = io::open(&dev_path, loop_flags, 0);
     if loop_fd < 0 {
         io::write_str(2, b"losetup: cannot open loop device\n");
@@ -418,8 +429,8 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -429,14 +440,18 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_losetup_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["losetup", "-h"])
@@ -451,7 +466,9 @@ mod tests {
     #[test]
     fn test_losetup_show() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["losetup", "-a"])

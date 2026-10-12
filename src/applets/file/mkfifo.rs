@@ -5,10 +5,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec::Vec;
 
 /// Get the process umask without permanently changing it.
 fn get_umask() -> u32 {
@@ -190,10 +190,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
-    use std::path::PathBuf;
     use std::os::unix::fs::FileTypeExt;
+    use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -203,13 +203,19 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_mkfifo_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_mkfifo_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -222,7 +228,9 @@ mod tests {
     #[test]
     fn test_mkfifo_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let fifo = dir.join("myfifo");
@@ -242,7 +250,9 @@ mod tests {
     #[test]
     fn test_mkfifo_multiple() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let fifo1 = dir.join("fifo1");
@@ -262,7 +272,9 @@ mod tests {
     #[test]
     fn test_mkfifo_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let fifo = dir.join("myfifo");
@@ -283,7 +295,9 @@ mod tests {
     #[test]
     fn test_mkfifo_no_permission() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Try creating in /root which should fail for non-root
         if std::env::var("USER").map(|u| u == "root").unwrap_or(false) {
@@ -301,7 +315,9 @@ mod tests {
     #[test]
     fn test_mkfifo_mode_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let fifo = dir.join("myfifo");

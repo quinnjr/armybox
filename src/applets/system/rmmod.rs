@@ -2,8 +2,8 @@
 //!
 //! Remove a loadable module from the kernel.
 
-use crate::sys;
 use crate::applets::get_arg;
+use crate::sys;
 
 /// rmmod - remove a module from the Linux kernel
 ///
@@ -19,7 +19,9 @@ use crate::applets::get_arg;
 /// - 0: Success
 /// - >0: An error occurred
 pub fn rmmod(argc: i32, argv: *const *const u8) -> i32 {
-    if argc < 2 { return 1; }
+    if argc < 2 {
+        return 1;
+    }
     let name = unsafe { get_arg(argv, 1).unwrap() };
     let mut name_buf = [0u8; 256];
     name_buf[..name.len()].copy_from_slice(name);
@@ -34,8 +36,8 @@ pub fn rmmod(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
@@ -45,19 +47,20 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
         let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
+        if release.exists() {
+            return release;
+        }
         manifest_dir.join("target/debug/armybox")
     }
 
     #[test]
     fn test_rmmod_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["rmmod"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["rmmod"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }
@@ -65,7 +68,9 @@ mod tests {
     #[test]
     fn test_rmmod_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rmmod", "nonexistent_module"])
