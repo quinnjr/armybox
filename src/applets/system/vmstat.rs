@@ -75,7 +75,7 @@ pub fn vmstat(argc: i32, argv: *const *const u8) -> i32 {
         unsafe { libc::sleep(delay) };
 
         // Print header again if not -n
-        if !show_header_once && iteration % 25 == 0 {
+        if !show_header_once && iteration.is_multiple_of(25) {
             print_header();
         }
     }

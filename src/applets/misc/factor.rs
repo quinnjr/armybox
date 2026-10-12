@@ -32,7 +32,7 @@ pub fn factor(argc: i32, argv: *const *const u8) -> i32 {
 
             let mut d = 2u64;
             while d * d <= n {
-                while n % d == 0 {
+                while n.is_multiple_of(d) {
                     io::write_str(1, b" ");
                     io::write_num(1, d);
                     n /= d;

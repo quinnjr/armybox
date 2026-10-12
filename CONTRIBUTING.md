@@ -43,7 +43,7 @@ Look for issues labeled `good first issue` - these are great for newcomers!
 
 ### Prerequisites
 
-- **Rust 2024** (1.85+) - Install via [rustup](https://rustup.rs)
+- **Rust 2024** (1.88+) - Install via [rustup](https://rustup.rs)
 - **Git** - For version control
 - **UPX** (optional) - For binary compression testing
 

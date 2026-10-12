@@ -31,38 +31,38 @@ pub extern "C" fn main(argc: i32, argv: *const *const u8) -> i32 {
     // Check if invoked as "armybox" itself
     if io::bytes_eq(applet_name, b"armybox") {
         // If there's an argument, use it as the applet name
-        if argc > 1 {
-            if let Some(arg1) = unsafe { applets::get_arg(argv, 1) } {
-                // Check for special flags
-                if io::bytes_eq(arg1, b"--list") || io::bytes_eq(arg1, b"-l") {
-                    applets::list_applets();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--help") || io::bytes_eq(arg1, b"-h") {
-                    print_help();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--version") || io::bytes_eq(arg1, b"-V") {
-                    print_version();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--install") {
-                    if argc > 2 {
-                        if let Some(dir) = unsafe { applets::get_arg(argv, 2) } {
-                            return install_symlinks(dir);
-                        }
-                    }
-                    io::write_str(2, b"armybox: --install requires a directory\n");
-                    return 1;
-                }
-
-                // Run the specified applet
-                // Shift argv: argv[1] becomes argv[0] for the applet
-                return run_applet(arg1, argc - 1, unsafe { argv.offset(1) });
+        if argc > 1
+            && let Some(arg1) = unsafe { applets::get_arg(argv, 1) }
+        {
+            // Check for special flags
+            if io::bytes_eq(arg1, b"--list") || io::bytes_eq(arg1, b"-l") {
+                applets::list_applets();
+                return 0;
             }
+
+            if io::bytes_eq(arg1, b"--help") || io::bytes_eq(arg1, b"-h") {
+                print_help();
+                return 0;
+            }
+
+            if io::bytes_eq(arg1, b"--version") || io::bytes_eq(arg1, b"-V") {
+                print_version();
+                return 0;
+            }
+
+            if io::bytes_eq(arg1, b"--install") {
+                if argc > 2
+                    && let Some(dir) = unsafe { applets::get_arg(argv, 2) }
+                {
+                    return install_symlinks(dir);
+                }
+                io::write_str(2, b"armybox: --install requires a directory\n");
+                return 1;
+            }
+
+            // Run the specified applet
+            // Shift argv: argv[1] becomes argv[0] for the applet
+            return run_applet(arg1, argc - 1, unsafe { argv.offset(1) });
         }
 
         // No arguments - print usage
