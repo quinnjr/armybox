@@ -4,7 +4,8 @@
 
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
+use crate::applets::get_arg;
+use alloc::vec::Vec;
 
 /// truncate - shrink or extend the size of a file
 ///
@@ -18,88 +19,112 @@ use crate::applets::{get_arg, has_opt};
 ///
 /// # Options
 /// - `-c`, `--no-create`: Do not create files that don't exist
-/// - `-s SIZE`: Set or adjust the file size
+/// - `-s SIZE`, `--size=SIZE`: Set the file size
 ///
 /// # Exit Status
 /// - 0: Success
 /// - >0: An error occurred
 pub fn truncate(argc: i32, argv: *const *const u8) -> i32 {
-    let mut size: i64 = 0;
-    let mut size_set = false;
-    let mut size_parse_failed = false;
+    let mut size_arg: Option<&[u8]> = None;
     let mut no_create = false;
+    let mut files: Vec<i32> = Vec::new();
     let mut exit_code = 0;
 
-    // First pass: find size option
+    // Parse options GNU-style: `-s SIZE`, `-sSIZE`, `--size=SIZE`,
+    // `--size SIZE`, clusters like `-cs SIZE`, and `--` to end options
+    let mut opts_done = false;
     let mut i = 1;
     while i < argc {
-        if let Some(arg) = unsafe { get_arg(argv, i) } {
-            if arg.len() > 0 && arg[0] == b'-' {
-                if arg == b"--no-create" || (arg.get(1) != Some(&b'-') && has_opt(arg, b'c')) {
-                    no_create = true;
-                }
-                if has_opt(arg, b's') && i + 1 < argc {
-                    if let Some(s) = unsafe { get_arg(argv, i + 1) } {
-                        match sys::parse_u64(s) {
-                            Some(v) => {
-                                size = v as i64;
-                                size_set = true;
+        let Some(arg) = (unsafe { get_arg(argv, i) }) else {
+            i += 1;
+            continue;
+        };
+        i += 1;
+
+        if opts_done || arg.len() < 2 || arg[0] != b'-' {
+            files.push(i - 1);
+        } else if arg == b"--" {
+            opts_done = true;
+        } else if arg == b"--no-create" {
+            no_create = true;
+        } else if let Some(v) = arg.strip_prefix(b"--size=") {
+            size_arg = Some(v);
+        } else if arg == b"--size" {
+            size_arg = unsafe { get_arg(argv, i) };
+            if size_arg.is_none() {
+                io::write_str(2, b"truncate: option '--size' requires an argument\n");
+                return 1;
+            }
+            i += 1;
+        } else if arg.starts_with(b"--") {
+            io::write_str(2, b"truncate: unrecognized option '");
+            io::write_all(2, arg);
+            io::write_str(2, b"'\n");
+            return 1;
+        } else {
+            for (k, &c) in arg.iter().enumerate().skip(1) {
+                match c {
+                    b'c' => no_create = true,
+                    b's' => {
+                        // The rest of the cluster, else the next argument
+                        if k + 1 < arg.len() {
+                            size_arg = Some(&arg[k + 1..]);
+                        } else {
+                            size_arg = unsafe { get_arg(argv, i) };
+                            if size_arg.is_none() {
+                                io::write_str(2, b"truncate: option requires an argument -- 's'\n");
+                                return 1;
                             }
-                            None => {
-                                size_parse_failed = true;
-                            }
+                            i += 1;
                         }
-                        i += 1;
+                        break;
+                    }
+                    _ => {
+                        io::write_str(2, b"truncate: invalid option -- '");
+                        io::write_all(2, &[c]);
+                        io::write_str(2, b"'\n");
+                        return 1;
                     }
                 }
             }
         }
-        i += 1;
-    }
-
-    if size_parse_failed {
-        io::write_str(2, b"truncate: invalid size specified for -s\n");
-        return 1;
     }
 
     // Refuse to truncate anything unless a size was explicitly given via
     // -s; without it there is no safe target size, and defaulting to 0
     // would silently zero every file argument.
-    if !size_set {
+    let Some(size_arg) = size_arg else {
         io::write_str(2, b"truncate: you must specify -s SIZE\n");
         io::write_str(2, b"usage: truncate -s SIZE file...\n");
         return 1;
-    }
+    };
+    let size = match sys::parse_u64(size_arg) {
+        Some(v) => v as i64,
+        None => {
+            io::write_str(2, b"truncate: invalid size specified for -s\n");
+            return 1;
+        }
+    };
 
     // Second pass: process files
-    for j in 1..argc {
+    for &j in files.iter() {
         if let Some(arg) = unsafe { get_arg(argv, j) } {
-            if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b's') {
-                    continue; // Skip the -s and its argument
+            // Like GNU truncate, open first: create missing files unless -c,
+            // which skips them (any other failure is still an error), and
+            // don't block on a FIFO or device node
+            let mut flags = libc::O_WRONLY | libc::O_NONBLOCK | libc::O_NOCTTY;
+            if !no_create {
+                flags |= libc::O_CREAT;
+            }
+            let fd = io::open(arg, flags, 0o666);
+            if fd < 0 {
+                if !(no_create && sys::errno() == libc::ENOENT) {
+                    sys::perror(arg);
+                    exit_code = 1;
                 }
                 continue;
             }
-
-            // Check if this is the size argument
-            if j > 1 {
-                if let Some(prev) = unsafe { get_arg(argv, j - 1) } {
-                    if prev.len() >= 2 && prev[0] == b'-' && has_opt(prev, b's') {
-                        continue; // This is the size argument, skip it
-                    }
-                }
-            }
-            // Like GNU truncate: create missing files unless -c, which skips them
-            if no_create {
-                if io::access(arg, libc::F_OK) != 0 {
-                    continue;
-                }
-            } else {
-                let fd = io::open(arg, libc::O_WRONLY | libc::O_CREAT, 0o666);
-                if fd >= 0 {
-                    io::close(fd);
-                }
-            }
+            io::close(fd);
 
             if unsafe { libc::truncate(arg.as_ptr() as *const libc::c_char, size) } < 0 {
                 sys::perror(arg);
@@ -256,6 +281,107 @@ mod tests {
             assert!(!missing.exists(), "{flag} created the file");
         }
         assert_eq!(fs::metadata(&existing).unwrap().len(), 5);
+        cleanup(&dir);
+    }
+
+    fn run(args: &[&str]) -> std::process::Output {
+        Command::new(get_armybox_path())
+            .arg("truncate")
+            .args(args)
+            .output()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_truncate_fifo_does_not_hang() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+
+        let dir = setup();
+        let fifo = dir.join("fifo");
+        let c = std::ffi::CString::new(fifo.to_str().unwrap()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(c.as_ptr(), 0o644) }, 0);
+
+        // A FIFO with no reader must fail at once (ENXIO), not block in open()
+        let mut child = Command::new(&armybox)
+            .args(["truncate", "-s", "0", fifo.to_str().unwrap()])
+            .spawn()
+            .unwrap();
+        let mut status = None;
+        for _ in 0..50 {
+            if let Some(s) = child.try_wait().unwrap() {
+                status = Some(s);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        if status.is_none() {
+            let _ = child.kill();
+            let _ = child.wait();
+            cleanup(&dir);
+            panic!("truncate blocked on a FIFO");
+        }
+        assert_ne!(status.unwrap().code(), Some(0));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn test_truncate_no_create_still_reports_other_errors() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+        // root bypasses the permission check this relies on
+        if unsafe { libc::geteuid() } == 0 { return; }
+
+        let dir = setup();
+        let locked = dir.join("locked");
+        fs::create_dir(&locked).unwrap();
+        let c = std::ffi::CString::new(locked.to_str().unwrap()).unwrap();
+        unsafe { libc::chmod(c.as_ptr(), 0) };
+
+        let output = run(&["-c", "-s", "1", locked.join("x").to_str().unwrap()]);
+
+        unsafe { libc::chmod(c.as_ptr(), 0o755) };
+        assert_ne!(output.status.code(), Some(0));
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn test_truncate_size_option_forms() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+
+        let dir = setup();
+        let file = dir.join("f");
+        let f = file.to_str().unwrap();
+        for (args, want) in [
+            (vec!["-s", "7", f], 7),
+            (vec!["-s8", f], 8),
+            (vec!["--size=9", f], 9),
+            (vec!["--size", "10", f], 10),
+            (vec!["-cs", "11", f], 11),
+            (vec!["-s", "12", "--", f], 12),
+        ] {
+            let output = run(&args);
+            assert_eq!(output.status.code(), Some(0), "{args:?}");
+            assert_eq!(fs::metadata(&file).unwrap().len(), want, "{args:?}");
+        }
+        cleanup(&dir);
+    }
+
+    #[test]
+    fn test_truncate_rejects_bad_options() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() { return; }
+
+        let dir = setup();
+        let file = dir.join("f");
+        let f = file.to_str().unwrap();
+        // -sc takes "c" as the size, like GNU; -x and --bogus are unknown
+        for args in [vec!["-sc", "5", f], vec!["-x", "-s", "1", f], vec!["--bogus", "-s", "1", f], vec!["-s"]] {
+            let output = run(&args);
+            assert_ne!(output.status.code(), Some(0), "{args:?}");
+        }
+        assert!(!file.exists());
         cleanup(&dir);
     }
 }
