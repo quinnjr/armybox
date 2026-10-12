@@ -57,7 +57,15 @@ pub fn run_with_stdin(args: &[&str], input: &[u8]) -> (i32, String, String) {
 
     {
         let stdin = child.stdin.as_mut().unwrap();
-        stdin.write_all(input).expect("Failed to write to stdin");
+        // armybox may exit before reading all input (e.g. on a usage error);
+        // that's a broken pipe, not a test failure
+        if let Err(e) = stdin.write_all(input) {
+            assert_eq!(
+                e.kind(),
+                std::io::ErrorKind::BrokenPipe,
+                "Failed to write to stdin: {e}"
+            );
+        }
     }
 
     let output = child.wait_with_output().expect("Failed to wait on child");
@@ -92,7 +100,15 @@ pub fn run_binary_with_stdin(args: &[&str], input: &[u8]) -> (i32, Vec<u8>, Vec<
 
     {
         let stdin = child.stdin.as_mut().unwrap();
-        stdin.write_all(input).expect("Failed to write to stdin");
+        // armybox may exit before reading all input (e.g. on a usage error);
+        // that's a broken pipe, not a test failure
+        if let Err(e) = stdin.write_all(input) {
+            assert_eq!(
+                e.kind(),
+                std::io::ErrorKind::BrokenPipe,
+                "Failed to write to stdin: {e}"
+            );
+        }
     }
 
     let output = child.wait_with_output().expect("Failed to wait on child");

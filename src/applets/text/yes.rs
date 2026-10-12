@@ -40,6 +40,23 @@ mod tests {
     use std::path::PathBuf;
     use std::process::{Command, Stdio};
 
+    /// Read stdout until `line` appears (or EOF / 4 KiB). A single read() can
+    /// return a partial line, since yes may write the text and the newline
+    /// separately
+    fn read_until(child: &mut std::process::Child, line: &[u8]) -> std::vec::Vec<u8> {
+        let mut buf = std::vec::Vec::new();
+        let mut chunk = [0u8; 256];
+        if let Some(ref mut stdout) = child.stdout {
+            while buf.len() < 4096 && !buf.windows(line.len()).any(|w| w == line) {
+                match stdout.read(&mut chunk) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => buf.extend_from_slice(&chunk[..n]),
+                }
+            }
+        }
+        buf
+    }
+
     fn get_armybox_path() -> PathBuf {
         if let Ok(path) = std::env::var("ARMYBOX_PATH") {
             return PathBuf::from(path);
@@ -67,11 +84,7 @@ mod tests {
             .spawn()
             .unwrap();
 
-        // Read a small amount of output
-        let mut buf = [0u8; 100];
-        if let Some(ref mut stdout) = child.stdout {
-            let _ = stdout.read(&mut buf);
-        }
+        let buf = read_until(&mut child, b"y\n");
 
         // Kill the process
         let _ = child.kill();
@@ -95,11 +108,7 @@ mod tests {
             .spawn()
             .unwrap();
 
-        // Read a small amount of output
-        let mut buf = [0u8; 100];
-        if let Some(ref mut stdout) = child.stdout {
-            let _ = stdout.read(&mut buf);
-        }
+        let buf = read_until(&mut child, b"hello\n");
 
         // Kill the process
         let _ = child.kill();
