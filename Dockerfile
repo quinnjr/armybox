@@ -4,7 +4,9 @@
 # =============================================================================
 # Stage 1: Build armybox static binary
 # =============================================================================
-FROM rust:1.83-bookworm AS builder
+# Track stable like the CI workflows; a pinned minor goes stale as the
+# MSRV moves (edition 2024 needs 1.85+)
+FROM rust:1-bookworm AS builder
 
 # Install musl tools for static linking
 RUN apt-get update && apt-get install -y \
@@ -17,15 +19,17 @@ RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /build
 
-# Copy source code
+# Copy source code (crates/ holds workspace members; .cargo/ holds the
+# per-target rustflags, including +crt-static and -lc link ordering)
 COPY Cargo.toml Cargo.lock ./
+COPY .cargo/ .cargo/
+COPY crates/ crates/
 COPY src/ src/
 COPY benches/ benches/
 COPY tests/ tests/
 
 # Build the static binary
-RUN RUSTFLAGS="-C target-feature=+crt-static" \
-    cargo build --release --target x86_64-unknown-linux-musl \
+RUN cargo build --release --target x86_64-unknown-linux-musl \
     --features full
 
 # Strip the binary for smaller size
