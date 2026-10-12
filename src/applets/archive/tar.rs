@@ -251,9 +251,9 @@ fn tar_add_file(fd: i32, path: &[u8], verbose: bool) -> i32 {
         return 1;
     }
 
-    let mode = stat_buf.st_mode;
-    let is_dir = (mode & libc::S_IFMT) == libc::S_IFDIR;
-    let is_link = (mode & libc::S_IFMT) == libc::S_IFLNK;
+    let mode = stat_buf.st_mode as u32;
+    let is_dir = (mode & libc::S_IFMT as u32) == libc::S_IFDIR as u32;
+    let is_link = (mode & libc::S_IFMT as u32) == libc::S_IFLNK as u32;
 
     if is_dir {
         // Add directory and recurse

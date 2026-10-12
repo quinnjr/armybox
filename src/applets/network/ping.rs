@@ -103,7 +103,7 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
                 64,
                 0,
                 &addr as *const _ as *const libc::sockaddr,
-                core::mem::size_of::<libc::sockaddr_in>() as u32,
+                core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
             )
         };
 
@@ -112,11 +112,11 @@ pub fn ping(argc: i32, argv: *const *const u8) -> i32 {
 
             // Set receive timeout
             let tv = libc::timeval { tv_sec: 1, tv_usec: 0 };
-            unsafe { libc::setsockopt(sock, libc::SOL_SOCKET, libc::SO_RCVTIMEO, &tv as *const _ as *const libc::c_void, core::mem::size_of::<libc::timeval>() as u32) };
+            unsafe { libc::setsockopt(sock, libc::SOL_SOCKET, libc::SO_RCVTIMEO, &tv as *const _ as *const libc::c_void, core::mem::size_of::<libc::timeval>() as libc::socklen_t) };
 
             let mut recv_buf = [0u8; 128];
             let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-            let mut fromlen = core::mem::size_of::<libc::sockaddr_in>() as u32;
+            let mut fromlen = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
             let recv_bytes = unsafe {
                 libc::recvfrom(

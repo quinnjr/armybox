@@ -355,7 +355,7 @@ fn get_mesg_status(line: &[u8]) -> u8 {
         return b'?';
     }
 
-    if stat.st_mode & libc::S_IWGRP != 0 {
+    if stat.st_mode as u32 & libc::S_IWGRP as u32 != 0 {
         b'+'
     } else {
         b'-'

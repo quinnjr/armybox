@@ -172,41 +172,41 @@ pub fn format_size(bytes: u64, buf: &mut [u8]) -> &[u8] {
 /// File mode to permission string
 pub fn format_mode(mode: u32, buf: &mut [u8; 10]) {
     // File type
-    buf[0] = match mode & libc::S_IFMT {
-        libc::S_IFDIR => b'd',
-        libc::S_IFLNK => b'l',
-        libc::S_IFCHR => b'c',
-        libc::S_IFBLK => b'b',
-        libc::S_IFIFO => b'p',
-        libc::S_IFSOCK => b's',
+    buf[0] = match mode & libc::S_IFMT as u32 {
+        t if t == libc::S_IFDIR as u32 => b'd',
+        t if t == libc::S_IFLNK as u32 => b'l',
+        t if t == libc::S_IFCHR as u32 => b'c',
+        t if t == libc::S_IFBLK as u32 => b'b',
+        t if t == libc::S_IFIFO as u32 => b'p',
+        t if t == libc::S_IFSOCK as u32 => b's',
         _ => b'-',
     };
 
     // User permissions
-    buf[1] = if mode & libc::S_IRUSR != 0 { b'r' } else { b'-' };
-    buf[2] = if mode & libc::S_IWUSR != 0 { b'w' } else { b'-' };
-    buf[3] = if mode & libc::S_ISUID != 0 {
-        if mode & libc::S_IXUSR != 0 { b's' } else { b'S' }
+    buf[1] = if mode & libc::S_IRUSR as u32 != 0 { b'r' } else { b'-' };
+    buf[2] = if mode & libc::S_IWUSR as u32 != 0 { b'w' } else { b'-' };
+    buf[3] = if mode & libc::S_ISUID as u32 != 0 {
+        if mode & libc::S_IXUSR as u32 != 0 { b's' } else { b'S' }
     } else {
-        if mode & libc::S_IXUSR != 0 { b'x' } else { b'-' }
+        if mode & libc::S_IXUSR as u32 != 0 { b'x' } else { b'-' }
     };
 
     // Group permissions
-    buf[4] = if mode & libc::S_IRGRP != 0 { b'r' } else { b'-' };
-    buf[5] = if mode & libc::S_IWGRP != 0 { b'w' } else { b'-' };
-    buf[6] = if mode & libc::S_ISGID != 0 {
-        if mode & libc::S_IXGRP != 0 { b's' } else { b'S' }
+    buf[4] = if mode & libc::S_IRGRP as u32 != 0 { b'r' } else { b'-' };
+    buf[5] = if mode & libc::S_IWGRP as u32 != 0 { b'w' } else { b'-' };
+    buf[6] = if mode & libc::S_ISGID as u32 != 0 {
+        if mode & libc::S_IXGRP as u32 != 0 { b's' } else { b'S' }
     } else {
-        if mode & libc::S_IXGRP != 0 { b'x' } else { b'-' }
+        if mode & libc::S_IXGRP as u32 != 0 { b'x' } else { b'-' }
     };
 
     // Other permissions
-    buf[7] = if mode & libc::S_IROTH != 0 { b'r' } else { b'-' };
-    buf[8] = if mode & libc::S_IWOTH != 0 { b'w' } else { b'-' };
-    buf[9] = if mode & libc::S_ISVTX != 0 {
-        if mode & libc::S_IXOTH != 0 { b't' } else { b'T' }
+    buf[7] = if mode & libc::S_IROTH as u32 != 0 { b'r' } else { b'-' };
+    buf[8] = if mode & libc::S_IWOTH as u32 != 0 { b'w' } else { b'-' };
+    buf[9] = if mode & libc::S_ISVTX as u32 != 0 {
+        if mode & libc::S_IXOTH as u32 != 0 { b't' } else { b'T' }
     } else {
-        if mode & libc::S_IXOTH != 0 { b'x' } else { b'-' }
+        if mode & libc::S_IXOTH as u32 != 0 { b'x' } else { b'-' }
     };
 }
 

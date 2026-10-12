@@ -261,8 +261,8 @@ fn cpio_create(verbose: bool) -> i32 {
         }
 
         ino += 1;
-        let mode = stat_buf.st_mode;
-        let is_file = (mode & libc::S_IFMT) == libc::S_IFREG;
+        let mode = stat_buf.st_mode as u32;
+        let is_file = (mode & libc::S_IFMT as u32) == libc::S_IFREG as u32;
 
         if is_file {
             // Read file content

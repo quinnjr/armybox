@@ -126,7 +126,7 @@ pub fn ftpget(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     if unsafe { libc::connect(ctrl_fd, &addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                              core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
         io::write_str(2, b"ftpget: connect failed\n");
         io::close(ctrl_fd);
         return 1;
@@ -169,7 +169,7 @@ fn resolve_host(host: &[u8], port: u16) -> Option<libc::sockaddr_in> {
     }
 
     let ai = unsafe { &*res };
-    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as u32 {
+    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t {
         unsafe { libc::freeaddrinfo(res) };
         return None;
     }
@@ -280,7 +280,7 @@ fn ftp_download(ctrl_fd: i32, user: &[u8], pass: &[u8], remote: &[u8], local: &[
     }
 
     if unsafe { libc::connect(data_fd, &pasv_addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                              core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
         io::write_str(2, b"ftpget: data connect failed\n");
         io::close(data_fd);
         return 1;

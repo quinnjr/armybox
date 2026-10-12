@@ -72,7 +72,20 @@ pub fn devmem(argc: i32, argv: *const *const u8) -> i32 {
     let map_base = addr & !page_mask;
     let map_offset = addr & page_mask;
 
-    // Map the memory
+    // Map the memory. Bionic's 32-bit off_t would turn physical addresses at
+    // or above 2 GiB negative, so Android goes through mmap64.
+    #[cfg(target_os = "android")]
+    let map = unsafe {
+        libc::mmap64(
+            core::ptr::null_mut(),
+            page_size,
+            libc::PROT_READ | libc::PROT_WRITE,
+            libc::MAP_SHARED,
+            fd,
+            map_base as libc::off64_t,
+        )
+    };
+    #[cfg(not(target_os = "android"))]
     let map = unsafe {
         libc::mmap(
             core::ptr::null_mut(),

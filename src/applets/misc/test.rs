@@ -190,21 +190,21 @@ fn unary(op: &[u8], arg: &[u8]) -> Result<bool, ()> {
         // Non-existent path: every remaining primary is false.
         return Ok(false);
     }
-    let mode = st.st_mode;
-    let ifmt = mode & libc::S_IFMT;
+    let mode = st.st_mode as u32;
+    let ifmt = mode & libc::S_IFMT as u32;
 
     let result = match op {
         b"-e" => true,
-        b"-f" => ifmt == libc::S_IFREG,
-        b"-d" => ifmt == libc::S_IFDIR,
-        b"-b" => ifmt == libc::S_IFBLK,
-        b"-c" => ifmt == libc::S_IFCHR,
-        b"-p" => ifmt == libc::S_IFIFO,
-        b"-S" => ifmt == libc::S_IFSOCK,
+        b"-f" => ifmt == libc::S_IFREG as u32,
+        b"-d" => ifmt == libc::S_IFDIR as u32,
+        b"-b" => ifmt == libc::S_IFBLK as u32,
+        b"-c" => ifmt == libc::S_IFCHR as u32,
+        b"-p" => ifmt == libc::S_IFIFO as u32,
+        b"-S" => ifmt == libc::S_IFSOCK as u32,
         b"-s" => st.st_size > 0,
-        b"-g" => (mode & libc::S_ISGID) != 0,
-        b"-u" => (mode & libc::S_ISUID) != 0,
-        b"-k" => (mode & libc::S_ISVTX) != 0,
+        b"-g" => (mode & libc::S_ISGID as u32) != 0,
+        b"-u" => (mode & libc::S_ISUID as u32) != 0,
+        b"-k" => (mode & libc::S_ISVTX as u32) != 0,
         b"-O" => st.st_uid == unsafe { libc::geteuid() },
         b"-G" => st.st_gid == unsafe { libc::getegid() },
         _ => return Err(()),

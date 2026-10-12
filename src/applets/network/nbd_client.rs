@@ -294,7 +294,7 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
         }
 
         if unsafe { libc::connect(fd, &addr as *const _ as *const libc::sockaddr,
-                                  core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                                  core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
             io::close(fd);
             return -1;
         }
@@ -321,7 +321,7 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
     }
 
     let ai = unsafe { &*res };
-    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as u32 {
+    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t {
         unsafe { libc::freeaddrinfo(res) };
         return -1;
     }
@@ -337,7 +337,7 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
     }
 
     if unsafe { libc::connect(fd, &addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+                              core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
         io::close(fd);
         return -1;
     }

@@ -6,6 +6,16 @@ use crate::io;
 use crate::sys;
 use crate::applets::get_arg;
 
+/// The kernel's `struct rlimit64`. `prlimit64` always writes 16 bytes, but
+/// `libc::rlimit` is only 8 where `rlim_t` is 32-bit (e.g. 32-bit Bionic).
+#[repr(C)]
+struct Rlimit64 {
+    rlim_cur: u64,
+    rlim_max: u64,
+}
+
+const RLIM64_INFINITY: u64 = !0;
+
 /// prlimit - get and set process resource limits
 ///
 /// # Synopsis
@@ -55,21 +65,17 @@ pub fn prlimit(argc: i32, argv: *const *const u8) -> i32 {
     io::write_str(1, b"RESOURCE   SOFT       HARD\n");
 
     for (resource, name) in resources.iter() {
-        let mut rlim: libc::rlimit = unsafe { core::mem::zeroed() };
+        let mut rlim = Rlimit64 { rlim_cur: 0, rlim_max: 0 };
 
-        let result = if pid == 0 {
-            unsafe { libc::getrlimit((*resource) as _, &mut rlim) }
-        } else {
-            // prlimit syscall for other processes
-            unsafe {
-                libc::syscall(
-                    libc::SYS_prlimit64,
-                    pid,
-                    *resource,
-                    core::ptr::null::<libc::rlimit>(),
-                    &mut rlim,
-                ) as i32
-            }
+        // prlimit64 with pid 0 targets the calling process
+        let result = unsafe {
+            libc::syscall(
+                libc::SYS_prlimit64,
+                pid,
+                *resource,
+                core::ptr::null::<Rlimit64>(),
+                &mut rlim,
+            ) as i32
         };
 
         if result != 0 {
@@ -82,14 +88,14 @@ pub fn prlimit(argc: i32, argv: *const *const u8) -> i32 {
             io::write_str(1, b" ");
         }
 
-        if rlim.rlim_cur == libc::RLIM_INFINITY {
+        if rlim.rlim_cur == RLIM64_INFINITY {
             io::write_str(1, b"unlimited  ");
         } else {
             io::write_num(1, rlim.rlim_cur);
             io::write_str(1, b" ");
         }
 
-        if rlim.rlim_max == libc::RLIM_INFINITY {
+        if rlim.rlim_max == RLIM64_INFINITY {
             io::write_str(1, b"unlimited");
         } else {
             io::write_num(1, rlim.rlim_max);
