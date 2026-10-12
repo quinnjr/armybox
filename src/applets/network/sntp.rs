@@ -2,9 +2,9 @@
 //!
 //! Query NTP servers for time synchronization.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // NTP constants
 const NTP_PORT: u16 = 123;
@@ -141,7 +141,8 @@ pub fn sntp(argc: i32, argv: *const *const u8) -> i32 {
     // Receive response
     let mut recv_buf = [0u8; NTP_PACKET_SIZE];
     let mut from: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-    let mut from_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
+    let mut from_len: libc::socklen_t =
+        core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
     let n = unsafe {
         libc::recvfrom(
@@ -175,15 +176,15 @@ pub fn sntp(argc: i32, argv: *const *const u8) -> i32 {
 
     // Extract transmit timestamp from server (bytes 40-47)
     // This is the time when the server sent the response
-    let tx_sec = ((recv_buf[40] as u64) << 24) |
-                 ((recv_buf[41] as u64) << 16) |
-                 ((recv_buf[42] as u64) << 8) |
-                 (recv_buf[43] as u64);
+    let tx_sec = ((recv_buf[40] as u64) << 24)
+        | ((recv_buf[41] as u64) << 16)
+        | ((recv_buf[42] as u64) << 8)
+        | (recv_buf[43] as u64);
 
-    let tx_frac = ((recv_buf[44] as u64) << 24) |
-                  ((recv_buf[45] as u64) << 16) |
-                  ((recv_buf[46] as u64) << 8) |
-                  (recv_buf[47] as u64);
+    let tx_frac = ((recv_buf[44] as u64) << 24)
+        | ((recv_buf[45] as u64) << 16)
+        | ((recv_buf[46] as u64) << 8)
+        | (recv_buf[47] as u64);
 
     // Convert to Unix timestamp
     let unix_sec = tx_sec.saturating_sub(NTP_EPOCH_OFFSET);
@@ -330,39 +331,30 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     }
     parts[3] = current as u8;
 
-    Some(((parts[0] as u32) << 24) |
-         ((parts[1] as u32) << 16) |
-         ((parts[2] as u32) << 8) |
-         (parts[3] as u32))
+    Some(
+        ((parts[0] as u32) << 24)
+            | ((parts[1] as u32) << 16)
+            | ((parts[2] as u32) << 8)
+            | (parts[3] as u32),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_sntp_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["sntp"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["sntp"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

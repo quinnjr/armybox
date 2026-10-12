@@ -31,9 +31,18 @@ pub fn cal(_argc: i32, _argv: *const *const u8) -> i32 {
 
     // Month names
     let months = [
-        b"January" as &[u8], b"February", b"March", b"April",
-        b"May", b"June", b"July", b"August",
-        b"September", b"October", b"November", b"December"
+        b"January" as &[u8],
+        b"February",
+        b"March",
+        b"April",
+        b"May",
+        b"June",
+        b"July",
+        b"August",
+        b"September",
+        b"October",
+        b"November",
+        b"December",
     ];
 
     let month = tm.tm_mon as usize;
@@ -94,30 +103,19 @@ pub fn cal(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_cal_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["cal"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["cal"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -128,12 +126,11 @@ mod tests {
     #[test]
     fn test_cal_has_month_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["cal"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["cal"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

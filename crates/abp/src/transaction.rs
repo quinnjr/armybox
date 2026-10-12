@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
+use crate::database::Database;
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::database::Database;
 
 /// Transaction operation types
 #[derive(Clone)]
@@ -76,6 +76,12 @@ enum DbChange {
     FilesUnregistered(Vec<String>),
 }
 
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transaction {
     /// Create a new transaction
     pub fn new() -> Self {
@@ -96,12 +102,20 @@ impl Transaction {
 
     /// Add an install operation
     pub fn add_install(&mut self, name: String, version: String, files: Vec<String>) {
-        self.operations.push(Operation::Install { name, version, files });
+        self.operations.push(Operation::Install {
+            name,
+            version,
+            files,
+        });
     }
 
     /// Add a remove operation
     pub fn add_remove(&mut self, name: String, version: String, files: Vec<String>) {
-        self.operations.push(Operation::Remove { name, version, files });
+        self.operations.push(Operation::Remove {
+            name,
+            version,
+            files,
+        });
     }
 
     /// Add an upgrade operation
@@ -162,23 +176,31 @@ impl Transaction {
         op: Operation,
     ) -> Result<CompletedOp, String> {
         match op {
-            Operation::Install { name, version, files } => {
-                self.execute_install(db, index, &name, &version, &files)
-            }
-            Operation::Remove { name, version, files } => {
-                self.execute_remove(db, index, &name, &version, &files)
-            }
+            Operation::Install {
+                name,
+                version,
+                files,
+            } => self.execute_install(db, index, &name, &version, &files),
+            Operation::Remove {
+                name,
+                version,
+                files,
+            } => self.execute_remove(db, index, &name, &version, &files),
             Operation::Upgrade {
                 name,
                 old_version,
                 new_version,
                 old_files,
                 new_files,
-            } => {
-                self.execute_upgrade(
-                    db, index, &name, &old_version, &new_version, &old_files, &new_files,
-                )
-            }
+            } => self.execute_upgrade(
+                db,
+                index,
+                &name,
+                &old_version,
+                &new_version,
+                &old_files,
+                &new_files,
+            ),
         }
     }
 
@@ -221,6 +243,7 @@ impl Transaction {
         })
     }
 
+    #[allow(clippy::too_many_arguments)] // full upgrade context, forwarded to remove/install
     fn execute_upgrade(
         &self,
         db: &Database,
@@ -369,10 +392,10 @@ fn mkdir_p(path: &[u8]) {
 
 /// Get parent directory of a path
 fn get_parent(path: &[u8]) -> Option<Vec<u8>> {
-    if let Some(pos) = path.iter().rposition(|&b| b == b'/') {
-        if pos > 0 {
-            return Some(path[..pos].to_vec());
-        }
+    if let Some(pos) = path.iter().rposition(|&b| b == b'/')
+        && pos > 0
+    {
+        return Some(path[..pos].to_vec());
     }
     None
 }

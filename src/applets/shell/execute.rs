@@ -19,11 +19,11 @@ use super::control::{execute_case, execute_for, execute_if, execute_until, execu
 #[cfg(feature = "alloc")]
 use super::expand::expand_string;
 #[cfg(feature = "alloc")]
-use super::parser::{parse_assignment_value, tokenize, Command, Token};
+use super::parser::{Command, Token, parse_assignment_value, tokenize};
 #[cfg(feature = "alloc")]
 use super::state::Shell;
 #[cfg(feature = "alloc")]
-use super::util::{find_word_end, skip_whitespace_and_comments, is_keyword_boundary};
+use super::util::{find_word_end, is_keyword_boundary, skip_whitespace_and_comments};
 
 /// Execute a script (multiple lines/statements)
 #[cfg(feature = "alloc")]
@@ -320,15 +320,26 @@ pub(super) fn execute_simple_pipeline(shell: &mut Shell, tokens: &[Token]) {
     // Single command - check for builtins
     if commands.len() == 1 && !commands[0].background {
         let cmd = &commands[0];
-        let has_redirects = cmd.stdout_file.is_some()
-            || cmd.stdin_file.is_some()
-            || cmd.stderr_file.is_some();
+        let has_redirects =
+            cmd.stdout_file.is_some() || cmd.stdin_file.is_some() || cmd.stderr_file.is_some();
 
         if has_redirects {
             // Set up redirections for the builtin, then restore
-            let saved_stdout = if cmd.stdout_file.is_some() { io::dup(1) } else { -1 };
-            let saved_stdin = if cmd.stdin_file.is_some() { io::dup(0) } else { -1 };
-            let saved_stderr = if cmd.stderr_file.is_some() { io::dup(2) } else { -1 };
+            let saved_stdout = if cmd.stdout_file.is_some() {
+                io::dup(1)
+            } else {
+                -1
+            };
+            let saved_stdin = if cmd.stdin_file.is_some() {
+                io::dup(0)
+            } else {
+                -1
+            };
+            let saved_stderr = if cmd.stderr_file.is_some() {
+                io::dup(2)
+            } else {
+                -1
+            };
 
             let mut redirect_ok = true;
 
@@ -550,4 +561,3 @@ pub(super) fn execute_command(cmd: &Command) {
     io::write_all(2, &cmd.args[0]);
     io::write_str(2, b": command not found\n");
 }
-

@@ -2,8 +2,8 @@
 //!
 //! Implements init (PID 1), getty, and related utilities for system startup.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 #[cfg(all(feature = "init", feature = "alloc"))]
 use alloc::vec::Vec;
@@ -36,14 +36,23 @@ struct InittabEntry {
 /// Parse action string to action type
 #[cfg(feature = "init")]
 fn parse_action(action: &[u8]) -> u8 {
-    if action == b"sysinit" { ACTION_SYSINIT }
-    else if action == b"respawn" { ACTION_RESPAWN }
-    else if action == b"once" { ACTION_ONCE }
-    else if action == b"wait" { ACTION_WAIT }
-    else if action == b"shutdown" { ACTION_SHUTDOWN }
-    else if action == b"ctrlaltdel" { ACTION_CTRLALTDEL }
-    else if action == b"restart" { ACTION_RESTART }
-    else { 0 }
+    if action == b"sysinit" {
+        ACTION_SYSINIT
+    } else if action == b"respawn" {
+        ACTION_RESPAWN
+    } else if action == b"once" {
+        ACTION_ONCE
+    } else if action == b"wait" {
+        ACTION_WAIT
+    } else if action == b"shutdown" {
+        ACTION_SHUTDOWN
+    } else if action == b"ctrlaltdel" {
+        ACTION_CTRLALTDEL
+    } else if action == b"restart" {
+        ACTION_RESTART
+    } else {
+        0
+    }
 }
 
 /// Run a command by forking and execing /bin/sh -c "command"
@@ -158,10 +167,8 @@ pub fn init(_argc: i32, _argv: *const *const u8) -> i32 {
         if pid == 0 {
             // Child - exec shell
             let sh = b"/bin/sh\0";
-            let argv: [*const libc::c_char; 2] = [
-                sh.as_ptr() as *const libc::c_char,
-                core::ptr::null(),
-            ];
+            let argv: [*const libc::c_char; 2] =
+                [sh.as_ptr() as *const libc::c_char, core::ptr::null()];
             unsafe {
                 libc::setsid();
                 libc::execv(sh.as_ptr() as *const libc::c_char, argv.as_ptr());
@@ -212,10 +219,8 @@ pub fn init(_argc: i32, _argv: *const *const u8) -> i32 {
             let pid = io::fork();
             if pid == 0 {
                 let sh = b"/bin/sh\0";
-                let argv: [*const libc::c_char; 2] = [
-                    sh.as_ptr() as *const libc::c_char,
-                    core::ptr::null(),
-                ];
+                let argv: [*const libc::c_char; 2] =
+                    [sh.as_ptr() as *const libc::c_char, core::ptr::null()];
                 unsafe {
                     libc::setsid();
                     libc::execv(sh.as_ptr() as *const libc::c_char, argv.as_ptr());
@@ -282,7 +287,9 @@ pub fn init(_argc: i32, _argv: *const *const u8) -> i32 {
                     io::write_str(1, b"\n");
 
                     // Small delay to prevent tight respawn loops
-                    unsafe { libc::sleep(1); }
+                    unsafe {
+                        libc::sleep(1);
+                    }
 
                     entry.pid = run_command(&entry.process, false);
                     break;
@@ -326,7 +333,12 @@ fn parse_inittab() -> Vec<InittabEntry> {
             let process = join_bytes(&parts[3..], b':');
 
             if action != 0 {
-                entries.push(InittabEntry { id, action, process, pid: 0 });
+                entries.push(InittabEntry {
+                    id,
+                    action,
+                    process,
+                    pid: 0,
+                });
             }
         } else if parts.len() >= 3 {
             // BusyBox format: ::action:process (id and runlevels can be empty)
@@ -334,7 +346,12 @@ fn parse_inittab() -> Vec<InittabEntry> {
             let process = join_bytes(&parts[2..], b':');
 
             if action != 0 {
-                entries.push(InittabEntry { id: Vec::new(), action, process, pid: 0 });
+                entries.push(InittabEntry {
+                    id: Vec::new(),
+                    action,
+                    process,
+                    pid: 0,
+                });
             }
         }
     }
@@ -345,8 +362,15 @@ fn parse_inittab() -> Vec<InittabEntry> {
 /// Trim whitespace from slice
 #[cfg(all(feature = "init", feature = "alloc"))]
 fn trim(s: &[u8]) -> &[u8] {
-    let start = s.iter().position(|&c| c != b' ' && c != b'\t' && c != b'\r').unwrap_or(s.len());
-    let end = s.iter().rposition(|&c| c != b' ' && c != b'\t' && c != b'\r').map(|i| i + 1).unwrap_or(start);
+    let start = s
+        .iter()
+        .position(|&c| c != b' ' && c != b'\t' && c != b'\r')
+        .unwrap_or(s.len());
+    let end = s
+        .iter()
+        .rposition(|&c| c != b' ' && c != b'\t' && c != b'\r')
+        .map(|i| i + 1)
+        .unwrap_or(start);
     &s[start..end]
 }
 
@@ -475,7 +499,10 @@ pub fn getty(argc: i32, argv: *const *const u8) -> i32 {
     ];
 
     unsafe {
-        libc::execv(login_path.as_ptr() as *const libc::c_char, argv_login.as_ptr());
+        libc::execv(
+            login_path.as_ptr() as *const libc::c_char,
+            argv_login.as_ptr(),
+        );
     }
 
     io::write_str(2, b"getty: exec /bin/login failed\n");
@@ -517,10 +544,7 @@ pub fn sulogin(_argc: i32, _argv: *const *const u8) -> i32 {
 
     // Spawn shell
     let sh = b"/bin/sh\0";
-    let argv: [*const libc::c_char; 2] = [
-        sh.as_ptr() as *const libc::c_char,
-        core::ptr::null(),
-    ];
+    let argv: [*const libc::c_char; 2] = [sh.as_ptr() as *const libc::c_char, core::ptr::null()];
 
     unsafe {
         libc::execv(sh.as_ptr() as *const libc::c_char, argv.as_ptr());
@@ -596,8 +620,14 @@ pub fn switch_root(argc: i32, argv: *const *const u8) -> i32 {
             return 1;
         }
 
-        if libc::mount(root_buf.as_ptr() as *const libc::c_char, b"/\0".as_ptr() as *const libc::c_char,
-                       core::ptr::null(), libc::MS_MOVE, core::ptr::null()) != 0 {
+        if libc::mount(
+            root_buf.as_ptr() as *const libc::c_char,
+            b"/\0".as_ptr() as *const libc::c_char,
+            core::ptr::null(),
+            libc::MS_MOVE,
+            core::ptr::null(),
+        ) != 0
+        {
             io::write_str(2, b"switch_root: mount --move failed\n");
             return 1;
         }
@@ -618,10 +648,8 @@ pub fn switch_root(argc: i32, argv: *const *const u8) -> i32 {
     let ilen = core::cmp::min(new_init.len(), init_buf.len() - 1);
     init_buf[..ilen].copy_from_slice(&new_init[..ilen]);
 
-    let argv_init: [*const libc::c_char; 2] = [
-        init_buf.as_ptr() as *const libc::c_char,
-        core::ptr::null(),
-    ];
+    let argv_init: [*const libc::c_char; 2] =
+        [init_buf.as_ptr() as *const libc::c_char, core::ptr::null()];
 
     unsafe {
         libc::execv(init_buf.as_ptr() as *const libc::c_char, argv_init.as_ptr());
@@ -661,6 +689,8 @@ pub fn watchdog(argc: i32, argv: *const *const u8) -> i32 {
     // Keep writing to prevent reboot
     loop {
         io::write_all(fd, b"\0");
-        unsafe { libc::sleep(10); }
+        unsafe {
+            libc::sleep(10);
+        }
     }
 }

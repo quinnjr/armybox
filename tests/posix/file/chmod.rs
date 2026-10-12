@@ -32,7 +32,10 @@ fn posix_chmod_symbolic_plus() {
     assert_success(&result);
 
     let perms = fs::metadata(&file).unwrap().permissions();
-    assert!((perms.mode() & 0o100) != 0, "user execute bit should be set");
+    assert!(
+        (perms.mode() & 0o100) != 0,
+        "user execute bit should be set"
+    );
 }
 
 /// POSIX: chmod with symbolic mode a-w
@@ -116,8 +119,14 @@ fn posix_chmod_multiple_files() {
     ]);
     assert_success(&result);
 
-    assert_eq!(fs::metadata(&file1).unwrap().permissions().mode() & 0o777, 0o755);
-    assert_eq!(fs::metadata(&file2).unwrap().permissions().mode() & 0o777, 0o755);
+    assert_eq!(
+        fs::metadata(&file1).unwrap().permissions().mode() & 0o777,
+        0o755
+    );
+    assert_eq!(
+        fs::metadata(&file2).unwrap().permissions().mode() & 0o777,
+        0o755
+    );
 }
 
 /// POSIX: Symbolic mode with multiple who symbols

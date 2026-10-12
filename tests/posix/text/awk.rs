@@ -218,7 +218,10 @@ fn posix_awk_array() {
 /// POSIX: awk regex match operator
 #[test]
 fn posix_awk_regex_match() {
-    let result = run_with_stdin(&["awk", "$0 ~ /^hello/ {print}"], b"hello\nworld\nhello again");
+    let result = run_with_stdin(
+        &["awk", "$0 ~ /^hello/ {print}"],
+        b"hello\nworld\nhello again",
+    );
     assert_success(&result);
     let lines: Vec<&str> = result.1.lines().collect();
     assert_eq!(lines.len(), 2);
@@ -271,7 +274,10 @@ fn posix_awk_user_function() {
 #[test]
 fn posix_awk_user_function_recursive() {
     let result = run_with_stdin(
-        &["awk", "function fac(n){return n<=1?1:n*fac(n-1)} BEGIN{print fac(5)}"],
+        &[
+            "awk",
+            "function fac(n){return n<=1?1:n*fac(n-1)} BEGIN{print fac(5)}",
+        ],
         b"",
     );
     assert_success(&result);
@@ -347,7 +353,10 @@ fn posix_awk_multidim_array() {
 #[test]
 fn posix_awk_delete_element() {
     let result = run_with_stdin(
-        &["awk", "BEGIN{a[1]=1;a[2]=2;delete a[1]; for(k in a) print k, a[k]}"],
+        &[
+            "awk",
+            "BEGIN{a[1]=1;a[2]=2;delete a[1]; for(k in a) print k, a[k]}",
+        ],
         b"",
     );
     assert_success(&result);
@@ -358,7 +367,10 @@ fn posix_awk_delete_element() {
 #[test]
 fn posix_awk_delete_all() {
     let result = run_with_stdin(
-        &["awk", "BEGIN{a[1]=1;a[2]=2;delete a; n=0; for(k in a) n++; print n}"],
+        &[
+            "awk",
+            "BEGIN{a[1]=1;a[2]=2;delete a; n=0; for(k in a) n++; print n}",
+        ],
         b"",
     );
     assert_success(&result);
@@ -416,10 +428,7 @@ fn posix_awk_printf_s_width() {
 /// POSIX: printf %c with a numeric and a string argument
 #[test]
 fn posix_awk_printf_c() {
-    let result = run_with_stdin(
-        &["awk", "BEGIN{printf \"%c%c\\n\", 65, \"hello\"}"],
-        b"",
-    );
+    let result = run_with_stdin(&["awk", "BEGIN{printf \"%c%c\\n\", 65, \"hello\"}"], b"");
     assert_success(&result);
     assert_eq!(result.1, "Ah\n");
 }

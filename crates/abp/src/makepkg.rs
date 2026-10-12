@@ -20,8 +20,8 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
 use crate::io;
+use alloc::vec::Vec;
 
 /// Known locations for the abp-makepkg script
 static MAKEPKG_PATHS: &[&[u8]] = &[
@@ -59,7 +59,10 @@ pub fn run(args: &[&[u8]]) -> i32 {
             io::write_all(2, path);
             io::write_str(2, b"\n");
         }
-        io::write_str(2, b"\nInstall abp-makepkg to one of these locations, or ensure it is on $PATH.\n");
+        io::write_str(
+            2,
+            b"\nInstall abp-makepkg to one of these locations, or ensure it is on $PATH.\n",
+        );
         return 1;
     }
 
@@ -164,24 +167,39 @@ fn exec_makepkg(script: &[u8], extra_args: &[&[u8]]) -> i32 {
 fn print_help() {
     io::write_str(1, b"abp makepkg - Build packages from ABUILD files\n\n");
     io::write_str(1, b"Usage: abp makepkg [options]\n\n");
-    io::write_str(1, b"This command builds .abp packages from ABUILD descriptors,\n");
+    io::write_str(
+        1,
+        b"This command builds .abp packages from ABUILD descriptors,\n",
+    );
     io::write_str(1, b"similar to Arch Linux's makepkg/PKGBUILD system.\n\n");
     io::write_str(1, b"Build Options:\n");
-    io::write_str(1, b"  -s, --syncdeps    Install missing deps with 'abp add'\n");
+    io::write_str(
+        1,
+        b"  -s, --syncdeps    Install missing deps with 'abp add'\n",
+    );
     io::write_str(1, b"  -e, --noextract   Do not extract source files\n");
     io::write_str(1, b"  -o, --nobuild     Download & extract only\n");
-    io::write_str(1, b"  -R, --repackage   Re-run package() without rebuilding\n");
+    io::write_str(
+        1,
+        b"  -R, --repackage   Re-run package() without rebuilding\n",
+    );
     io::write_str(1, b"  -f, --force       Overwrite existing package\n");
     io::write_str(1, b"  -c, --clean       Clean up work files after build\n");
     io::write_str(1, b"  -C, --cleanbuild  Remove srcdir before building\n");
-    io::write_str(1, b"      --nocheck     Do not run the check() function\n\n");
+    io::write_str(
+        1,
+        b"      --nocheck     Do not run the check() function\n\n",
+    );
     io::write_str(1, b"Install Options:\n");
     io::write_str(1, b"  -i, --install     Install package after building\n");
     io::write_str(1, b"  -r, --rmdeps      Remove makedeps after build\n\n");
     io::write_str(1, b"Info Options:\n");
     io::write_str(1, b"  -g, --geninteg    Generate integrity checksums\n");
     io::write_str(1, b"      --printsrcinfo Print SRCINFO and exit\n");
-    io::write_str(1, b"      --packagelist  List packages that would be created\n\n");
+    io::write_str(
+        1,
+        b"      --packagelist  List packages that would be created\n\n",
+    );
     io::write_str(1, b"Other:\n");
     io::write_str(1, b"  -p <file>         Use alternate ABUILD file\n");
     io::write_str(1, b"  -S, --source      Build source-only tarball\n");
@@ -191,8 +209,20 @@ fn print_help() {
     io::write_str(1, b"Configuration:\n");
     io::write_str(1, b"  /etc/abp/makepkg.conf         System configuration\n");
     io::write_str(1, b"  ~/.config/abp/makepkg.conf    User overrides\n\n");
-    io::write_str(1, b"ABUILD files define packages with variables and functions:\n");
-    io::write_str(1, b"  Variables: pkgname, pkgver, pkgrel, pkgdesc, depends, ...\n");
-    io::write_str(1, b"  Functions: prepare(), build(), check(), package()\n\n");
-    io::write_str(1, b"See 'abp-makepkg --help' for the full option reference.\n");
+    io::write_str(
+        1,
+        b"ABUILD files define packages with variables and functions:\n",
+    );
+    io::write_str(
+        1,
+        b"  Variables: pkgname, pkgver, pkgrel, pkgdesc, depends, ...\n",
+    );
+    io::write_str(
+        1,
+        b"  Functions: prepare(), build(), check(), package()\n\n",
+    );
+    io::write_str(
+        1,
+        b"See 'abp-makepkg --help' for the full option reference.\n",
+    );
 }

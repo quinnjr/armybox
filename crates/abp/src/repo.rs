@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use crate::io;
 use crate::database::{Database, RepoRecord, current_time};
 use crate::fetch::fetch_index;
+use crate::io;
+use alloc::string::String;
 
 /// Add a repository
 pub fn add_repo(url: &[u8], name: &[u8]) -> i32 {
@@ -121,7 +121,11 @@ pub fn list_repos() -> i32 {
     io::write_str(1, b"Configured repositories:\n\n");
 
     for repo in &repos {
-        let status = if repo.enabled { "[enabled]" } else { "[disabled]" };
+        let status = if repo.enabled {
+            "[enabled]"
+        } else {
+            "[disabled]"
+        };
         io::write_all(1, status.as_bytes());
         io::write_str(1, b" ");
         io::write_all(1, repo.name.as_bytes());
@@ -217,9 +221,13 @@ fn format_time(timestamp: u64) {
 
     io::write_num(1, year);
     io::write_str(1, b"-");
-    if month < 10 { io::write_str(1, b"0"); }
+    if month < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_num(1, month);
     io::write_str(1, b"-");
-    if day < 10 { io::write_str(1, b"0"); }
+    if day < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_num(1, day);
 }

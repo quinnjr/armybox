@@ -509,7 +509,11 @@ impl Proc {
             let cn = read_file(&path[..len], &mut cmd);
             if cn > 0 {
                 let cn = (cn as usize).min(cmd.len());
-                argv0_len = cmd[..cn].iter().position(|&c| c == 0).unwrap_or(cn).min(argv0.len());
+                argv0_len = cmd[..cn]
+                    .iter()
+                    .position(|&c| c == 0)
+                    .unwrap_or(cn)
+                    .min(argv0.len());
                 argv0[..argv0_len].copy_from_slice(&cmd[..argv0_len]);
 
                 // Bytes past the last non-NUL one (a rewritten argv leaves
@@ -866,30 +870,19 @@ fn group_name(gid: u32) -> &'static [u8] {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ps_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ps"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ps"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -897,12 +890,11 @@ mod tests {
     #[test]
     fn test_ps_has_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ps"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ps"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("PID"));
@@ -912,12 +904,11 @@ mod tests {
     #[test]
     fn test_ps_lists_processes() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ps", "-A"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ps", "-A"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Should have at least the header plus one process
@@ -928,12 +919,11 @@ mod tests {
     #[test]
     fn test_ps_invalid_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ps", "-Z"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ps", "-Z"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
@@ -942,7 +932,9 @@ mod tests {
     #[test]
     fn test_ps_unknown_keyword() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ps", "-o", "nosuchfield"])

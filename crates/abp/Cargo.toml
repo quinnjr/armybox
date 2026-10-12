@@ -2,7 +2,7 @@
 name = "abp"
 version = "0.2.1"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.94"
 authors = ["Joseph R. Quinn <quinn.josephr@protonmail.com>"]
 description = "ABP Package Manager - a minimal, secure package manager for armybox systems"
 repository = "https://github.com/quinnjr/armybox"

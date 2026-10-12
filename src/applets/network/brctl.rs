@@ -2,10 +2,10 @@
 //!
 //! Manage ethernet bridges.
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 // Bridge ioctl commands
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -316,14 +316,7 @@ fn show(bridge: Option<&[u8]>) -> i32 {
 
     let mut buf = [0u8; 4096];
     loop {
-        let n = unsafe {
-            libc::syscall(
-                libc::SYS_getdents64,
-                fd,
-                buf.as_mut_ptr(),
-                buf.len(),
-            )
-        };
+        let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
 
         if n <= 0 {
             break;
@@ -331,7 +324,10 @@ fn show(bridge: Option<&[u8]>) -> i32 {
 
         let mut offset = 0;
         while offset < n as usize {
-            let entry = unsafe { &*(buf.as_ptr().add(offset) as *const LinuxDirent64) };
+            let entry = unsafe {
+                // buf is a byte array (alignment 1), so copy the header out
+                core::ptr::read_unaligned(buf.as_ptr().add(offset) as *const LinuxDirent64)
+            };
             let name_len = entry.d_reclen as usize - 19; // header size
             let name = &buf[offset + 19..offset + 19 + name_len];
 
@@ -397,7 +393,10 @@ fn show_bridge_info(name: &[u8]) {
         let n = io::read(fd, &mut buf);
         if n > 0 {
             // Trim newline
-            let end = buf[..n as usize].iter().position(|&c| c == b'\n').unwrap_or(n as usize);
+            let end = buf[..n as usize]
+                .iter()
+                .position(|&c| c == b'\n')
+                .unwrap_or(n as usize);
             io::write_all(1, &buf[..end]);
         }
         io::close(fd);
@@ -438,20 +437,16 @@ fn show_bridge_info(name: &[u8]) {
     let dir_fd = io::open(&path, libc::O_RDONLY | libc::O_DIRECTORY, 0);
     if dir_fd >= 0 {
         let mut buf = [0u8; 1024];
-        let n = unsafe {
-            libc::syscall(
-                libc::SYS_getdents64,
-                dir_fd,
-                buf.as_mut_ptr(),
-                buf.len(),
-            )
-        };
+        let n = unsafe { libc::syscall(libc::SYS_getdents64, dir_fd, buf.as_mut_ptr(), buf.len()) };
 
         if n > 0 {
             let mut offset = 0;
             let mut first = true;
             while offset < n as usize {
-                let entry = unsafe { &*(buf.as_ptr().add(offset) as *const LinuxDirent64) };
+                let entry = unsafe {
+                    // buf is a byte array (alignment 1), so copy the header out
+                    core::ptr::read_unaligned(buf.as_ptr().add(offset) as *const LinuxDirent64)
+                };
                 let if_name = &buf[offset + 19..];
                 let if_name_end = if_name.iter().position(|&c| c == 0).unwrap_or(0);
                 let if_name = &if_name[..if_name_end];
@@ -586,37 +581,29 @@ fn print_usage() {
     io::write_str(1, b"  stp BRIDGE on|off     Enable/disable STP\n");
     io::write_str(1, b"  setfd BRIDGE TIME     Set forward delay (seconds)\n");
     io::write_str(1, b"  sethello BRIDGE TIME  Set hello time (seconds)\n");
-    io::write_str(1, b"  setmaxage BRIDGE TIME Set max message age (seconds)\n");
+    io::write_str(
+        1,
+        b"  setmaxage BRIDGE TIME Set max message age (seconds)\n",
+    );
     io::write_str(1, b"  setageing BRIDGE TIME Set ageing time (seconds)\n");
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_brctl_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["brctl"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["brctl"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -626,7 +613,9 @@ mod tests {
     #[test]
     fn test_brctl_show() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["brctl", "show"])

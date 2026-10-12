@@ -2,9 +2,9 @@
 //!
 //! Get or set the I/O scheduling class and priority for a process.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 // I/O scheduling classes
 const IOPRIO_CLASS_NONE: i32 = 0;
@@ -52,21 +52,21 @@ pub fn ionice(argc: i32, argv: *const *const u8) -> i32 {
 
     let mut i = 1;
     while i < argc {
-        if let Some(arg) = unsafe { get_arg(argv, i ) } {
+        if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg == b"-c" && i + 1 < argc {
-                if let Some(c) = unsafe { get_arg(argv, i + 1 ) } {
+                if let Some(c) = unsafe { get_arg(argv, i + 1) } {
                     class = sys::parse_i64(c).unwrap_or(2) as i32;
                 }
                 i += 2;
                 continue;
             } else if arg == b"-n" && i + 1 < argc {
-                if let Some(n) = unsafe { get_arg(argv, i + 1 ) } {
+                if let Some(n) = unsafe { get_arg(argv, i + 1) } {
                     level = sys::parse_i64(n).unwrap_or(4) as i32;
                 }
                 i += 2;
                 continue;
             } else if arg == b"-p" && i + 1 < argc {
-                if let Some(p) = unsafe { get_arg(argv, i + 1 ) } {
+                if let Some(p) = unsafe { get_arg(argv, i + 1) } {
                     pid = sys::parse_i64(p).unwrap_or(0) as i32;
                 }
                 i += 2;
@@ -95,7 +95,11 @@ pub fn ionice(argc: i32, argv: *const *const u8) -> i32 {
         let cur_data = ioprio_prio_data(prio);
 
         let class_names = [b"none" as &[u8], b"realtime", b"best-effort", b"idle"];
-        let class_name = if cur_class < 4 { class_names[cur_class as usize] } else { b"unknown" };
+        let class_name = if cur_class < 4 {
+            class_names[cur_class as usize]
+        } else {
+            b"unknown"
+        };
 
         io::write_all(1, class_name);
         if cur_class == IOPRIO_CLASS_RT || cur_class == IOPRIO_CLASS_BE {
@@ -107,8 +111,12 @@ pub fn ionice(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     // Set defaults
-    if class < 0 { class = IOPRIO_CLASS_BE; }
-    if level < 0 { level = 4; }
+    if class < 0 {
+        class = IOPRIO_CLASS_BE;
+    }
+    if level < 0 {
+        level = 4;
+    }
 
     let prio = ioprio_prio_value(class, level);
 
@@ -135,12 +143,15 @@ pub fn ionice(argc: i32, argv: *const *const u8) -> i32 {
         }
 
         // Build argv for exec
-        let cmd = unsafe { get_arg(argv, cmd_idx ).unwrap() };
+        let cmd = unsafe { get_arg(argv, cmd_idx).unwrap() };
         let mut cmd_buf = [0u8; 4096];
         cmd_buf[..cmd.len()].copy_from_slice(cmd);
 
         unsafe {
-            libc::execvp(cmd_buf.as_ptr() as *const libc::c_char, argv.add(cmd_idx as usize) as *const *const libc::c_char);
+            libc::execvp(
+                cmd_buf.as_ptr() as *const libc::c_char,
+                argv.add(cmd_idx as usize) as *const *const libc::c_char,
+            );
         }
         sys::perror(cmd);
         io::exit(127);
@@ -160,42 +171,37 @@ pub fn ionice(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ionice_show_self() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ionice"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ionice"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Should show a class name
-        assert!(stdout.contains("best-effort") || stdout.contains("none") ||
-                stdout.contains("realtime") || stdout.contains("idle"));
+        assert!(
+            stdout.contains("best-effort")
+                || stdout.contains("none")
+                || stdout.contains("realtime")
+                || stdout.contains("idle")
+        );
     }
 
     #[test]
     fn test_ionice_with_command() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ionice", "-c", "2", "-n", "7", "true"])

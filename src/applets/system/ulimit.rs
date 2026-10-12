@@ -2,9 +2,9 @@
 //!
 //! Display or modify shell resource limits.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// ulimit - get and set user resource limits
 ///
@@ -120,7 +120,11 @@ pub fn ulimit(argc: i32, argv: *const *const u8) -> i32 {
         return 1;
     }
 
-    let value = if use_hard { rlim.rlim_max } else { rlim.rlim_cur };
+    let value = if use_hard {
+        rlim.rlim_max
+    } else {
+        rlim.rlim_cur
+    };
 
     if value == libc::RLIM_INFINITY {
         io::write_str(1, b"unlimited\n");
@@ -134,16 +138,56 @@ pub fn ulimit(argc: i32, argv: *const *const u8) -> i32 {
 
 fn print_all_limits(use_hard: bool) {
     let limits = [
-        (libc::RLIMIT_CORE, b"core file size          (blocks, -c) " as &[u8], 512u64),
-        (libc::RLIMIT_DATA, b"data seg size           (kbytes, -d) ", 1024),
-        (libc::RLIMIT_FSIZE, b"file size               (blocks, -f) ", 512),
-        (libc::RLIMIT_MEMLOCK, b"max locked memory       (kbytes, -l) ", 1024),
-        (libc::RLIMIT_RSS, b"max resident set size   (kbytes, -m) ", 1024),
-        (libc::RLIMIT_NOFILE, b"open files                      (-n) ", 1),
-        (libc::RLIMIT_STACK, b"stack size              (kbytes, -s) ", 1024),
-        (libc::RLIMIT_CPU, b"cpu time                (seconds, -t) ", 1),
-        (libc::RLIMIT_NPROC, b"max user processes              (-u) ", 1),
-        (libc::RLIMIT_AS, b"virtual memory          (kbytes, -v) ", 1024),
+        (
+            libc::RLIMIT_CORE,
+            b"core file size          (blocks, -c) " as &[u8],
+            512u64,
+        ),
+        (
+            libc::RLIMIT_DATA,
+            b"data seg size           (kbytes, -d) ",
+            1024,
+        ),
+        (
+            libc::RLIMIT_FSIZE,
+            b"file size               (blocks, -f) ",
+            512,
+        ),
+        (
+            libc::RLIMIT_MEMLOCK,
+            b"max locked memory       (kbytes, -l) ",
+            1024,
+        ),
+        (
+            libc::RLIMIT_RSS,
+            b"max resident set size   (kbytes, -m) ",
+            1024,
+        ),
+        (
+            libc::RLIMIT_NOFILE,
+            b"open files                      (-n) ",
+            1,
+        ),
+        (
+            libc::RLIMIT_STACK,
+            b"stack size              (kbytes, -s) ",
+            1024,
+        ),
+        (
+            libc::RLIMIT_CPU,
+            b"cpu time                (seconds, -t) ",
+            1,
+        ),
+        (
+            libc::RLIMIT_NPROC,
+            b"max user processes              (-u) ",
+            1,
+        ),
+        (
+            libc::RLIMIT_AS,
+            b"virtual memory          (kbytes, -v) ",
+            1024,
+        ),
     ];
 
     for (resource, name, divisor) in limits.iter() {
@@ -151,7 +195,11 @@ fn print_all_limits(use_hard: bool) {
 
         let mut rlim: libc::rlimit = unsafe { core::mem::zeroed() };
         if unsafe { libc::getrlimit(*resource as _, &mut rlim) } == 0 {
-            let value = if use_hard { rlim.rlim_max } else { rlim.rlim_cur };
+            let value = if use_hard {
+                rlim.rlim_max
+            } else {
+                rlim.rlim_cur
+            };
             if value == libc::RLIM_INFINITY {
                 io::write_str(1, b"unlimited\n");
             } else {
@@ -167,30 +215,19 @@ fn print_all_limits(use_hard: bool) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ulimit_default() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ulimit"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ulimit"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         // Should output a number or "unlimited"
@@ -201,7 +238,9 @@ mod tests {
     #[test]
     fn test_ulimit_all() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ulimit", "-a"])
@@ -217,7 +256,9 @@ mod tests {
     #[test]
     fn test_ulimit_open_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ulimit", "-n"])
@@ -233,7 +274,9 @@ mod tests {
     #[test]
     fn test_ulimit_hard_limit() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ulimit", "-Hn"])

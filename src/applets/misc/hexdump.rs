@@ -2,9 +2,9 @@
 //!
 //! Display file contents in hex format.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// hexdump - display file in hex
 ///
@@ -21,28 +21,42 @@ use super::get_arg;
 pub fn hexdump(argc: i32, argv: *const *const u8) -> i32 {
     let fd = if argc > 1 {
         if let Some(path) = unsafe { get_arg(argv, argc - 1) } {
-            if path[0] != b'-' { io::open(path, libc::O_RDONLY, 0) } else { 0 }
-        } else { 0 }
-    } else { 0 };
+            if path[0] != b'-' {
+                io::open(path, libc::O_RDONLY, 0)
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    } else {
+        0
+    };
 
     let mut buf = [0u8; 16];
     let mut offset = 0u64;
 
     loop {
         let n = io::read(fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         // Print offset
         let mut hex = [0u8; 16];
         let s = sys::format_hex(offset, &mut hex);
-        for _ in 0..(8 - s.len()) { io::write_str(1, b"0"); }
+        for _ in 0..(8 - s.len()) {
+            io::write_str(1, b"0");
+        }
         io::write_all(1, s);
         io::write_str(1, b"  ");
 
         // Print hex
         for i in 0..n as usize {
             let h = sys::format_hex(buf[i] as u64, &mut hex);
-            if h.len() == 1 { io::write_str(1, b"0"); }
+            if h.len() == 1 {
+                io::write_str(1, b"0");
+            }
             io::write_all(1, h);
             io::write_str(1, b" ");
         }
@@ -51,7 +65,9 @@ pub fn hexdump(argc: i32, argv: *const *const u8) -> i32 {
         offset += n as u64;
     }
 
-    if fd != 0 { io::close(fd); }
+    if fd != 0 {
+        io::close(fd);
+    }
     0
 }
 
@@ -66,14 +82,14 @@ pub fn od(argc: i32, argv: *const *const u8) -> i32 {
     // Output format types
     #[derive(Clone, Copy)]
     enum Format {
-        Octal1,   // -t o1 - octal bytes
-        Octal2,   // -t o2 - octal 2-byte words
-        Hex1,     // -t x1 - hex bytes
-        Hex2,     // -t x2 - hex 2-byte words
-        Decimal1, // -t d1 - signed decimal bytes
-        Decimal2, // -t d2 - signed decimal 2-byte words
-        Unsigned1,// -t u1 - unsigned decimal bytes
-        Char,     // -t c - characters
+        Octal1,    // -t o1 - octal bytes
+        Octal2,    // -t o2 - octal 2-byte words
+        Hex1,      // -t x1 - hex bytes
+        Hex2,      // -t x2 - hex 2-byte words
+        Decimal1,  // -t d1 - signed decimal bytes
+        Decimal2,  // -t d2 - signed decimal 2-byte words
+        Unsigned1, // -t u1 - unsigned decimal bytes
+        Char,      // -t c - characters
     }
 
     #[derive(Clone, Copy)]
@@ -306,12 +322,24 @@ pub fn od(argc: i32, argv: *const *const u8) -> i32 {
                 for &b in line {
                     io::write_str(1, b" ");
                     match b {
-                        0 => { io::write_str(1, b" \\0"); }
-                        b'\t' => { io::write_str(1, b" \\t"); }
-                        b'\n' => { io::write_str(1, b" \\n"); }
-                        b'\r' => { io::write_str(1, b" \\r"); }
-                        b'\\' => { io::write_str(1, b" \\\\"); }
-                        0x20..=0x7E => { io::write_all(1, &[b' ', b' ', b]); }
+                        0 => {
+                            io::write_str(1, b" \\0");
+                        }
+                        b'\t' => {
+                            io::write_str(1, b" \\t");
+                        }
+                        b'\n' => {
+                            io::write_str(1, b" \\n");
+                        }
+                        b'\r' => {
+                            io::write_str(1, b" \\r");
+                        }
+                        b'\\' => {
+                            io::write_str(1, b" \\\\");
+                        }
+                        0x20..=0x7E => {
+                            io::write_all(1, &[b' ', b' ', b]);
+                        }
                         _ => {
                             let oct = crate::sys::format_octal(b as u32, &mut buf);
                             io::write_str(1, b"\\");
@@ -372,27 +400,19 @@ pub fn od(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
-    use std::io::Write;
-    use std::path::PathBuf;
     use std::fs;
+    use std::io::Write;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::{Command, Stdio};
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_hexdump_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_test_hexdump");
         let _ = fs::create_dir_all(&dir);
@@ -412,7 +432,9 @@ mod tests {
     #[test]
     fn test_hexdump_stdin() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["hexdump"])

@@ -2,7 +2,7 @@
 name = "zstd-nostd"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.94"
 authors = ["Joseph R. Quinn <quinn.josephr@protonmail.com>"]
 description = "Pure Rust no_std Zstandard (zstd) compression and decompression"
 repository = "https://github.com/quinnjr/armybox"

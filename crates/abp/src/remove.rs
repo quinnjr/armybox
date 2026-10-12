@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
+use crate::database::Database;
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::database::Database;
 
 /// Remove packages
 pub fn remove_packages(packages: &[&[u8]], purge: bool, force: bool) -> i32 {
@@ -50,7 +50,8 @@ pub fn remove_packages(packages: &[&[u8]], purge: bool, force: bool) -> i32 {
     if !force {
         for name in &to_remove {
             let dependents = db.get_dependents(name);
-            let blocking: Vec<_> = dependents.iter()
+            let blocking: Vec<_> = dependents
+                .iter()
                 .filter(|d| !to_remove.contains(d))
                 .collect();
 

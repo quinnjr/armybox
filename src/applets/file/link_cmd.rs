@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/link.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// link - create a hard link to a file
 ///
@@ -56,25 +56,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_link_cmd_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_link_cmd_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -87,7 +81,9 @@ mod tests {
     #[test]
     fn test_link_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -95,7 +91,11 @@ mod tests {
         fs::write(&target, "content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["link", target.to_str().unwrap(), link_name.to_str().unwrap()])
+            .args([
+                "link",
+                target.to_str().unwrap(),
+                link_name.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -109,12 +109,11 @@ mod tests {
     #[test]
     fn test_link_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["link"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["link"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }
@@ -122,7 +121,9 @@ mod tests {
     #[test]
     fn test_link_missing_second_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -140,7 +141,9 @@ mod tests {
     #[test]
     fn test_link_nonexistent_target() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let link_name = dir.join("link.txt");

@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/ls.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -421,9 +421,7 @@ fn sort_entries(entries: &mut [Entry], flags: &Flags) {
         });
     } else if flags.sort_size {
         // Largest first.
-        entries.sort_unstable_by(|a, b| {
-            b.size.cmp(&a.size).then_with(|| a.name.cmp(&b.name))
-        });
+        entries.sort_unstable_by(|a, b| b.size.cmp(&a.size).then_with(|| a.name.cmp(&b.name)));
     } else {
         // Lexicographic by byte order.
         entries.sort_unstable_by(|a, b| a.name.cmp(&b.name));
@@ -632,8 +630,8 @@ fn join_path(dir: &[u8], name: &[u8], out: &mut [u8; io::PATH_MAX]) -> Option<us
 /// Format Unix timestamp as "Mon DD HH:MM" or "Mon DD  YYYY" for older files
 fn format_time(timestamp: u64) {
     const MONTHS: [&[u8]; 12] = [
-        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun",
-        b"Jul", b"Aug", b"Sep", b"Oct", b"Nov", b"Dec"
+        b"Jan", b"Feb", b"Mar", b"Apr", b"May", b"Jun", b"Jul", b"Aug", b"Sep", b"Oct", b"Nov",
+        b"Dec",
     ];
 
     // Simple time calculation (not handling timezones)
@@ -652,7 +650,12 @@ fn format_time(timestamp: u64) {
     let mut remaining_days = days;
 
     loop {
-        let days_in_year = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) { 366 } else { 365 };
+        let days_in_year =
+            if year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400)) {
+                366
+            } else {
+                365
+            };
         if remaining_days < days_in_year {
             break;
         }
@@ -660,11 +663,12 @@ fn format_time(timestamp: u64) {
         year += 1;
     }
 
-    let days_in_months: [u64; 12] = if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
+    let days_in_months: [u64; 12] =
+        if year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400)) {
+            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        } else {
+            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        };
 
     let mut month = 0usize;
     for (i, &days_in_month) in days_in_months.iter().enumerate() {
@@ -682,7 +686,9 @@ fn format_time(timestamp: u64) {
 
     out(MONTHS[month]);
     out(b" ");
-    if day < 10 { out(b" "); }
+    if day < 10 {
+        out(b" ");
+    }
     out_num(day);
     out(b" ");
 
@@ -692,10 +698,14 @@ fn format_time(timestamp: u64) {
         out_num(year);
     } else {
         // Show time for recent files
-        if hour < 10 { out(b"0"); }
+        if hour < 10 {
+            out(b"0");
+        }
         out_num(hour);
         out(b":");
-        if minute < 10 { out(b"0"); }
+        if minute < 10 {
+            out(b"0");
+        }
         out_num(minute);
     }
 }
@@ -703,12 +713,20 @@ fn format_time(timestamp: u64) {
 /// Write classify suffix (-F option)
 fn write_classify_suffix(mode: u32) {
     match mode & libc::S_IFMT as u32 {
-        m if m == libc::S_IFDIR as u32 => { out(b"/"); }
-        m if m == libc::S_IFLNK as u32 => { out(b"@"); }
-        m if m == libc::S_IFIFO as u32 => { out(b"|"); }
-        m if m == libc::S_IFSOCK as u32 => { out(b"="); }
-        m if m == libc::S_IFREG as u32 => {
-            if mode & 0o111 != 0 { out(b"*"); }
+        m if m == libc::S_IFDIR as u32 => {
+            out(b"/");
+        }
+        m if m == libc::S_IFLNK as u32 => {
+            out(b"@");
+        }
+        m if m == libc::S_IFIFO as u32 => {
+            out(b"|");
+        }
+        m if m == libc::S_IFSOCK as u32 => {
+            out(b"=");
+        }
+        m if m == libc::S_IFREG as u32 && mode & 0o111 != 0 => {
+            out(b"*");
         }
         _ => {}
     }
@@ -722,22 +740,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_ls_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_ls_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -750,7 +765,9 @@ mod tests {
     #[test]
     fn test_ls_current_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "content").unwrap();
@@ -771,7 +788,9 @@ mod tests {
     #[test]
     fn test_ls_hidden_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("visible.txt"), "content").unwrap();
@@ -802,7 +821,9 @@ mod tests {
     #[test]
     fn test_ls_one_per_line() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "content").unwrap();
@@ -824,7 +845,9 @@ mod tests {
     #[test]
     fn test_ls_long_format() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file.txt"), "hello world").unwrap();
@@ -846,7 +869,9 @@ mod tests {
     #[test]
     fn test_ls_classify() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("subdir")).unwrap();
@@ -867,7 +892,9 @@ mod tests {
     #[test]
     fn test_ls_nonexistent_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ls", "/nonexistent/directory"])
@@ -882,7 +909,9 @@ mod tests {
     #[test]
     fn test_ls_inode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file.txt"), "content").unwrap();
@@ -903,7 +932,9 @@ mod tests {
     #[test]
     fn test_ls_empty_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         // Dir is empty

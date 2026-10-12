@@ -69,11 +69,7 @@ fn posix_wc_multiple_files() {
     fs::write(&file1, "hello\n").unwrap();
     fs::write(&file2, "world\n").unwrap();
 
-    let result = run(&[
-        "wc",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["wc", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_success(&result);
     assert!(result.1.contains("total"));
 }

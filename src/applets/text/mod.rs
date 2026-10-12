@@ -2,7 +2,6 @@
 //!
 //! POSIX.1-2017 compliant text manipulation utilities.
 
-
 // Individual utility modules
 #[cfg(feature = "awk")]
 mod awk;
@@ -77,7 +76,7 @@ pub use fmt::fmt;
 #[cfg(feature = "fold")]
 pub use fold::fold;
 #[cfg(feature = "grep")]
-pub use grep::{grep, egrep, fgrep};
+pub use grep::{egrep, fgrep, grep};
 #[cfg(feature = "head")]
 pub use head::head;
 #[cfg(feature = "nl")]

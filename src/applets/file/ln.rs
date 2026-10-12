@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/ln.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 use alloc::vec::Vec;
 
 /// ln - make links between files
@@ -41,9 +41,15 @@ pub fn ln(argc: i32, argv: *const *const u8) -> i32 {
     for i in 1..argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b's') { symbolic = true; }
-                if has_opt(arg, b'f') { force = true; }
-                if has_opt(arg, b'n') { no_deref = true; }
+                if has_opt(arg, b's') {
+                    symbolic = true;
+                }
+                if has_opt(arg, b'f') {
+                    force = true;
+                }
+                if has_opt(arg, b'n') {
+                    no_deref = true;
+                }
                 files_start = i + 1;
             } else {
                 break;
@@ -69,8 +75,13 @@ pub fn ln(argc: i32, argv: *const *const u8) -> i32 {
     // a symbolic link to a directory is treated as a normal file instead
     // of being dereferenced.
     let mut st: libc::stat = unsafe { core::mem::zeroed() };
-    let stat_ret = if no_deref { io::lstat(last, &mut st) } else { io::stat(last, &mut st) };
-    let last_is_dir = stat_ret == 0 && (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32;
+    let stat_ret = if no_deref {
+        io::lstat(last, &mut st)
+    } else {
+        io::stat(last, &mut st)
+    };
+    let last_is_dir =
+        stat_ret == 0 && (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32;
 
     if last_is_dir {
         // ln [-fs] source... target_dir
@@ -117,7 +128,11 @@ pub fn ln(argc: i32, argv: *const *const u8) -> i32 {
 /// error instead of risking an unintended path (e.g. with `-f`, silently
 /// truncating could cause an unrelated file to be unlinked/overwritten).
 fn build_dest_path(dest_dir: &[u8], src: &[u8]) -> Option<Vec<u8>> {
-    let basename_start = src.iter().rposition(|&c| c == b'/').map(|p| p + 1).unwrap_or(0);
+    let basename_start = src
+        .iter()
+        .rposition(|&c| c == b'/')
+        .map(|p| p + 1)
+        .unwrap_or(0);
     let basename = &src[basename_start..];
 
     let needs_sep = !dest_dir.is_empty() && dest_dir[dest_dir.len() - 1] != b'/';
@@ -170,22 +185,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_ln_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_ln_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -198,7 +210,9 @@ mod tests {
     #[test]
     fn test_ln_hard_link() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -219,7 +233,9 @@ mod tests {
     #[test]
     fn test_ln_symbolic_link() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -239,7 +255,9 @@ mod tests {
     #[test]
     fn test_ln_force() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let target = dir.join("target.txt");
@@ -248,7 +266,12 @@ mod tests {
         fs::write(&link, "old").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["ln", "-sf", target.to_str().unwrap(), link.to_str().unwrap()])
+            .args([
+                "ln",
+                "-sf",
+                target.to_str().unwrap(),
+                link.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -260,12 +283,11 @@ mod tests {
     #[test]
     fn test_ln_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ln"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ln"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }
@@ -273,7 +295,9 @@ mod tests {
     #[test]
     fn test_ln_nonexistent_target() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let link = dir.join("link.txt");

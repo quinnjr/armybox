@@ -8,7 +8,10 @@ use std::fs;
 /// POSIX: "The tail utility shall copy the last lines of each file"
 #[test]
 fn posix_tail_default() {
-    let input = (1..=15).map(|n| format!("line{}", n)).collect::<Vec<_>>().join("\n");
+    let input = (1..=15)
+        .map(|n| format!("line{}", n))
+        .collect::<Vec<_>>()
+        .join("\n");
     let result = run_with_stdin(&["tail"], input.as_bytes());
     assert_success(&result);
     assert_eq!(count_stdout_lines(&result), 10);
@@ -18,7 +21,10 @@ fn posix_tail_default() {
 /// POSIX: tail -n count
 #[test]
 fn posix_tail_count() {
-    let input = (1..=10).map(|n| format!("line{}", n)).collect::<Vec<_>>().join("\n");
+    let input = (1..=10)
+        .map(|n| format!("line{}", n))
+        .collect::<Vec<_>>()
+        .join("\n");
     let result = run_with_stdin(&["tail", "-n", "3"], input.as_bytes());
     assert_success(&result);
     assert_eq!(count_stdout_lines(&result), 3);
@@ -28,7 +34,10 @@ fn posix_tail_count() {
 /// POSIX: tail -n +N (starting from line N)
 #[test]
 fn posix_tail_from_line() {
-    let input = (1..=10).map(|n| format!("line{}", n)).collect::<Vec<_>>().join("\n");
+    let input = (1..=10)
+        .map(|n| format!("line{}", n))
+        .collect::<Vec<_>>()
+        .join("\n");
     let result = run_with_stdin(&["tail", "-n", "+8"], input.as_bytes());
     assert_success(&result);
     assert_eq!(count_stdout_lines(&result), 3);
@@ -48,7 +57,10 @@ fn posix_tail_bytes() {
 fn posix_tail_from_file() {
     let dir = setup_test_env();
     let file = dir.path().join("input");
-    let content = (1..=15).map(|n| format!("line{}", n)).collect::<Vec<_>>().join("\n");
+    let content = (1..=15)
+        .map(|n| format!("line{}", n))
+        .collect::<Vec<_>>()
+        .join("\n");
     fs::write(&file, &content).unwrap();
 
     let result = run(&["tail", file.to_str().unwrap()]);
@@ -65,11 +77,7 @@ fn posix_tail_multiple_files() {
     fs::write(&file1, "content1\n").unwrap();
     fs::write(&file2, "content2\n").unwrap();
 
-    let result = run(&[
-        "tail",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["tail", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_success(&result);
     assert!(result.1.contains("content1"));
     assert!(result.1.contains("content2"));
@@ -115,7 +123,10 @@ fn posix_tail_bytes_negative() {
 /// positive count.
 #[test]
 fn posix_tail_lines_negative() {
-    let input = (1..=10).map(|n| format!("line{}", n)).collect::<Vec<_>>().join("\n");
+    let input = (1..=10)
+        .map(|n| format!("line{}", n))
+        .collect::<Vec<_>>()
+        .join("\n");
     let result = run_with_stdin(&["tail", "-n", "-3"], input.as_bytes());
     assert_success(&result);
     assert_eq!(count_stdout_lines(&result), 3);

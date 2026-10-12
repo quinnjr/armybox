@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// Watch entry
 struct Watch {
@@ -127,7 +127,11 @@ pub fn inotifyd(argc: i32, argv: *const *const u8) -> i32 {
     // Event loop
     loop {
         let n = unsafe {
-            libc::read(inotify_fd, event_buf.as_mut_ptr() as *mut libc::c_void, event_buf.len())
+            libc::read(
+                inotify_fd,
+                event_buf.as_mut_ptr() as *mut libc::c_void,
+                event_buf.len(),
+            )
         };
 
         if n < 0 {
@@ -192,7 +196,8 @@ pub fn inotifyd(argc: i32, argv: *const *const u8) -> i32 {
             };
 
             // Find the watch path
-            let watch_path = watches.iter()
+            let watch_path = watches
+                .iter()
                 .find(|w| w.wd == wd)
                 .map(|w| &w.path[..])
                 .unwrap_or(b"?");
@@ -259,19 +264,33 @@ fn parse_mask(s: &[u8]) -> u32 {
 
 /// Convert inotify mask to single-character event type
 fn mask_to_char(mask: u32) -> u8 {
-    if mask & libc::IN_ACCESS != 0 { b'a' }
-    else if mask & libc::IN_CREATE != 0 { b'c' }
-    else if mask & libc::IN_DELETE != 0 { b'd' }
-    else if mask & libc::IN_DELETE_SELF != 0 { b'D' }
-    else if mask & libc::IN_MODIFY != 0 { b'm' }
-    else if mask & libc::IN_MOVED_FROM != 0 { b'M' }
-    else if mask & libc::IN_MOVED_TO != 0 { b'M' }
-    else if mask & libc::IN_MOVE_SELF != 0 { b'M' }
-    else if mask & libc::IN_CLOSE_WRITE != 0 { b'w' }
-    else if mask & libc::IN_CLOSE_NOWRITE != 0 { b'0' }
-    else if mask & libc::IN_OPEN != 0 { b'r' }
-    else if mask & libc::IN_UNMOUNT != 0 { b'u' }
-    else { b'?' }
+    if mask & libc::IN_ACCESS != 0 {
+        b'a'
+    } else if mask & libc::IN_CREATE != 0 {
+        b'c'
+    } else if mask & libc::IN_DELETE != 0 {
+        b'd'
+    } else if mask & libc::IN_DELETE_SELF != 0 {
+        b'D'
+    } else if mask & libc::IN_MODIFY != 0 {
+        b'm'
+    } else if mask & libc::IN_MOVED_FROM != 0 {
+        b'M'
+    } else if mask & libc::IN_MOVED_TO != 0 {
+        b'M'
+    } else if mask & libc::IN_MOVE_SELF != 0 {
+        b'M'
+    } else if mask & libc::IN_CLOSE_WRITE != 0 {
+        b'w'
+    } else if mask & libc::IN_CLOSE_NOWRITE != 0 {
+        b'0'
+    } else if mask & libc::IN_OPEN != 0 {
+        b'r'
+    } else if mask & libc::IN_UNMOUNT != 0 {
+        b'u'
+    } else {
+        b'?'
+    }
 }
 
 /// Execute the handler program
@@ -311,30 +330,19 @@ fn execute_handler(prog: &[u8], event_char: u8, path: &[u8]) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_inotifyd_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["inotifyd"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["inotifyd"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

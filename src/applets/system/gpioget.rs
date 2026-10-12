@@ -6,10 +6,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 // GPIO ioctl commands (from linux/gpio.h)
 const GPIO_GET_CHIPINFO_IOCTL: crate::io::IoctlReq = 0x8044B401u32 as crate::io::IoctlReq;
@@ -151,7 +151,7 @@ pub fn gpioget(argc: i32, argv: *const *const u8) -> i32 {
     let fd = unsafe { libc::open(path.as_ptr() as *const libc::c_char, libc::O_RDONLY) };
     if fd < 0 {
         io::write_str(2, b"gpioget: cannot open ");
-        io::write_all(2, &path[..path.len()-1]);
+        io::write_all(2, &path[..path.len() - 1]);
         io::write_str(2, b"\n");
         return 1;
     }
@@ -170,30 +170,46 @@ pub fn gpioget(argc: i32, argv: *const *const u8) -> i32 {
     req.consumer_label[..label.len()].copy_from_slice(label);
 
     let ret = unsafe {
-        libc::ioctl(fd, GPIO_GET_LINEHANDLE_IOCTL, &mut req as *mut GpioHandleRequest)
+        libc::ioctl(
+            fd,
+            GPIO_GET_LINEHANDLE_IOCTL,
+            &mut req as *mut GpioHandleRequest,
+        )
     };
 
     if ret < 0 || req.fd < 0 {
         // Fallback: try to read from sysfs
-        unsafe { libc::close(fd); }
+        unsafe {
+            libc::close(fd);
+        }
         return read_gpio_sysfs(chip, &lines, active_low);
     }
 
-    unsafe { libc::close(fd); }
+    unsafe {
+        libc::close(fd);
+    }
 
     // Read values
     let mut data: GpioHandleData = unsafe { core::mem::zeroed() };
     let ret = unsafe {
-        libc::ioctl(req.fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &mut data as *mut GpioHandleData)
+        libc::ioctl(
+            req.fd,
+            GPIOHANDLE_GET_LINE_VALUES_IOCTL,
+            &mut data as *mut GpioHandleData,
+        )
     };
 
     if ret < 0 {
-        unsafe { libc::close(req.fd); }
+        unsafe {
+            libc::close(req.fd);
+        }
         io::write_str(2, b"gpioget: failed to read GPIO values\n");
         return 1;
     }
 
-    unsafe { libc::close(req.fd); }
+    unsafe {
+        libc::close(req.fd);
+    }
 
     // Output values
     for idx in 0..lines.len() {
@@ -239,7 +255,10 @@ fn read_gpio_sysfs(chip: &[u8], lines: &[u32], active_low: bool) -> i32 {
     io::close(fd);
 
     let base = if n > 0 {
-        let end = buf.iter().position(|&c| c == b'\n' || c == 0).unwrap_or(n as usize);
+        let end = buf
+            .iter()
+            .position(|&c| c == b'\n' || c == 0)
+            .unwrap_or(n as usize);
         sys::parse_u64(&buf[..end]).unwrap_or(0) as u32
     } else {
         chip_num * 32 // Estimate
@@ -252,7 +271,8 @@ fn read_gpio_sysfs(chip: &[u8], lines: &[u32], active_low: bool) -> i32 {
         // Export GPIO if needed
         let mut export_path = b"/sys/class/gpio/export".to_vec();
         export_path.push(0);
-        let export_fd = unsafe { libc::open(export_path.as_ptr() as *const libc::c_char, libc::O_WRONLY) };
+        let export_fd =
+            unsafe { libc::open(export_path.as_ptr() as *const libc::c_char, libc::O_WRONLY) };
         if export_fd >= 0 {
             let gpio_str = sys::format_u64(gpio_num as u64, &mut num_buf);
             unsafe {
@@ -296,30 +316,19 @@ fn read_gpio_sysfs(chip: &[u8], lines: &[u32], active_low: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_gpioget_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["gpioget"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["gpioget"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -329,7 +338,9 @@ mod tests {
     #[test]
     fn test_gpioget_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["gpioget", "--help"])
@@ -344,7 +355,9 @@ mod tests {
     #[test]
     fn test_gpioget_nonexistent_chip() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["gpioget", "nonexistent_chip", "0"])

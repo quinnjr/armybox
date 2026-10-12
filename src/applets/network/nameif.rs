@@ -3,9 +3,9 @@
 //! Assign names to network interfaces.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// nameif - name network interfaces based on MAC addresses
 ///
@@ -83,7 +83,8 @@ pub fn nameif(argc: i32, argv: *const *const u8) -> i32 {
             continue;
         }
 
-        let parts: Vec<&[u8]> = line.split(|&c| c == b' ' || c == b'\t')
+        let parts: Vec<&[u8]> = line
+            .split(|&c| c == b' ' || c == b'\t')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -170,14 +171,7 @@ fn find_interface_by_mac(target: &[u8; 6]) -> Option<Vec<u8>> {
     let mut found_name: Option<Vec<u8>> = None;
 
     loop {
-        let n = unsafe {
-            libc::syscall(
-                libc::SYS_getdents64,
-                dir_fd,
-                buf.as_mut_ptr(),
-                buf.len()
-            )
-        };
+        let n = unsafe { libc::syscall(libc::SYS_getdents64, dir_fd, buf.as_mut_ptr(), buf.len()) };
 
         if n <= 0 {
             break;
@@ -191,7 +185,9 @@ fn find_interface_by_mac(target: &[u8; 6]) -> Option<Vec<u8>> {
             // d_type is at offset 18
             // d_name starts at offset 19
             let name_start = 19;
-            let name_end = entry[name_start..].iter().position(|&c| c == 0)
+            let name_end = entry[name_start..]
+                .iter()
+                .position(|&c| c == 0)
                 .map(|p| name_start + p)
                 .unwrap_or(reclen);
             let name = &entry[name_start..name_end];
@@ -323,25 +319,17 @@ pub fn nameif(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_nameif_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nameif", "-h"])
@@ -356,12 +344,11 @@ mod tests {
     #[test]
     fn test_nameif_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["nameif"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["nameif"]).output().unwrap();
 
         // Should succeed (no /etc/mactab is not an error)
         assert_eq!(output.status.code(), Some(0));
@@ -371,10 +358,22 @@ mod tests {
     fn test_parse_mac() {
         use super::parse_mac;
 
-        assert_eq!(parse_mac(b"00:11:22:33:44:55"), Some([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]));
-        assert_eq!(parse_mac(b"aa:bb:cc:dd:ee:ff"), Some([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]));
-        assert_eq!(parse_mac(b"AA:BB:CC:DD:EE:FF"), Some([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]));
-        assert_eq!(parse_mac(b"00-11-22-33-44-55"), Some([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]));
+        assert_eq!(
+            parse_mac(b"00:11:22:33:44:55"),
+            Some([0x00, 0x11, 0x22, 0x33, 0x44, 0x55])
+        );
+        assert_eq!(
+            parse_mac(b"aa:bb:cc:dd:ee:ff"),
+            Some([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        );
+        assert_eq!(
+            parse_mac(b"AA:BB:CC:DD:EE:FF"),
+            Some([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])
+        );
+        assert_eq!(
+            parse_mac(b"00-11-22-33-44-55"),
+            Some([0x00, 0x11, 0x22, 0x33, 0x44, 0x55])
+        );
         assert_eq!(parse_mac(b"invalid"), None);
         assert_eq!(parse_mac(b"00:11:22:33:44"), None);
     }

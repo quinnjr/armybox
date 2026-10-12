@@ -3,7 +3,6 @@
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/nohup.html
 
 use crate::posix::helpers::*;
-use std::fs;
 
 /// POSIX: "The nohup utility shall invoke the utility ignoring the SIGHUP signal"
 #[test]
@@ -12,7 +11,12 @@ fn posix_nohup_basic() {
     let output = dir.path().join("output.txt");
 
     let result = run_in_dir(
-        &["nohup", "sh", "-c", &format!("echo hello > {}", output.to_str().unwrap())],
+        &[
+            "nohup",
+            "sh",
+            "-c",
+            &format!("echo hello > {}", output.to_str().unwrap()),
+        ],
         dir.path(),
     );
 

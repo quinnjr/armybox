@@ -2,8 +2,8 @@
 //!
 //! Converts CRLF line endings to LF.
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// dos2unix - convert DOS line endings to Unix
 ///
@@ -26,13 +26,17 @@ pub fn dos2unix(argc: i32, argv: *const *const u8) -> i32 {
                 #[cfg(feature = "alloc")]
                 {
                     let fd = io::open(path, libc::O_RDONLY, 0);
-                    if fd < 0 { continue; }
+                    if fd < 0 {
+                        continue;
+                    }
 
                     let content = io::read_all(fd);
                     io::close(fd);
 
                     let fd = io::open(path, libc::O_WRONLY | libc::O_TRUNC, 0);
-                    if fd < 0 { continue; }
+                    if fd < 0 {
+                        continue;
+                    }
 
                     for &c in &content {
                         if c != b'\r' {
@@ -53,25 +57,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_dos2unix_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_dos2unix_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -84,7 +82,9 @@ mod tests {
     #[test]
     fn test_dos2unix_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
@@ -104,7 +104,9 @@ mod tests {
     #[test]
     fn test_dos2unix_no_crlf() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
@@ -124,7 +126,9 @@ mod tests {
     #[test]
     fn test_dos2unix_mixed_endings() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");

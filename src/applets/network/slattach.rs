@@ -2,21 +2,21 @@
 //!
 //! SLIP/CSLIP attachment utility.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // Line discipline constants
 #[cfg(any(target_os = "linux", target_os = "android"))]
-const N_SLIP: libc::c_int = 1;      // Serial Line IP
+const N_SLIP: libc::c_int = 1; // Serial Line IP
 #[cfg(any(target_os = "linux", target_os = "android"))]
-const N_CSLIP: libc::c_int = 2;     // SLIP + VJ header compression
+const N_CSLIP: libc::c_int = 2; // SLIP + VJ header compression
 #[cfg(any(target_os = "linux", target_os = "android"))]
-const N_SLIP6: libc::c_int = 3;     // 6-bit SLIP
+const N_SLIP6: libc::c_int = 3; // 6-bit SLIP
 #[cfg(any(target_os = "linux", target_os = "android"))]
-const N_CSLIP6: libc::c_int = 4;    // 6-bit SLIP + VJ compression
+const N_CSLIP6: libc::c_int = 4; // 6-bit SLIP + VJ compression
 #[cfg(any(target_os = "linux", target_os = "android"))]
-const N_PPP: libc::c_int = 3;       // PPP (same as SLIP6 on some systems)
+const N_PPP: libc::c_int = 3; // PPP (same as SLIP6 on some systems)
 
 // TTY ioctl for setting line discipline
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -236,7 +236,10 @@ fn print_usage() {
     io::write_str(1, b"Usage: slattach [OPTIONS] TTY\n\n");
     io::write_str(1, b"Attach a serial line to a network interface.\n\n");
     io::write_str(1, b"Options:\n");
-    io::write_str(1, b"  -p PROTO   Protocol: slip, cslip, slip6, cslip6, ppp [default: cslip]\n");
+    io::write_str(
+        1,
+        b"  -p PROTO   Protocol: slip, cslip, slip6, cslip6, ppp [default: cslip]\n",
+    );
     io::write_str(1, b"  -s SPEED   Line speed (baud rate)\n");
     io::write_str(1, b"  -e         Exit after setting up line\n");
     io::write_str(1, b"  -L         Enable 3-wire mode (no modem control)\n");
@@ -246,25 +249,17 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_slattach_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["slattach", "-h"])
@@ -279,12 +274,11 @@ mod tests {
     #[test]
     fn test_slattach_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["slattach"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["slattach"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

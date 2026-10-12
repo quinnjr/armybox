@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/cut.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Sentinel used for the end of an open-ended range (`N-`).
 const OPEN_END: usize = usize::MAX;
@@ -56,11 +56,17 @@ pub fn cut(argc: i32, argv: *const *const u8) -> i32 {
         while i < argc {
             let arg = match unsafe { get_arg(argv, i) } {
                 Some(a) => a,
-                None => { i += 1; continue; }
+                None => {
+                    i += 1;
+                    continue;
+                }
             };
 
             if arg == b"--help" {
-                io::write_str(1, b"usage: cut -b|-c|-f list [-n] [-d delim] [-s] [file...]\n");
+                io::write_str(
+                    1,
+                    b"usage: cut -b|-c|-f list [-n] [-d delim] [-s] [file...]\n",
+                );
                 return 0;
             } else if arg == b"-" {
                 // Explicit stdin operand.
@@ -77,13 +83,19 @@ pub fn cut(argc: i32, argv: *const *const u8) -> i32 {
                             delimiter = arg[2];
                         } else if i + 1 < argc {
                             if let Some(d) = unsafe { get_arg(argv, i + 1) } {
-                                if !d.is_empty() { delimiter = d[0]; }
+                                if !d.is_empty() {
+                                    delimiter = d[0];
+                                }
                             }
                             i += 1;
                         }
                     }
                     b'f' | b'c' | b'b' => {
-                        if arg[1] == b'f' { field_mode = true; } else { char_mode = true; }
+                        if arg[1] == b'f' {
+                            field_mode = true;
+                        } else {
+                            char_mode = true;
+                        }
                         let list: Option<&[u8]> = if arg.len() > 2 {
                             Some(&arg[2..])
                         } else if i + 1 < argc {
@@ -94,14 +106,18 @@ pub fn cut(argc: i32, argv: *const *const u8) -> i32 {
                             None
                         };
                         match list {
-                            Some(l) if parse_list(l, &mut ranges) => { list_given = true; }
+                            Some(l) if parse_list(l, &mut ranges) => {
+                                list_given = true;
+                            }
                             _ => {
                                 io::write_str(2, b"cut: invalid list of ranges\n");
                                 return 2;
                             }
                         }
                     }
-                    b's' => { suppress = true; }
+                    b's' => {
+                        suppress = true;
+                    }
                     b'n' => { /* no-op */ }
                     _ => {
                         io::write_str(2, b"cut: invalid option\n");
@@ -116,7 +132,10 @@ pub fn cut(argc: i32, argv: *const *const u8) -> i32 {
 
         // A list is required, and the two modes are mutually exclusive.
         if !list_given {
-            io::write_str(2, b"cut: you must specify a list of bytes, characters, or fields\n");
+            io::write_str(
+                2,
+                b"cut: you must specify a list of bytes, characters, or fields\n",
+            );
             return 2;
         }
         if field_mode && char_mode {
@@ -249,7 +268,13 @@ fn process_content(
         i += 1;
     }
     if start < len {
-        return cut_line(&content[start..len], field_mode, delimiter, ranges, suppress);
+        return cut_line(
+            &content[start..len],
+            field_mode,
+            delimiter,
+            ranges,
+            suppress,
+        );
     }
     true
 }
@@ -323,26 +348,18 @@ fn cut_line(
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::{Command, Stdio};
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_cut_field() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["cut", "-f", "2", "-d", ":"])
@@ -365,7 +382,9 @@ mod tests {
     #[test]
     fn test_cut_chars() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["cut", "-c", "1-3"])
@@ -388,7 +407,9 @@ mod tests {
     #[test]
     fn test_cut_first_field() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["cut", "-f1", "-d,"])
@@ -411,7 +432,9 @@ mod tests {
     #[test]
     fn test_cut_tab_delimiter() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["cut", "-f", "2"])

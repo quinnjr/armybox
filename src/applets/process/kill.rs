@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/kill.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Table of symbolic signal names (without the "SIG" prefix) to numbers.
 const SIGNALS: &[(&[u8], i32)] = &[
@@ -32,9 +32,9 @@ fn parse_signal(spec: &[u8]) -> Option<i32> {
         return sys::parse_i64(spec).map(|v| v as i32);
     }
     let name = if spec.len() > 3
-        && spec[0].to_ascii_uppercase() == b'S'
-        && spec[1].to_ascii_uppercase() == b'I'
-        && spec[2].to_ascii_uppercase() == b'G'
+        && spec[0].eq_ignore_ascii_case(&b'S')
+        && spec[1].eq_ignore_ascii_case(&b'I')
+        && spec[2].eq_ignore_ascii_case(&b'G')
     {
         &spec[3..]
     } else {
@@ -155,28 +155,20 @@ pub fn kill(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_kill_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Kill with signal 0 (check if process exists) on our own PID
         let pid = std::process::id();
@@ -191,7 +183,9 @@ mod tests {
     #[test]
     fn test_kill_nonexistent_pid() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Try to kill a very high PID that doesn't exist
         let output = Command::new(&armybox)

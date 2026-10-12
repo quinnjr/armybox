@@ -4,8 +4,8 @@
 
 extern crate alloc;
 
-use crate::io;
 use crate::database::Database;
+use crate::io;
 
 /// List installed packages
 pub fn list_installed(verbose: bool) -> i32 {
@@ -332,10 +332,13 @@ fn format_time(timestamp: u64) {
 
     io::write_num(1, year);
     io::write_str(1, b"-");
-    if month < 10 { io::write_str(1, b"0"); }
+    if month < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_num(1, month);
     io::write_str(1, b"-");
-    if day < 10 { io::write_str(1, b"0"); }
+    if day < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_num(1, day);
 }
-

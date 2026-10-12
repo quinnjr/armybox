@@ -16,7 +16,7 @@ pub mod test_helpers {
     pub fn create_test_dir(prefix: &str) -> PathBuf {
         let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pid = std::process::id();
-        let dir = std::env::temp_dir().join(format!("{}_{}_{}",  prefix, pid, id));
+        let dir = std::env::temp_dir().join(format!("{}_{}_{}", prefix, pid, id));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("Failed to create test directory");
         dir
@@ -35,8 +35,17 @@ pub mod test_helpers {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
+        // Prefer the binary from this test build's own profile, so a stale
+        // build from the other profile isn't tested by mistake
+        let (own, other) = if cfg!(debug_assertions) {
+            ("target/debug/armybox", "target/release/armybox")
+        } else {
+            ("target/release/armybox", "target/debug/armybox")
+        };
+        let own = manifest_dir.join(own);
+        if own.exists() {
+            return own;
+        }
+        manifest_dir.join(other)
     }
 }

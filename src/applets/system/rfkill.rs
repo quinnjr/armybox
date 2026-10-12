@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec::Vec;
 
 /// rfkill - tool for enabling and disabling wireless devices
 ///
@@ -173,21 +173,33 @@ fn rfkill_list() -> i32 {
         }
 
         // Device name (left-aligned, 16 chars)
-        let dev_name = if device_str.is_empty() { name_u8 } else { &device_str };
+        let dev_name = if device_str.is_empty() {
+            name_u8
+        } else {
+            &device_str
+        };
         io::write_all(1, dev_name);
         for _ in dev_name.len()..17 {
             io::write_str(1, b" ");
         }
 
         // Soft block state
-        let soft_state: &[u8] = if soft_blocked { b"blocked" } else { b"unblocked" };
+        let soft_state: &[u8] = if soft_blocked {
+            b"blocked"
+        } else {
+            b"unblocked"
+        };
         io::write_all(1, soft_state);
         for _ in soft_state.len()..10 {
             io::write_str(1, b" ");
         }
 
         // Hard block state
-        let hard_state: &[u8] = if hard_blocked { b"blocked" } else { b"unblocked" };
+        let hard_state: &[u8] = if hard_blocked {
+            b"blocked"
+        } else {
+            b"unblocked"
+        };
         io::write_all(1, hard_state);
 
         io::write_str(1, b"\n");
@@ -359,25 +371,17 @@ fn set_device_by_id(id: &[u8], block: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_rfkill_list() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rfkill", "list"])
@@ -392,12 +396,11 @@ mod tests {
     #[test]
     fn test_rfkill_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["rfkill"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["rfkill"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -405,7 +408,9 @@ mod tests {
     #[test]
     fn test_rfkill_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rfkill", "--help"])

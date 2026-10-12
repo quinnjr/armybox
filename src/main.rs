@@ -8,7 +8,7 @@
 
 extern crate armybox;
 
-use armybox::{io, applets, run_applet};
+use armybox::{applets, io, run_applet};
 
 /// Main entry point
 #[unsafe(no_mangle)]
@@ -31,38 +31,38 @@ pub extern "C" fn main(argc: i32, argv: *const *const u8) -> i32 {
     // Check if invoked as "armybox" itself
     if io::bytes_eq(applet_name, b"armybox") {
         // If there's an argument, use it as the applet name
-        if argc > 1 {
-            if let Some(arg1) = unsafe { applets::get_arg(argv, 1) } {
-                // Check for special flags
-                if io::bytes_eq(arg1, b"--list") || io::bytes_eq(arg1, b"-l") {
-                    applets::list_applets();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--help") || io::bytes_eq(arg1, b"-h") {
-                    print_help();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--version") || io::bytes_eq(arg1, b"-V") {
-                    print_version();
-                    return 0;
-                }
-
-                if io::bytes_eq(arg1, b"--install") {
-                    if argc > 2 {
-                        if let Some(dir) = unsafe { applets::get_arg(argv, 2) } {
-                            return install_symlinks(dir);
-                        }
-                    }
-                    io::write_str(2, b"armybox: --install requires a directory\n");
-                    return 1;
-                }
-
-                // Run the specified applet
-                // Shift argv: argv[1] becomes argv[0] for the applet
-                return run_applet(arg1, argc - 1, unsafe { argv.offset(1) });
+        if argc > 1
+            && let Some(arg1) = unsafe { applets::get_arg(argv, 1) }
+        {
+            // Check for special flags
+            if io::bytes_eq(arg1, b"--list") || io::bytes_eq(arg1, b"-l") {
+                applets::list_applets();
+                return 0;
             }
+
+            if io::bytes_eq(arg1, b"--help") || io::bytes_eq(arg1, b"-h") {
+                print_help();
+                return 0;
+            }
+
+            if io::bytes_eq(arg1, b"--version") || io::bytes_eq(arg1, b"-V") {
+                print_version();
+                return 0;
+            }
+
+            if io::bytes_eq(arg1, b"--install") {
+                if argc > 2
+                    && let Some(dir) = unsafe { applets::get_arg(argv, 2) }
+                {
+                    return install_symlinks(dir);
+                }
+                io::write_str(2, b"armybox: --install requires a directory\n");
+                return 1;
+            }
+
+            // Run the specified applet
+            // Shift argv: argv[1] becomes argv[0] for the applet
+            return run_applet(arg1, argc - 1, unsafe { argv.offset(1) });
         }
 
         // No arguments - print usage
@@ -99,12 +99,18 @@ fn print_help() {
     io::write_str(1, b"  -l, --list      List all available applets\n");
     io::write_str(1, b"  -h, --help      Show this help message\n");
     io::write_str(1, b"  -V, --version   Show version information\n");
-    io::write_str(1, b"  --install DIR   Create symlinks in DIR for all applets\n");
+    io::write_str(
+        1,
+        b"  --install DIR   Create symlinks in DIR for all applets\n",
+    );
 }
 
 /// Print version
 fn print_version() {
-    io::write_str(1, concat!("armybox ", env!("CARGO_PKG_VERSION"), "\n").as_bytes());
+    io::write_str(
+        1,
+        concat!("armybox ", env!("CARGO_PKG_VERSION"), "\n").as_bytes(),
+    );
     io::write_str(1, b"A #[no_std] BusyBox/Toybox clone in Rust\n");
     io::write_str(1, b"Copyright (c) 2025 Joseph R. Quinn\n");
 }
@@ -123,7 +129,7 @@ fn install_symlinks(dir: &[u8]) -> i32 {
         libc::readlink(
             target_buf.as_ptr() as *const libc::c_char,
             target.as_mut_ptr() as *mut libc::c_char,
-            target.len() - 1
+            target.len() - 1,
         )
     };
 
@@ -142,10 +148,38 @@ fn install_symlinks(dir: &[u8]) -> i32 {
 
     // Get list via list_applets - for now just create basic symlinks
     let names: &[&[u8]] = &[
-        b"true", b"false", b"echo", b"cat", b"ls", b"cp", b"mv", b"rm",
-        b"mkdir", b"rmdir", b"pwd", b"touch", b"ln", b"chmod", b"head", b"tail",
-        b"wc", b"grep", b"sed", b"awk", b"sort", b"uniq", b"cut", b"tr",
-        b"date", b"uname", b"hostname", b"whoami", b"id", b"ps", b"kill", b"sleep",
+        b"true",
+        b"false",
+        b"echo",
+        b"cat",
+        b"ls",
+        b"cp",
+        b"mv",
+        b"rm",
+        b"mkdir",
+        b"rmdir",
+        b"pwd",
+        b"touch",
+        b"ln",
+        b"chmod",
+        b"head",
+        b"tail",
+        b"wc",
+        b"grep",
+        b"sed",
+        b"awk",
+        b"sort",
+        b"uniq",
+        b"cut",
+        b"tr",
+        b"date",
+        b"uname",
+        b"hostname",
+        b"whoami",
+        b"id",
+        b"ps",
+        b"kill",
+        b"sleep",
     ];
     for &name in names {
         // Build link path: dir/name

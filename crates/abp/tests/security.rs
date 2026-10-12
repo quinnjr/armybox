@@ -34,10 +34,10 @@
 //! their (deliberately-inconsistent) bytes in order to reach the integrity
 //! checks at all.
 
-use abp::crypto::{key_id, sha256, PublicKey};
+use abp::crypto::{PublicKey, key_id, sha256};
 use abp::format::{
-    AbpHeader, AbpPackage, Manifest, ManifestEntry, PackageMetadata, ABP_VERSION_MAJOR,
-    ABP_VERSION_MINOR,
+    ABP_VERSION_MAJOR, ABP_VERSION_MINOR, AbpHeader, AbpPackage, Manifest, ManifestEntry,
+    PackageMetadata,
 };
 use abp::verify::verify_package;
 use ed25519_dalek::{Signer, SigningKey};
@@ -69,7 +69,10 @@ fn tar_member(name: &str, data: &[u8]) -> Vec<u8> {
     let mut block = vec![0u8; 512];
 
     let nb = name.as_bytes();
-    assert!(nb.len() < 100, "test member name must fit the tar name field");
+    assert!(
+        nb.len() < 100,
+        "test member name must fit the tar name field"
+    );
     block[..nb.len()].copy_from_slice(nb);
 
     // mode 0644 (only the parser in extract_payload reads this; harmless here).
@@ -86,7 +89,7 @@ fn tar_member(name: &str, data: &[u8]) -> Vec<u8> {
     let mut out = block;
     out.extend_from_slice(data);
     let pad = (512 - (data.len() % 512)) % 512;
-    out.extend(core::iter::repeat(0u8).take(pad));
+    out.extend(std::iter::repeat_n(0u8, pad));
     out
 }
 
@@ -134,9 +137,11 @@ fn assemble_signed(
     let pk = sk.verifying_key().to_bytes();
     let kid = key_id(&pk);
 
-    let mut meta = PackageMetadata::default();
-    meta.name = String::from("secpkg");
-    meta.version = String::from("1.0.0");
+    let meta = PackageMetadata {
+        name: String::from("secpkg"),
+        version: String::from("1.0.0"),
+        ..Default::default()
+    };
 
     let pkg = AbpPackage {
         header: AbpHeader {
@@ -190,10 +195,7 @@ fn good_members() -> Vec<(&'static str, &'static [u8])> {
 
 /// Manifest matching [`good_members`].
 fn good_manifest() -> Vec<ManifestEntry> {
-    good_members()
-        .iter()
-        .map(|(p, d)| entry(p, d))
-        .collect()
+    good_members().iter().map(|(p, d)| entry(p, d)).collect()
 }
 
 // ---------------------------------------------------------------------------

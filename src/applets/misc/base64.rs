@@ -2,8 +2,8 @@
 //!
 //! Encode or decode data in base64.
 
-use crate::io;
 use super::has_opt;
+use crate::io;
 
 /// base64 - base64 encode/decode
 ///
@@ -35,8 +35,12 @@ pub fn base64(argc: i32, argv: *const *const u8) -> i32 {
                 ignore_garbage = true;
             } else if arg.len() > 1 && arg[0] == b'-' && arg != b"-" {
                 // Combined short options, e.g. -di
-                if has_opt(arg, b'd') { decode = true; }
-                if has_opt(arg, b'i') { ignore_garbage = true; }
+                if has_opt(arg, b'd') {
+                    decode = true;
+                }
+                if has_opt(arg, b'i') {
+                    ignore_garbage = true;
+                }
             } else {
                 files.push(arg);
             }
@@ -150,7 +154,11 @@ pub fn base64(argc: i32, argv: *const *const u8) -> i32 {
         }
         if i < content.len() {
             let a = content[i];
-            let b = if i + 1 < content.len() { content[i + 1] } else { 0 };
+            let b = if i + 1 < content.len() {
+                content[i + 1]
+            } else {
+                0
+            };
             out.push(ALPHABET[(a >> 2) as usize]);
             out.push(ALPHABET[(((a & 0x3) << 4) | (b >> 4)) as usize]);
             if i + 1 < content.len() {
@@ -311,26 +319,18 @@ pub fn base32(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::{Command, Stdio};
     use std::io::Write;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::{Command, Stdio};
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_base64_encode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["base64"])
@@ -351,7 +351,9 @@ mod tests {
     #[test]
     fn test_base64_decode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["base64", "-d"])
@@ -360,7 +362,12 @@ mod tests {
             .spawn()
             .unwrap();
 
-        child.stdin.as_mut().unwrap().write_all(b"SGVsbG8=").unwrap();
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(b"SGVsbG8=")
+            .unwrap();
         drop(child.stdin.take());
 
         let output = child.wait_with_output().unwrap();

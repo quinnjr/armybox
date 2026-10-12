@@ -2,9 +2,9 @@
 //!
 //! GNU coreutils compatible implementation.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 use alloc::vec::Vec;
 
 /// truncate - shrink or extend the size of a file
@@ -142,25 +142,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_truncate_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_truncate_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -173,7 +167,9 @@ mod tests {
     #[test]
     fn test_truncate_shrink() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -194,7 +190,9 @@ mod tests {
     #[test]
     fn test_truncate_extend() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -214,7 +212,9 @@ mod tests {
     #[test]
     fn test_truncate_to_zero() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -233,7 +233,9 @@ mod tests {
     #[test]
     fn test_truncate_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["truncate", "-s", "10", "/nonexistent/file"])
@@ -246,7 +248,9 @@ mod tests {
     #[test]
     fn test_truncate_creates_missing_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("new.txt");
@@ -264,7 +268,9 @@ mod tests {
     #[test]
     fn test_truncate_no_create_skips_missing_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let existing = dir.join("existing.txt");
@@ -273,7 +279,14 @@ mod tests {
         for flag in ["-c", "--no-create"] {
             let missing = dir.join("missing.txt");
             let output = Command::new(&armybox)
-                .args(["truncate", flag, "-s", "5", missing.to_str().unwrap(), existing.to_str().unwrap()])
+                .args([
+                    "truncate",
+                    flag,
+                    "-s",
+                    "5",
+                    missing.to_str().unwrap(),
+                    existing.to_str().unwrap(),
+                ])
                 .output()
                 .unwrap();
 
@@ -295,7 +308,9 @@ mod tests {
     #[test]
     fn test_truncate_fifo_does_not_hang() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let fifo = dir.join("fifo");
@@ -328,9 +343,13 @@ mod tests {
     #[test]
     fn test_truncate_no_create_still_reports_other_errors() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
         // root bypasses the permission check this relies on
-        if unsafe { libc::geteuid() } == 0 { return; }
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
 
         let dir = setup();
         let locked = dir.join("locked");
@@ -348,7 +367,9 @@ mod tests {
     #[test]
     fn test_truncate_size_option_forms() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("f");
@@ -371,13 +392,20 @@ mod tests {
     #[test]
     fn test_truncate_rejects_bad_options() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("f");
         let f = file.to_str().unwrap();
         // -sc takes "c" as the size, like GNU; -x and --bogus are unknown
-        for args in [vec!["-sc", "5", f], vec!["-x", "-s", "1", f], vec!["--bogus", "-s", "1", f], vec!["-s"]] {
+        for args in [
+            vec!["-sc", "5", f],
+            vec!["-x", "-s", "1", f],
+            vec!["--bogus", "-s", "1", f],
+            vec!["-s"],
+        ] {
             let output = run(&args);
             assert_ne!(output.status.code(), Some(0), "{args:?}");
         }

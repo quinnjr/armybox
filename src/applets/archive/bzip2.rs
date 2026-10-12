@@ -2,13 +2,13 @@
 //!
 //! Compress files using bzip2 algorithm.
 
-use alloc::vec::Vec;
-use alloc::vec;
-use crate::io;
 use super::{get_arg, open_read, open_write_create};
+use crate::io;
+use alloc::vec;
+use alloc::vec::Vec;
 
 // bzip2 magic bytes
-const MAGIC: [u8; 2] = [b'B', b'Z'];
+const MAGIC: [u8; 2] = *b"BZ";
 const BLOCK_MAGIC: [u8; 6] = [0x31, 0x41, 0x59, 0x26, 0x53, 0x59]; // pi digits
 const STREAM_END_MAGIC: [u8; 6] = [0x17, 0x72, 0x45, 0x38, 0x50, 0x90]; // sqrt(pi) digits
 
@@ -80,12 +80,18 @@ pub fn bzip2(argc: i32, argv: *const *const u8) -> i32 {
                     bzip2_stream(fd, 1, block_size)
                 };
                 io::close(fd);
-                if result != 0 { return result; }
+                if result != 0 {
+                    return result;
+                }
             } else {
                 if decompress {
-                    if bunzip2_file(file, keep) != 0 { return 1; }
+                    if bunzip2_file(file, keep) != 0 {
+                        return 1;
+                    }
                 } else {
-                    if bzip2_file(file, keep, block_size) != 0 { return 1; }
+                    if bzip2_file(file, keep, block_size) != 0 {
+                        return 1;
+                    }
                 }
             }
         }
@@ -125,7 +131,9 @@ fn bzip2_stream(input_fd: i32, output_fd: i32, block_size: u8) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         data.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -197,7 +205,9 @@ fn bunzip2_stream(input_fd: i32, output_fd: i32) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         compressed.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -516,7 +526,8 @@ fn decompress_block(reader: &mut BitReader) -> Vec<u8> {
     }
 
     // Build Huffman decoders
-    let decoders: Vec<HuffmanDecoder> = tables.iter()
+    let decoders: Vec<HuffmanDecoder> = tables
+        .iter()
         .map(|t| HuffmanDecoder::from_lengths(t))
         .collect();
 
@@ -592,7 +603,11 @@ fn rle1_decode(data: &[u8]) -> Vec<u8> {
     let mut i = 0;
     while i < data.len() {
         output.push(data[i]);
-        if i + 3 < data.len() && data[i] == data[i + 1] && data[i] == data[i + 2] && data[i] == data[i + 3] {
+        if i + 3 < data.len()
+            && data[i] == data[i + 1]
+            && data[i] == data[i + 2]
+            && data[i] == data[i + 3]
+        {
             output.extend_from_slice(&[data[i], data[i], data[i]]);
             i += 4;
             if i < data.len() {
@@ -793,7 +808,11 @@ struct BitWriter {
 
 impl BitWriter {
     fn new() -> Self {
-        BitWriter { data: Vec::new(), buffer: 0, bits: 0 }
+        BitWriter {
+            data: Vec::new(),
+            buffer: 0,
+            bits: 0,
+        }
     }
 
     fn write_bits(&mut self, value: u32, count: usize) {
@@ -831,7 +850,12 @@ struct BitReader<'a> {
 
 impl<'a> BitReader<'a> {
     fn new(data: &'a [u8]) -> Self {
-        BitReader { data, pos: 0, buffer: 0, bits: 0 }
+        BitReader {
+            data,
+            pos: 0,
+            buffer: 0,
+            bits: 0,
+        }
     }
 
     fn read_bits(&mut self, count: usize) -> u32 {
@@ -935,25 +959,17 @@ fn bzip2_crc32(data: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_bzip2_compress() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;
@@ -979,7 +995,9 @@ mod tests {
     #[test]
     fn test_bzip2_invalid_input() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;

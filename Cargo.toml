@@ -5,7 +5,7 @@ members = [".", "crates/abp", "crates/zstd-nostd"]
 name = "armybox"
 version = "0.5.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.94"
 authors = ["Joseph R. Quinn <quinn.josephr@protonmail.com>"]
 description = "A memory-safe #[no_std] BusyBox/Toybox clone in Rust - 303 Unix utilities in ~108KB"
 documentation = "https://docs.rs/armybox"
@@ -470,9 +470,10 @@ abp = { version = "0.2.1", path = "crates/abp", optional = true, default-feature
 zstd-nostd = { version = "0.2.0", path = "crates/zstd-nostd", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-# For testing only - benchmarks are in crates/benchmarks
+# Tests and benches only (benches/ run the binary under criterion)
 tempfile = "3"
 proptest = "1"
+criterion = { version = "0.7", default-features = false, features = ["cargo_bench_support"] }
 
 # Benchmark profile
 [profile.bench]
@@ -487,11 +488,25 @@ strip = "symbols"
 debug = false
 overflow-checks = false
 
-# Don't use panic=abort for dev profile to allow tests
+# The no_std binary can't unwind. Test builds ignore this setting (the test
+# harness always uses unwind), so abort here doesn't affect cargo test.
 [profile.dev]
-panic = "unwind"
+panic = "abort"
 
 [[bin]]
 name = "armybox"
 path = "src/main.rs"
 test = false  # Binary uses no_std/no_main, can't be tested directly
+bench = false  # Same: a bench harness would pull in std
+
+[[bench]]
+name = "applet_benchmarks"
+harness = false
+
+[[bench]]
+name = "compression_benchmarks"
+harness = false
+
+[[bench]]
+name = "text_benchmarks"
+harness = false

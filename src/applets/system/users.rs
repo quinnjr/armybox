@@ -87,13 +87,15 @@ pub fn users(argc: i32, argv: *const *const u8) -> i32 {
     let mut first = true;
 
     loop {
+        // Compare as isize: a failed read (-1) must end the loop too
         let n = io::read(fd, &mut buf);
-        if (n as usize) < UTMP_SIZE {
+        if n < UTMP_SIZE as isize {
             break;
         }
 
-        // SAFETY: buf is properly sized and aligned for Utmp
-        let entry: &Utmp = unsafe { &*(buf.as_ptr() as *const Utmp) };
+        // SAFETY: buf holds UTMP_SIZE initialized bytes; the byte buffer has
+        // alignment 1, so copy the record out instead of referencing it
+        let entry: Utmp = unsafe { core::ptr::read_unaligned(buf.as_ptr() as *const Utmp) };
 
         // Only show logged-in users
         if entry.ut_type != USER_PROCESS {
@@ -133,30 +135,19 @@ pub fn users(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_users_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["users"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["users"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -164,14 +155,47 @@ mod tests {
     #[test]
     fn test_users_produces_output() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["users"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["users"]).output().unwrap();
 
         // Should at least print a newline
         assert!(!output.stdout.is_empty());
+    }
+
+    /// One glibc-layout utmp record (384 bytes) with the given type and user
+    fn utmp_record(ut_type: i16, user: &[u8]) -> std::vec::Vec<u8> {
+        let mut rec = std::vec![0u8; super::UTMP_SIZE];
+        rec[..2].copy_from_slice(&ut_type.to_ne_bytes());
+        // ut_user follows ut_type(2) + pad(2) + ut_pid(4) + ut_line(32) + ut_id(4)
+        rec[44..44 + user.len()].copy_from_slice(user);
+        rec
+    }
+
+    #[test]
+    fn test_users_reads_utmp_records() {
+        let armybox = get_armybox_path();
+        if !armybox.exists() {
+            return;
+        }
+        assert_eq!(super::UTMP_SIZE, 384);
+
+        let mut data = utmp_record(super::USER_PROCESS, b"alice");
+        data.extend(utmp_record(8, b"gone")); // DEAD_PROCESS: not listed
+        data.extend(utmp_record(super::USER_PROCESS, b"bob"));
+        let path =
+            std::env::temp_dir().join(std::format!("armybox_users_utmp_{}", std::process::id()));
+        std::fs::write(&path, &data).unwrap();
+
+        let output = Command::new(&armybox)
+            .args(["users", path.to_str().unwrap()])
+            .output()
+            .unwrap();
+        let _ = std::fs::remove_file(&path);
+
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(output.stdout, b"alice bob\n");
     }
 }

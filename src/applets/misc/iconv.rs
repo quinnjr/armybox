@@ -4,9 +4,9 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// iconv - character set conversion (POSIX compliant)
 ///
@@ -101,7 +101,11 @@ fn normalize_encoding(name: &[u8]) -> Encoding {
         Encoding::Ascii
     } else if upper == b"UTF-8" || upper == b"UTF8" {
         Encoding::Utf8
-    } else if upper == b"ISO-8859-1" || upper == b"ISO88591" || upper == b"LATIN1" || upper == b"LATIN-1" {
+    } else if upper == b"ISO-8859-1"
+        || upper == b"ISO88591"
+        || upper == b"LATIN1"
+        || upper == b"LATIN-1"
+    {
         Encoding::Latin1
     } else {
         // Default to UTF-8
@@ -159,7 +163,10 @@ fn decode_to_codepoints(data: &[u8], enc: Encoding) -> Vec<u32> {
                         i += 1;
                     }
                 } else if b < 0xF0 {
-                    if i + 2 < data.len() && data[i + 1] & 0xC0 == 0x80 && data[i + 2] & 0xC0 == 0x80 {
+                    if i + 2 < data.len()
+                        && data[i + 1] & 0xC0 == 0x80
+                        && data[i + 2] & 0xC0 == 0x80
+                    {
                         let cp = ((b as u32 & 0x0F) << 12)
                             | ((data[i + 1] as u32 & 0x3F) << 6)
                             | (data[i + 2] as u32 & 0x3F);
@@ -246,25 +253,17 @@ fn encode_from_codepoints(codepoints: &[u32], enc: Encoding) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_iconv_list() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["iconv", "-l"])

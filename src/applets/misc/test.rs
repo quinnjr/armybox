@@ -6,9 +6,9 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // Exit codes.
 const TRUE: i32 = 0;
@@ -142,17 +142,44 @@ fn four_args(args: &[&[u8]]) -> Result<bool, ()> {
 fn is_binary_op(op: &[u8]) -> bool {
     matches!(
         op,
-        b"=" | b"==" | b"!=" | b"-eq" | b"-ne" | b"-lt" | b"-le" | b"-gt" | b"-ge"
-            | b"-nt" | b"-ot" | b"-ef"
+        b"=" | b"=="
+            | b"!="
+            | b"-eq"
+            | b"-ne"
+            | b"-lt"
+            | b"-le"
+            | b"-gt"
+            | b"-ge"
+            | b"-nt"
+            | b"-ot"
+            | b"-ef"
     )
 }
 
 fn is_unary_op(op: &[u8]) -> bool {
     matches!(
         op,
-        b"-b" | b"-c" | b"-d" | b"-e" | b"-f" | b"-g" | b"-h" | b"-L" | b"-k" | b"-p"
-            | b"-r" | b"-s" | b"-S" | b"-t" | b"-u" | b"-w" | b"-x" | b"-O" | b"-G"
-            | b"-n" | b"-z"
+        b"-b"
+            | b"-c"
+            | b"-d"
+            | b"-e"
+            | b"-f"
+            | b"-g"
+            | b"-h"
+            | b"-L"
+            | b"-k"
+            | b"-p"
+            | b"-r"
+            | b"-s"
+            | b"-S"
+            | b"-t"
+            | b"-u"
+            | b"-w"
+            | b"-x"
+            | b"-O"
+            | b"-G"
+            | b"-n"
+            | b"-z"
     )
 }
 
@@ -343,26 +370,18 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
     use std::fs;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_file_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_test_test");
         let _ = fs::create_dir_all(&dir);
@@ -380,7 +399,9 @@ mod tests {
     #[test]
     fn test_file_not_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "-e", "/nonexistent/path/file"])
@@ -393,7 +414,9 @@ mod tests {
     #[test]
     fn test_string_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "foo", "=", "foo"])
@@ -406,7 +429,9 @@ mod tests {
     #[test]
     fn test_string_not_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "foo", "!=", "bar"])
@@ -419,7 +444,9 @@ mod tests {
     #[test]
     fn test_numeric_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "42", "-eq", "42"])
@@ -432,7 +459,9 @@ mod tests {
     #[test]
     fn test_numeric_less_than() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "5", "-lt", "10"])

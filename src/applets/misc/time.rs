@@ -4,31 +4,31 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use alloc::ffi::CString;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::ffi::CString;
+use alloc::vec::Vec;
 
 /// rusage structure for getrusage()
 #[repr(C)]
 struct Rusage {
-    ru_utime: Timeval,      // user CPU time
-    ru_stime: Timeval,      // system CPU time
-    ru_maxrss: libc::c_long,        // max resident set size
-    ru_ixrss: libc::c_long,         // integral shared memory size
-    ru_idrss: libc::c_long,         // integral unshared data size
-    ru_isrss: libc::c_long,         // integral unshared stack size
-    ru_minflt: libc::c_long,        // page reclaims (soft page faults)
-    ru_majflt: libc::c_long,        // page faults (hard page faults)
-    ru_nswap: libc::c_long,         // swaps
-    ru_inblock: libc::c_long,       // block input operations
-    ru_oublock: libc::c_long,       // block output operations
-    ru_msgsnd: libc::c_long,        // IPC messages sent
-    ru_msgrcv: libc::c_long,        // IPC messages received
-    ru_nsignals: libc::c_long,      // signals received
-    ru_nvcsw: libc::c_long,         // voluntary context switches
-    ru_nivcsw: libc::c_long,        // involuntary context switches
+    ru_utime: Timeval,         // user CPU time
+    ru_stime: Timeval,         // system CPU time
+    ru_maxrss: libc::c_long,   // max resident set size
+    ru_ixrss: libc::c_long,    // integral shared memory size
+    ru_idrss: libc::c_long,    // integral unshared data size
+    ru_isrss: libc::c_long,    // integral unshared stack size
+    ru_minflt: libc::c_long,   // page reclaims (soft page faults)
+    ru_majflt: libc::c_long,   // page faults (hard page faults)
+    ru_nswap: libc::c_long,    // swaps
+    ru_inblock: libc::c_long,  // block input operations
+    ru_oublock: libc::c_long,  // block output operations
+    ru_msgsnd: libc::c_long,   // IPC messages sent
+    ru_msgrcv: libc::c_long,   // IPC messages received
+    ru_nsignals: libc::c_long, // signals received
+    ru_nvcsw: libc::c_long,    // voluntary context switches
+    ru_nivcsw: libc::c_long,   // involuntary context switches
 }
 
 #[repr(C)]
@@ -47,8 +47,12 @@ struct Timespec {
 const CLOCK_MONOTONIC: libc::clockid_t = 1;
 
 unsafe extern "C" {
-    fn wait4(pid: libc::pid_t, status: *mut libc::c_int, options: libc::c_int,
-             rusage: *mut Rusage) -> libc::pid_t;
+    fn wait4(
+        pid: libc::pid_t,
+        status: *mut libc::c_int,
+        options: libc::c_int,
+        rusage: *mut Rusage,
+    ) -> libc::pid_t;
     fn clock_gettime(clockid: libc::clockid_t, tp: *mut Timespec) -> libc::c_int;
 }
 
@@ -103,8 +107,13 @@ pub fn time(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     // Get start time with high precision
-    let mut start_time = Timespec { tv_sec: 0, tv_nsec: 0 };
-    unsafe { clock_gettime(CLOCK_MONOTONIC, &mut start_time); }
+    let mut start_time = Timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    unsafe {
+        clock_gettime(CLOCK_MONOTONIC, &mut start_time);
+    }
 
     // Fork and exec
     let pid = unsafe { libc::fork() };
@@ -128,12 +137,15 @@ pub fn time(argc: i32, argv: *const *const u8) -> i32 {
             }
         }
 
-        let ptrs: Vec<*const libc::c_char> = args.iter()
+        let ptrs: Vec<*const libc::c_char> = args
+            .iter()
             .map(|s| s.as_ptr())
             .chain(core::iter::once(core::ptr::null()))
             .collect();
 
-        unsafe { libc::execvp(ptrs[0], ptrs.as_ptr()); }
+        unsafe {
+            libc::execvp(ptrs[0], ptrs.as_ptr());
+        }
 
         // If exec failed
         io::write_str(2, b"time: ");
@@ -141,7 +153,9 @@ pub fn time(argc: i32, argv: *const *const u8) -> i32 {
             io::write_all(2, cmd);
         }
         io::write_str(2, b": command not found\n");
-        unsafe { libc::_exit(127); }
+        unsafe {
+            libc::_exit(127);
+        }
     }
 
     // Parent - wait for child and get resource usage
@@ -151,8 +165,13 @@ pub fn time(argc: i32, argv: *const *const u8) -> i32 {
     let ret = unsafe { wait4(pid, &mut status, 0, &mut rusage) };
 
     // Get end time
-    let mut end_time = Timespec { tv_sec: 0, tv_nsec: 0 };
-    unsafe { clock_gettime(CLOCK_MONOTONIC, &mut end_time); }
+    let mut end_time = Timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    unsafe {
+        clock_gettime(CLOCK_MONOTONIC, &mut end_time);
+    }
 
     if ret < 0 {
         io::write_str(2, b"time: wait failed\n");
@@ -185,10 +204,13 @@ pub fn time(argc: i32, argv: *const *const u8) -> i32 {
     } else if verbose {
         // Verbose format with all stats
         print_verbose_stats(
-            real_sec as u64, (real_nsec / 1000) as u64,
-            user_sec, user_usec,
-            sys_sec, sys_usec,
-            &rusage
+            real_sec as u64,
+            (real_nsec / 1000) as u64,
+            user_sec,
+            user_usec,
+            sys_sec,
+            sys_usec,
+            &rusage,
         );
     } else {
         // Default bash-like format
@@ -253,10 +275,13 @@ fn print_default_time(name: &[u8], secs: u64, msecs: u64) {
 
 /// Print verbose statistics (like GNU time -v)
 fn print_verbose_stats(
-    real_sec: u64, real_usec: u64,
-    user_sec: u64, user_usec: u64,
-    sys_sec: u64, sys_usec: u64,
-    rusage: &Rusage
+    real_sec: u64,
+    real_usec: u64,
+    user_sec: u64,
+    user_usec: u64,
+    sys_sec: u64,
+    sys_usec: u64,
+    rusage: &Rusage,
 ) {
     io::write_str(2, b"\tCommand being timed\n");
 
@@ -272,11 +297,9 @@ fn print_verbose_stats(
     // Calculate CPU percentage
     let total_cpu_usec = (user_sec * 1_000_000 + user_usec) + (sys_sec * 1_000_000 + sys_usec);
     let real_usec_total = real_sec * 1_000_000 + real_usec;
-    let cpu_percent = if real_usec_total > 0 {
-        (total_cpu_usec * 100) / real_usec_total
-    } else {
-        0
-    };
+    let cpu_percent = (total_cpu_usec * 100)
+        .checked_div(real_usec_total)
+        .unwrap_or(0);
 
     io::write_str(2, b"\tPercent of CPU this job got: ");
     io::write_num(2, cpu_percent);
@@ -359,8 +382,14 @@ fn print_help() {
     io::write_str(1, b"Usage: time [-p] [-v] COMMAND [ARGS...]\n\n");
     io::write_str(1, b"Run COMMAND and report time statistics.\n\n");
     io::write_str(1, b"Options:\n");
-    io::write_str(1, b"  -p, --portability   Use POSIX portable output format\n");
-    io::write_str(1, b"  -v, --verbose       Print all resource usage statistics\n");
+    io::write_str(
+        1,
+        b"  -p, --portability   Use POSIX portable output format\n",
+    );
+    io::write_str(
+        1,
+        b"  -v, --verbose       Print all resource usage statistics\n",
+    );
     io::write_str(1, b"  -h, --help          Display this help\n\n");
     io::write_str(1, b"Output:\n");
     io::write_str(1, b"  real    Wall clock time (elapsed time)\n");
@@ -371,25 +400,17 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_time_true() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "true"])
@@ -406,12 +427,11 @@ mod tests {
     #[test]
     fn test_time_no_command() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["time"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["time"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -421,7 +441,9 @@ mod tests {
     #[test]
     fn test_time_portable() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "-p", "true"])
@@ -438,7 +460,9 @@ mod tests {
     #[test]
     fn test_time_verbose() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "-v", "true"])
@@ -454,7 +478,9 @@ mod tests {
     #[test]
     fn test_time_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "--help"])
@@ -469,7 +495,9 @@ mod tests {
     #[test]
     fn test_time_exit_status() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "false"])
@@ -483,7 +511,9 @@ mod tests {
     #[test]
     fn test_time_nonexistent_command() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "nonexistent_command_12345"])
@@ -497,7 +527,9 @@ mod tests {
     #[test]
     fn test_time_with_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["time", "echo", "hello", "world"])

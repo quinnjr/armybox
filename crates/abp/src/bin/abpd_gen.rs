@@ -14,8 +14,8 @@
 use std::io::{self, BufRead, Write};
 
 // Use the library's pkgindex module
-use abp::pkgindex::build::{PackageIndexBuilder, PackageInfo};
 use abp::pkgindex::Category;
+use abp::pkgindex::build::{PackageIndexBuilder, PackageInfo};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -54,8 +54,8 @@ fn main() {
             "network" | "rust-netutil" => Category::Network,
             "text" => Category::Text,
             "archive" => Category::Archive,
-            "devel" | "build-tool" | "bootstrap" | "rust-toolchain"
-                | "llvm-toolchain" | "runtime" => Category::Devel,
+            "devel" | "build-tool" | "bootstrap" | "rust-toolchain" | "llvm-toolchain"
+            | "runtime" => Category::Devel,
             "shell" | "rust-shell" => Category::Shell,
             "editor" | "rust-devtool" => Category::Editor,
             "meta" => Category::Meta,
@@ -110,9 +110,5 @@ fn main() {
 }
 
 fn truncate(s: &str, max: usize) -> &str {
-    if s.len() <= max {
-        s
-    } else {
-        &s[..max]
-    }
+    if s.len() <= max { s } else { &s[..max] }
 }

@@ -21,13 +21,15 @@ use crate::sys;
 pub fn ascii(_argc: i32, _argv: *const *const u8) -> i32 {
     // Control character names
     const CTRL_NAMES: [&[u8]; 32] = [
-        b"NUL", b"SOH", b"STX", b"ETX", b"EOT", b"ENQ", b"ACK", b"BEL",
-        b"BS ", b"HT ", b"LF ", b"VT ", b"FF ", b"CR ", b"SO ", b"SI ",
-        b"DLE", b"DC1", b"DC2", b"DC3", b"DC4", b"NAK", b"SYN", b"ETB",
-        b"CAN", b"EM ", b"SUB", b"ESC", b"FS ", b"GS ", b"RS ", b"US ",
+        b"NUL", b"SOH", b"STX", b"ETX", b"EOT", b"ENQ", b"ACK", b"BEL", b"BS ", b"HT ", b"LF ",
+        b"VT ", b"FF ", b"CR ", b"SO ", b"SI ", b"DLE", b"DC1", b"DC2", b"DC3", b"DC4", b"NAK",
+        b"SYN", b"ETB", b"CAN", b"EM ", b"SUB", b"ESC", b"FS ", b"GS ", b"RS ", b"US ",
     ];
 
-    io::write_str(1, b"Dec Hex    Dec Hex    Dec Hex  Dec Hex  Dec Hex  Dec Hex   Dec Hex   Dec Hex\n");
+    io::write_str(
+        1,
+        b"Dec Hex    Dec Hex    Dec Hex  Dec Hex  Dec Hex  Dec Hex   Dec Hex   Dec Hex\n",
+    );
 
     for row in 0..16 {
         for col in 0..8 {
@@ -76,30 +78,19 @@ pub fn ascii(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ascii() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ascii"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ascii"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

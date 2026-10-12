@@ -3,9 +3,9 @@
 //! FTP file upload utility.
 
 extern crate alloc;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// ftpput - upload files via FTP
 ///
@@ -137,8 +137,14 @@ pub fn ftpput(argc: i32, argv: *const *const u8) -> i32 {
         return 1;
     }
 
-    if unsafe { libc::connect(ctrl_fd, &addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
+    if unsafe {
+        libc::connect(
+            ctrl_fd,
+            &addr as *const _ as *const libc::sockaddr,
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+        )
+    } < 0
+    {
         io::write_str(2, b"ftpput: connect failed\n");
         io::close(ctrl_fd);
         io::close(in_fd);
@@ -174,7 +180,15 @@ fn resolve_host(host: &[u8], port: u16) -> Option<libc::sockaddr_in> {
     hints.ai_socktype = libc::SOCK_STREAM;
 
     let mut res: *mut libc::addrinfo = core::ptr::null_mut();
-    if unsafe { libc::getaddrinfo(host_cstr.as_ptr() as *const libc::c_char, core::ptr::null(), &hints, &mut res) } != 0 {
+    if unsafe {
+        libc::getaddrinfo(
+            host_cstr.as_ptr() as *const libc::c_char,
+            core::ptr::null(),
+            &hints,
+            &mut res,
+        )
+    } != 0
+    {
         return None;
     }
 
@@ -183,7 +197,9 @@ fn resolve_host(host: &[u8], port: u16) -> Option<libc::sockaddr_in> {
     }
 
     let ai = unsafe { &*res };
-    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t {
+    if ai.ai_addr.is_null()
+        || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t
+    {
         unsafe { libc::freeaddrinfo(res) };
         return None;
     }
@@ -229,7 +245,15 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     Some(u32::from_ne_bytes(octets))
 }
 
-fn ftp_upload(ctrl_fd: i32, in_fd: i32, user: &[u8], pass: &[u8], remote: &[u8], _file_size: u64, verbose: bool) -> i32 {
+fn ftp_upload(
+    ctrl_fd: i32,
+    in_fd: i32,
+    user: &[u8],
+    pass: &[u8],
+    remote: &[u8],
+    _file_size: u64,
+    verbose: bool,
+) -> i32 {
     // Read initial banner
     let mut buf = [0u8; 1024];
     let code = read_response(ctrl_fd, &mut buf, verbose);
@@ -293,8 +317,14 @@ fn ftp_upload(ctrl_fd: i32, in_fd: i32, user: &[u8], pass: &[u8], remote: &[u8],
         return 1;
     }
 
-    if unsafe { libc::connect(data_fd, &pasv_addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) } < 0 {
+    if unsafe {
+        libc::connect(
+            data_fd,
+            &pasv_addr as *const _ as *const libc::sockaddr,
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+        )
+    } < 0
+    {
         io::write_str(2, b"ftpput: data connect failed\n");
         io::close(data_fd);
         return 1;
@@ -382,9 +412,8 @@ fn read_response(fd: i32, buf: &mut [u8], verbose: bool) -> u32 {
         }
 
         if n >= 3 {
-            let c = (buf[0] - b'0') as u32 * 100 +
-                    (buf[1] - b'0') as u32 * 10 +
-                    (buf[2] - b'0') as u32;
+            let c =
+                (buf[0] - b'0') as u32 * 100 + (buf[1] - b'0') as u32 * 10 + (buf[2] - b'0') as u32;
             code = c;
 
             if n >= 4 && buf[3] != b'-' {
@@ -425,10 +454,10 @@ fn parse_pasv_response(resp: &[u8]) -> Option<libc::sockaddr_in> {
     }
     values[5] = current;
 
-    let ip = ((values[0] as u32) << 0) |
-             ((values[1] as u32) << 8) |
-             ((values[2] as u32) << 16) |
-             ((values[3] as u32) << 24);
+    let ip = ((values[0] as u32) << 0)
+        | ((values[1] as u32) << 8)
+        | ((values[2] as u32) << 16)
+        | ((values[3] as u32) << 24);
     let port = (values[4] as u16) << 8 | (values[5] as u16);
 
     let mut addr: libc::sockaddr_in = unsafe { core::mem::zeroed() };
@@ -452,25 +481,17 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ftpput_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ftpput", "-h"])
@@ -485,12 +506,11 @@ mod tests {
     #[test]
     fn test_ftpput_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ftpput"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ftpput"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

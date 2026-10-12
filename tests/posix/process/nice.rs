@@ -26,7 +26,7 @@ fn posix_nice_show_current() {
     let result = run(&["nice"]);
     assert_success(&result);
     let nice: i32 = result.1.trim().parse().unwrap_or(-999);
-    assert!(nice >= -20 && nice <= 19);
+    assert!((-20..=19).contains(&nice));
 }
 
 /// POSIX: nice positive increment

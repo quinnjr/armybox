@@ -10,7 +10,7 @@
 pub mod helpers;
 
 // Re-export helpers for backward compatibility
-pub use helpers::{get_armybox_path, run, run_with_stdin, setup_test_env};
+pub use helpers::{get_armybox_path, setup_test_env};
 
 mod file;
 mod misc;

@@ -2,16 +2,18 @@
 //!
 //! Common utilities for running armybox and verifying POSIX-compliant behavior.
 
+// A shared toolkit: not every helper is used by the current tests
+#![allow(dead_code)]
+
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 /// Get the path to the armybox binary.
 ///
-/// Checks ARMYBOX_PATH env var first, then target/release/armybox, then target/debug/armybox.
-/// Panics with helpful message if no binary found.
+/// Uses ARMYBOX_PATH if set (for CI or custom setups), otherwise the binary
+/// Cargo built for this test run's profile.
 pub fn get_armybox_path() -> PathBuf {
-    // Check environment variable first (for CI or custom setups)
     if let Ok(path) = std::env::var("ARMYBOX_PATH") {
         let p = PathBuf::from(&path);
         if p.exists() {
@@ -20,30 +22,8 @@ pub fn get_armybox_path() -> PathBuf {
         panic!("ARMYBOX_PATH set to '{}' but file does not exist", path);
     }
 
-    // Resolve against the crate root as an ABSOLUTE path. Tests that use
-    // `run_in_dir` change the child's working directory, so a relative binary
-    // path would fail to execute — always return an absolute location.
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-    let release = root.join("target/release/armybox");
-    if release.exists() {
-        return release;
-    }
-
-    let debug = root.join("target/debug/armybox");
-    if debug.exists() {
-        return debug;
-    }
-
-    panic!(
-        "armybox binary not found!\n\
-         \n\
-         Please build it first with:\n\
-         \n\
-         RUSTFLAGS=\"-C linker=gcc -C link-arg=-lc\" cargo build --release\n\
-         \n\
-         Or set ARMYBOX_PATH environment variable to the binary location."
-    );
+    // Absolute, so tests that change the child's working directory still work
+    PathBuf::from(env!("CARGO_BIN_EXE_armybox"))
 }
 
 /// Create a test environment with a temporary directory.
@@ -77,7 +57,15 @@ pub fn run_with_stdin(args: &[&str], input: &[u8]) -> (i32, String, String) {
 
     {
         let stdin = child.stdin.as_mut().unwrap();
-        stdin.write_all(input).expect("Failed to write to stdin");
+        // armybox may exit before reading all input (e.g. on a usage error);
+        // that's a broken pipe, not a test failure
+        if let Err(e) = stdin.write_all(input) {
+            assert_eq!(
+                e.kind(),
+                std::io::ErrorKind::BrokenPipe,
+                "Failed to write to stdin: {e}"
+            );
+        }
     }
 
     let output = child.wait_with_output().expect("Failed to wait on child");
@@ -112,7 +100,15 @@ pub fn run_binary_with_stdin(args: &[&str], input: &[u8]) -> (i32, Vec<u8>, Vec<
 
     {
         let stdin = child.stdin.as_mut().unwrap();
-        stdin.write_all(input).expect("Failed to write to stdin");
+        // armybox may exit before reading all input (e.g. on a usage error);
+        // that's a broken pipe, not a test failure
+        if let Err(e) = stdin.write_all(input) {
+            assert_eq!(
+                e.kind(),
+                std::io::ErrorKind::BrokenPipe,
+                "Failed to write to stdin: {e}"
+            );
+        }
     }
 
     let output = child.wait_with_output().expect("Failed to wait on child");

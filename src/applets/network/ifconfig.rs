@@ -2,8 +2,8 @@
 //!
 //! Display or configure network interface parameters.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// ifconfig - configure network interfaces
 ///
@@ -30,7 +30,9 @@ pub fn ifconfig(argc: i32, argv: *const *const u8) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         let mut offset = 0;
         while offset < n as usize {
             let dirent = unsafe { &*(buf.as_ptr().add(offset) as *const libc::dirent64) };
@@ -52,13 +54,22 @@ pub fn ifconfig(argc: i32, argv: *const *const u8) -> i32 {
                 // Read flags
                 let mut path = [0u8; 128];
                 let mut pi = 0;
-                for &c in b"/sys/class/net/" { path[pi] = c; pi += 1; }
-                for &c in name { path[pi] = c; pi += 1; }
+                for &c in b"/sys/class/net/" {
+                    path[pi] = c;
+                    pi += 1;
+                }
+                for &c in name {
+                    path[pi] = c;
+                    pi += 1;
+                }
 
                 let path_base = pi;
 
                 // Read operstate
-                for &c in b"/operstate\0" { path[pi] = c; pi += 1; }
+                for &c in b"/operstate\0" {
+                    path[pi] = c;
+                    pi += 1;
+                }
                 let state_fd = io::open(&path, libc::O_RDONLY, 0);
                 if state_fd >= 0 {
                     let mut state_buf = [0u8; 32];
@@ -79,7 +90,10 @@ pub fn ifconfig(argc: i32, argv: *const *const u8) -> i32 {
 
                 // Read address
                 pi = path_base;
-                for &c in b"/address\0" { path[pi] = c; pi += 1; }
+                for &c in b"/address\0" {
+                    path[pi] = c;
+                    pi += 1;
+                }
                 let addr_fd = io::open(&path, libc::O_RDONLY, 0);
                 if addr_fd >= 0 {
                     let mut addr_buf = [0u8; 64];
@@ -94,7 +108,10 @@ pub fn ifconfig(argc: i32, argv: *const *const u8) -> i32 {
 
                 // Read MTU
                 pi = path_base;
-                for &c in b"/mtu\0" { path[pi] = c; pi += 1; }
+                for &c in b"/mtu\0" {
+                    path[pi] = c;
+                    pi += 1;
+                }
                 let mtu_fd = io::open(&path, libc::O_RDONLY, 0);
                 if mtu_fd >= 0 {
                     let mut mtu_buf = [0u8; 16];
@@ -119,30 +136,19 @@ pub fn ifconfig(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ifconfig_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["ifconfig"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["ifconfig"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         // Should show at least lo interface
@@ -153,7 +159,9 @@ mod tests {
     #[test]
     fn test_ifconfig_lo() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ifconfig", "lo"])

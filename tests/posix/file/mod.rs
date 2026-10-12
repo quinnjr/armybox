@@ -2,9 +2,9 @@
 
 mod basename;
 mod cat;
+mod chgrp;
 mod chmod;
 mod chown;
-mod chgrp;
 mod cp;
 mod dd;
 mod dirname;

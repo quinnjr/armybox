@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
+use crate::database::AvailablePackage;
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::database::AvailablePackage;
 
 /// Fetch repository index
 pub fn fetch_index(base_url: &str) -> Result<Vec<AvailablePackage>, String> {
@@ -19,8 +19,7 @@ pub fn fetch_index(base_url: &str) -> Result<Vec<AvailablePackage>, String> {
     url.push_str("APKINDEX");
 
     // For now, we only support file:// URLs for testing
-    if url.starts_with("file://") {
-        let path = &url[7..];
+    if let Some(path) = url.strip_prefix("file://") {
         return fetch_file_index(path);
     }
 
@@ -104,10 +103,7 @@ fn parse_index(data: &[u8]) -> Result<Vec<AvailablePackage>, String> {
             b'V' => current.version = String::from(value),
             b'T' => current.description = String::from(value),
             b'D' => {
-                current.depends = value
-                    .split_whitespace()
-                    .map(String::from)
-                    .collect();
+                current.depends = value.split_whitespace().map(String::from).collect();
             }
             b'S' => current.size = value.parse().unwrap_or(0),
             b'C' => {
@@ -154,8 +150,7 @@ fn hex_digit(c: u8) -> Option<u8> {
 /// Download a package
 pub fn download_package(url: &str, dest: &[u8]) -> Result<(), String> {
     // For now, only support file:// URLs
-    if url.starts_with("file://") {
-        let path = &url[7..];
+    if let Some(path) = url.strip_prefix("file://") {
         return copy_file(path.as_bytes(), dest);
     }
 

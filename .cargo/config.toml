@@ -18,6 +18,10 @@ rustflags = [
     "-C", "link-arg=-Wl,--hash-style=gnu",
     # Link against libc for no_std (ordered before target-specific libs)
     "-C", "link-arg=-lc",
+    # Unoptimized (dev) builds keep core's unwind landing pads, which
+    # reference _Unwind_Resume even under panic=abort; release LTO strips
+    # them, so this static unwinder is only pulled in by dev builds
+    "-C", "link-arg=-lgcc_eh",
 ]
 
 # ============================================================================

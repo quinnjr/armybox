@@ -2,24 +2,24 @@
 //!
 //! Simple telnet client for remote terminal connections.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // Telnet protocol constants
-const IAC: u8 = 255;  // Interpret As Command
+const IAC: u8 = 255; // Interpret As Command
 const DONT: u8 = 254;
 const DO: u8 = 253;
 const WONT: u8 = 252;
 const WILL: u8 = 251;
-const SB: u8 = 250;   // Subnegotiation Begin
-const SE: u8 = 240;   // Subnegotiation End
+const SB: u8 = 250; // Subnegotiation Begin
+const SE: u8 = 240; // Subnegotiation End
 
 // Telnet options
 const TELOPT_ECHO: u8 = 1;
-const TELOPT_SGA: u8 = 3;    // Suppress Go Ahead
+const TELOPT_SGA: u8 = 3; // Suppress Go Ahead
 const TELOPT_TTYPE: u8 = 24; // Terminal Type
-const TELOPT_NAWS: u8 = 31;  // Window Size
+const TELOPT_NAWS: u8 = 31; // Window Size
 
 /// telnet - user interface to the TELNET protocol
 ///
@@ -91,7 +91,10 @@ pub fn telnet(argc: i32, argv: *const *const u8) -> i32 {
     };
 
     if ret < 0 {
-        io::write_str(2, b"telnet: Unable to connect to remote host: Connection refused\n");
+        io::write_str(
+            2,
+            b"telnet: Unable to connect to remote host: Connection refused\n",
+        );
         unsafe { libc::close(sock) };
         return 1;
     }
@@ -157,9 +160,8 @@ pub fn telnet(argc: i32, argv: *const *const u8) -> i32 {
         // Check for input from socket
         if unsafe { libc::FD_ISSET(sock, &read_fds) } {
             let mut buf = [0u8; 1024];
-            let n = unsafe {
-                libc::recv(sock, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0)
-            };
+            let n =
+                unsafe { libc::recv(sock, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
 
             if n <= 0 {
                 io::write_str(1, b"\nConnection closed by foreign host.\n");
@@ -309,9 +311,7 @@ fn handle_telnet_option(sock: i32, cmd: u8, opt: u8, state: &mut TelnetState) {
                 }
             }
         }
-        DONT => {
-            [IAC, WONT, opt]
-        }
+        DONT => [IAC, WONT, opt],
         WILL => {
             // Server will do something
             match opt {
@@ -323,9 +323,7 @@ fn handle_telnet_option(sock: i32, cmd: u8, opt: u8, state: &mut TelnetState) {
                     state.sga = true;
                     [IAC, DO, opt]
                 }
-                _ => {
-                    [IAC, DONT, opt]
-                }
+                _ => [IAC, DONT, opt],
             }
         }
         WONT => {
@@ -428,10 +426,12 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     }
     parts[3] = current as u8;
 
-    Some(((parts[0] as u32) << 24) |
-         ((parts[1] as u32) << 16) |
-         ((parts[2] as u32) << 8) |
-         (parts[3] as u32))
+    Some(
+        ((parts[0] as u32) << 24)
+            | ((parts[1] as u32) << 16)
+            | ((parts[2] as u32) << 8)
+            | (parts[3] as u32),
+    )
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -454,30 +454,19 @@ fn print_addr(addr: &libc::sockaddr_in) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_telnet_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["telnet"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["telnet"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

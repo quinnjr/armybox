@@ -96,7 +96,10 @@ pub fn id(argc: i32, argv: *const *const u8) -> i32 {
         return 1;
     }
     if (want_name || want_real) && modes == 0 {
-        io::write_str(2, b"id: cannot print only names or real IDs in default format\n");
+        io::write_str(
+            2,
+            b"id: cannot print only names or real IDs in default format\n",
+        );
         return 1;
     }
 
@@ -251,30 +254,19 @@ pub fn id(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_id_output() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["id"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["id"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -285,12 +277,11 @@ mod tests {
     #[test]
     fn test_id_contains_current_uid() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["id"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["id"]).output().unwrap();
 
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Should contain uid= followed by a number

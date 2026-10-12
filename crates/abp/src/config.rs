@@ -4,9 +4,9 @@
 
 extern crate alloc;
 
+use crate::io;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
 
 /// ABP configuration
 #[derive(Clone)]
@@ -182,7 +182,10 @@ impl RepoConfig {
 
             if let Some(eq_pos) = line.find('=') {
                 let key = line[..eq_pos].trim();
-                let value = line[eq_pos + 1..].trim().trim_matches('"').trim_matches('\'');
+                let value = line[eq_pos + 1..]
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'');
 
                 match key {
                     "name" => config.name = String::from(value),
@@ -202,7 +205,6 @@ impl RepoConfig {
     }
 }
 
-
 /// Initialize ABP directories and configuration
 pub fn init_abp() -> Result<(), String> {
     let dirs = [
@@ -217,14 +219,12 @@ pub fn init_abp() -> Result<(), String> {
     ];
 
     for dir in &dirs {
-        if io::access(*dir, libc::F_OK) != 0 {
-            if io::mkdir(*dir, 0o755) != 0 {
-                let mut msg = String::from("cannot create directory: ");
-                if let Ok(s) = core::str::from_utf8(*dir) {
-                    msg.push_str(s);
-                }
-                return Err(msg);
+        if io::access(dir, libc::F_OK) != 0 && io::mkdir(dir, 0o755) != 0 {
+            let mut msg = String::from("cannot create directory: ");
+            if let Ok(s) = core::str::from_utf8(dir) {
+                msg.push_str(s);
             }
+            return Err(msg);
         }
     }
 

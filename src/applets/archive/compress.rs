@@ -2,10 +2,10 @@
 //!
 //! Unix compress utility (legacy format).
 
-use alloc::vec::Vec;
-use alloc::vec;
-use crate::io;
 use super::{get_arg, open_read, open_write_create};
+use crate::io;
+use alloc::vec;
+use alloc::vec::Vec;
 
 // LZW constants
 const MAGIC: [u8; 2] = [0x1f, 0x9d];
@@ -78,12 +78,18 @@ pub fn compress(argc: i32, argv: *const *const u8) -> i32 {
                     compress_stream(fd, 1)
                 };
                 io::close(fd);
-                if result != 0 { return result; }
+                if result != 0 {
+                    return result;
+                }
             } else {
                 if decompress {
-                    if decompress_file(file, keep) != 0 { return 1; }
+                    if decompress_file(file, keep) != 0 {
+                        return 1;
+                    }
                 } else {
-                    if compress_file(file, keep) != 0 { return 1; }
+                    if compress_file(file, keep) != 0 {
+                        return 1;
+                    }
                 }
             }
         }
@@ -111,7 +117,9 @@ fn compress_stream(input_fd: i32, output_fd: i32) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         data.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -156,7 +164,9 @@ fn decompress_stream(input_fd: i32, output_fd: i32) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(input_fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         compressed.extend_from_slice(&buf[..n as usize]);
     }
 
@@ -298,7 +308,11 @@ fn lzw_compress(data: &[u8], max_bits: u8) -> Vec<u8> {
         insert_code(&mut dict, vec![i as u8], i);
     }
 
-    let emit_code = |code: u16, output: &mut Vec<u8>, bit_buffer: &mut u32, bits_in_buffer: &mut u8, current_bits: u8| {
+    let emit_code = |code: u16,
+                     output: &mut Vec<u8>,
+                     bit_buffer: &mut u32,
+                     bits_in_buffer: &mut u8,
+                     current_bits: u8| {
         *bit_buffer |= (code as u32) << *bits_in_buffer;
         *bits_in_buffer += current_bits;
         while *bits_in_buffer >= 8 {
@@ -318,7 +332,13 @@ fn lzw_compress(data: &[u8], max_bits: u8) -> Vec<u8> {
         } else {
             // Output code for current
             if let Some(code) = find_code(&dict, &current) {
-                emit_code(code, &mut output, &mut bit_buffer, &mut bits_in_buffer, current_bits);
+                emit_code(
+                    code,
+                    &mut output,
+                    &mut bit_buffer,
+                    &mut bits_in_buffer,
+                    current_bits,
+                );
             }
 
             // Add next to dictionary
@@ -338,7 +358,13 @@ fn lzw_compress(data: &[u8], max_bits: u8) -> Vec<u8> {
 
     // Output final code
     if let Some(code) = find_code(&dict, &current) {
-        emit_code(code, &mut output, &mut bit_buffer, &mut bits_in_buffer, current_bits);
+        emit_code(
+            code,
+            &mut output,
+            &mut bit_buffer,
+            &mut bits_in_buffer,
+            current_bits,
+        );
     }
 
     // Flush remaining bits
@@ -449,25 +475,17 @@ fn lzw_decompress(data: &[u8], max_bits: u8, block_mode: bool) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_compress_stdin() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;
@@ -482,7 +500,9 @@ mod tests {
 
         {
             let stdin = child.stdin.as_mut().unwrap();
-            stdin.write_all(b"Hello, World! This is a test of compress.").unwrap();
+            stdin
+                .write_all(b"Hello, World! This is a test of compress.")
+                .unwrap();
         }
 
         let output = child.wait_with_output().unwrap();
@@ -497,7 +517,9 @@ mod tests {
     #[test]
     fn test_compress_decompress_roundtrip() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;
@@ -541,7 +563,9 @@ mod tests {
     #[test]
     fn test_uncompress_alias() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;

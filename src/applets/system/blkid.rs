@@ -5,9 +5,9 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// Filesystem detection result
 struct FsInfo {
@@ -72,8 +72,14 @@ pub fn blkid(argc: i32, argv: *const *const u8) -> i32 {
                 i += 1;
             } else if arg == b"-h" || arg == b"--help" {
                 io::write_all(1, b"Usage: blkid [-o format] [-s tag] [device...]\n");
-                io::write_all(1, b"  -o format  Output format: full, value, device, export\n");
-                io::write_all(1, b"  -s tag     Show only specified tag (UUID, TYPE, LABEL)\n");
+                io::write_all(
+                    1,
+                    b"  -o format  Output format: full, value, device, export\n",
+                );
+                io::write_all(
+                    1,
+                    b"  -s tag     Show only specified tag (UUID, TYPE, LABEL)\n",
+                );
                 return 0;
             }
         } else {
@@ -101,10 +107,10 @@ pub fn blkid(argc: i32, argv: *const *const u8) -> i32 {
 
 #[derive(Clone, Copy)]
 enum OutputFormat {
-    Full,    // /dev/sda1: UUID="..." TYPE="..."
-    Value,   // Just the value
-    Device,  // Just device name
-    Export,  // DEVNAME=/dev/sda1\nUUID=...\n
+    Full,   // /dev/sda1: UUID="..." TYPE="..."
+    Value,  // Just the value
+    Device, // Just device name
+    Export, // DEVNAME=/dev/sda1\nUUID=...\n
 }
 
 /// Scan all block devices
@@ -112,7 +118,12 @@ fn scan_all_devices(format: OutputFormat, show_tag: Option<&[u8]>) -> i32 {
     let mut found_any = false;
 
     // Read /sys/block to find block devices
-    let dir_fd = unsafe { libc::open(b"/sys/block\0".as_ptr() as *const libc::c_char, libc::O_RDONLY | libc::O_DIRECTORY) };
+    let dir_fd = unsafe {
+        libc::open(
+            b"/sys/block\0".as_ptr() as *const libc::c_char,
+            libc::O_RDONLY | libc::O_DIRECTORY,
+        )
+    };
     if dir_fd < 0 {
         return 2;
     }
@@ -153,7 +164,12 @@ fn scan_all_devices(format: OutputFormat, show_tag: Option<&[u8]>) -> i32 {
 }
 
 /// Scan a block device and its partitions
-fn scan_block_device(name: &[u8], format: OutputFormat, show_tag: Option<&[u8]>, found_any: &mut bool) {
+fn scan_block_device(
+    name: &[u8],
+    format: OutputFormat,
+    show_tag: Option<&[u8]>,
+    found_any: &mut bool,
+) {
     // Skip loop, ram, and dm devices for cleaner output (like real blkid)
     if name.starts_with(b"loop") || name.starts_with(b"ram") {
         return;
@@ -176,7 +192,12 @@ fn scan_block_device(name: &[u8], format: OutputFormat, show_tag: Option<&[u8]>,
     sys_path.extend_from_slice(name);
     sys_path.push(0);
 
-    let dir_fd = unsafe { libc::open(sys_path.as_ptr() as *const libc::c_char, libc::O_RDONLY | libc::O_DIRECTORY) };
+    let dir_fd = unsafe {
+        libc::open(
+            sys_path.as_ptr() as *const libc::c_char,
+            libc::O_RDONLY | libc::O_DIRECTORY,
+        )
+    };
     if dir_fd < 0 {
         return;
     }
@@ -361,7 +382,8 @@ fn detect_btrfs(buf: &[u8]) -> Option<FsInfo> {
     uuid.copy_from_slice(&buf[sb_offset + 0x20..sb_offset + 0x30]);
 
     // Label at offset 0x12B in superblock (256 bytes)
-    let label = extract_label(&buf[sb_offset + 0x12B..sb_offset + 0x22B.min(buf.len() - sb_offset)]);
+    let label =
+        extract_label(&buf[sb_offset + 0x12B..sb_offset + 0x22B.min(buf.len() - sb_offset)]);
 
     Some(FsInfo {
         fs_type: b"btrfs",
@@ -379,7 +401,8 @@ fn detect_swap(buf: &[u8]) -> Option<FsInfo> {
         if buf.len() >= pagesize {
             let magic_offset = pagesize - 10;
             if &buf[magic_offset..magic_offset + 10] == b"SWAPSPACE2"
-               || &buf[magic_offset..magic_offset + 10] == b"SWAP-SPACE" {
+                || &buf[magic_offset..magic_offset + 10] == b"SWAP-SPACE"
+            {
                 // UUID at offset 0x40C in swap header (swap_header_v1_2)
                 let mut uuid = [0u8; 16];
                 if buf.len() >= 0x41C {
@@ -522,7 +545,8 @@ fn detect_squashfs(buf: &[u8]) -> Option<FsInfo> {
 
     // Magic at offset 0: "hsqs" (little-endian) or "sqsh" (big-endian)
     let magic = u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]);
-    if magic != 0x73717368 { // "hsqs"
+    if magic != 0x73717368 {
+        // "hsqs"
         // Try big-endian
         let magic_be = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
         if magic_be != 0x73717368 {
@@ -547,8 +571,10 @@ fn detect_f2fs(buf: &[u8]) -> Option<FsInfo> {
 
     let sb_offset = 0x400;
     let magic = u32::from_le_bytes([
-        buf[sb_offset], buf[sb_offset + 1],
-        buf[sb_offset + 2], buf[sb_offset + 3]
+        buf[sb_offset],
+        buf[sb_offset + 1],
+        buf[sb_offset + 2],
+        buf[sb_offset + 3],
     ]);
 
     if magic != 0xF2F52010 {
@@ -561,7 +587,8 @@ fn detect_f2fs(buf: &[u8]) -> Option<FsInfo> {
 
     // Volume name at offset 0x7C (512 bytes, UTF-16LE)
     // For simplicity, try to extract ASCII portion
-    let label = extract_utf16_label(&buf[sb_offset + 0x7C..sb_offset + 0x27C.min(buf.len() - sb_offset)]);
+    let label =
+        extract_utf16_label(&buf[sb_offset + 0x7C..sb_offset + 0x27C.min(buf.len() - sb_offset)]);
 
     Some(FsInfo {
         fs_type: b"f2fs",
@@ -738,30 +765,19 @@ fn print_uuid(uuid: &[u8; 16]) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_blkid_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["blkid"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["blkid"]).output().unwrap();
 
         // Exit code 0 if found devices, 2 if no devices (both acceptable in tests)
         assert!(output.status.code() == Some(0) || output.status.code() == Some(2));
@@ -770,7 +786,9 @@ mod tests {
     #[test]
     fn test_blkid_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["blkid", "-h"])

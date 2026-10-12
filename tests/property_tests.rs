@@ -4,13 +4,12 @@
 //! for all inputs, helping catch edge cases.
 
 use proptest::prelude::*;
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::Command;
 use tempfile::NamedTempFile;
 
 fn armybox() -> String {
-    std::env::var("ARMYBOX_PATH")
-        .unwrap_or_else(|_| "./target/release/armybox".to_string())
+    std::env::var("ARMYBOX_PATH").unwrap_or_else(|_| env!("CARGO_BIN_EXE_armybox").to_string())
 }
 
 // =============================================================================

@@ -3,9 +3,9 @@
 //! Deactivate a network interface.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 /// ifdown - bring a network interface down
 ///
@@ -81,7 +81,9 @@ pub fn ifdown(argc: i32, argv: *const *const u8) -> i32 {
 
     for iface in &ifaces {
         // Find config for this interface
-        let iface_config = config.as_ref().and_then(|c| c.iter().find(|cfg| cfg.name == *iface));
+        let iface_config = config
+            .as_ref()
+            .and_then(|c| c.iter().find(|cfg| cfg.name == *iface));
 
         match iface_config {
             Some(cfg) => {
@@ -146,7 +148,8 @@ fn parse_interfaces_file() -> Option<Vec<InterfaceConfig>> {
             continue;
         }
 
-        let parts: Vec<&[u8]> = line.split(|&c| c == b' ' || c == b'\t')
+        let parts: Vec<&[u8]> = line
+            .split(|&c| c == b' ' || c == b'\t')
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -342,25 +345,17 @@ pub fn ifdown(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ifdown_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["ifdown", "-h"])

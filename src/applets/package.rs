@@ -3,11 +3,11 @@
 extern crate alloc;
 
 #[cfg(feature = "abp")]
-use alloc::vec::Vec;
+use super::get_arg;
 #[cfg(feature = "apk")]
 use crate::io;
 #[cfg(feature = "abp")]
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// ABP command entry point - delegates to the abp crate
 #[cfg(feature = "abp")]

@@ -2,8 +2,8 @@
 //!
 //! Flush file system buffers for specified files.
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// fsync - synchronize a file's in-core state with storage device
 ///
@@ -42,31 +42,20 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
-    use std::path::PathBuf;
     use std::fs;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_fsync_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["fsync"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["fsync"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }
@@ -74,10 +63,16 @@ mod tests {
     #[test]
     fn test_fsync_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let test_file = std::env::temp_dir().join(format!("armybox_fsync_test_{}_{}",  std::process::id(), counter));
+        let test_file = std::env::temp_dir().join(format!(
+            "armybox_fsync_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         fs::write(&test_file, "test").unwrap();
 
         let output = Command::new(&armybox)
