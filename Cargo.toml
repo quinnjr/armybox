@@ -354,7 +354,8 @@ renice = []
 setsid = []
 taskset = []
 timeout = []
-top = []
+# top reuses ps's /proc/<pid> parser and needs the heap for the process list.
+top = ["alloc", "ps"]
 uclampset = []
 unshare = []
 
