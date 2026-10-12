@@ -470,9 +470,10 @@ abp = { version = "0.2.1", path = "crates/abp", optional = true, default-feature
 zstd-nostd = { version = "0.2.0", path = "crates/zstd-nostd", optional = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-# For testing only - benchmarks are in crates/benchmarks
+# Tests and benches only (benches/ run the binary under criterion)
 tempfile = "3"
 proptest = "1"
+criterion = { version = "0.7", default-features = false, features = ["cargo_bench_support"] }
 
 # Benchmark profile
 [profile.bench]
@@ -496,3 +497,16 @@ panic = "abort"
 name = "armybox"
 path = "src/main.rs"
 test = false  # Binary uses no_std/no_main, can't be tested directly
+bench = false  # Same: a bench harness would pull in std
+
+[[bench]]
+name = "applet_benchmarks"
+harness = false
+
+[[bench]]
+name = "compression_benchmarks"
+harness = false
+
+[[bench]]
+name = "text_benchmarks"
+harness = false
