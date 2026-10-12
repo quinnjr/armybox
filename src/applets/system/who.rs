@@ -149,17 +149,18 @@ pub fn who(argc: i32, argv: *const *const u8) -> i32 {
     };
 
     // Open utmp file
-    let fd = io::open(b"/var/run/utmp\0", libc::O_RDONLY, 0);
+    let mut fd = io::open(b"/var/run/utmp\0", libc::O_RDONLY, 0);
     if fd < 0 {
+        let first_errno = sys::errno();
         // Try alternate location
-        let fd2 = io::open(b"/run/utmp\0", libc::O_RDONLY, 0);
-        if fd2 < 0 {
+        fd = io::open(b"/run/utmp\0", libc::O_RDONLY, 0);
+        // No utmp at all just means no login records (as with getutxent);
+        // process_utmp's read on fd -1 fails and yields an empty listing.
+        // Any other failure, on either path, is a real error.
+        if fd < 0 && (first_errno != libc::ENOENT || sys::errno() != libc::ENOENT) {
             io::write_str(2, b"who: cannot open utmp\n");
             return 1;
         }
-        return process_utmp(fd2, show_header, show_boot, show_dead, show_login,
-                           show_runlevel, show_time_change, show_idle, show_mesg,
-                           quick_mode, my_tty);
     }
 
     process_utmp(fd, show_header, show_boot, show_dead, show_login,
@@ -190,13 +191,15 @@ fn process_utmp(fd: i32, show_header: bool, show_boot: bool, show_dead: bool,
     let mut first_quick = true;
 
     loop {
+        // Compare as isize: a failed read (-1) must end the loop too
         let n = io::read(fd, &mut buf);
-        if (n as usize) < UTMP_SIZE {
+        if n < UTMP_SIZE as isize {
             break;
         }
 
-        // SAFETY: buf is properly sized and aligned for Utmp
-        let entry: &Utmp = unsafe { &*(buf.as_ptr() as *const Utmp) };
+        // SAFETY: buf holds UTMP_SIZE initialized bytes; the byte buffer has
+        // alignment 1, so copy the record out instead of referencing it
+        let entry: Utmp = unsafe { core::ptr::read_unaligned(buf.as_ptr() as *const Utmp) };
 
         // Filter by type
         let show = match entry.ut_type {
@@ -296,7 +299,9 @@ fn process_utmp(fd: i32, show_header: bool, show_boot: bool, show_dead: bool,
         count += 1;
     }
 
-    io::close(fd);
+    if fd >= 0 {
+        io::close(fd);
+    }
 
     if quick_mode {
         io::write_str(1, b"\n# users=");
