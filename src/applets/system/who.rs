@@ -147,11 +147,13 @@ pub fn who(argc: i32, argv: *const *const u8) -> i32 {
     // Open utmp file
     let mut fd = io::open(b"/var/run/utmp\0", libc::O_RDONLY, 0);
     if fd < 0 {
+        let first_errno = sys::errno();
         // Try alternate location
         fd = io::open(b"/run/utmp\0", libc::O_RDONLY, 0);
         // No utmp at all just means no login records (as with getutxent);
-        // process_utmp's read on fd -1 fails and yields an empty listing
-        if fd < 0 && sys::errno() != libc::ENOENT {
+        // process_utmp's read on fd -1 fails and yields an empty listing.
+        // Any other failure, on either path, is a real error.
+        if fd < 0 && (first_errno != libc::ENOENT || sys::errno() != libc::ENOENT) {
             io::write_str(2, b"who: cannot open utmp\n");
             return 1;
         }
