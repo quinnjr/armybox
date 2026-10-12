@@ -499,7 +499,7 @@ pub fn to_hex(data: &[u8]) -> Vec<u8> {
 
 /// Parse hex string to bytes
 pub fn from_hex(hex: &[u8]) -> Option<Vec<u8>> {
-    if hex.len() % 2 != 0 {
+    if !hex.len().is_multiple_of(2) {
         return None;
     }
 

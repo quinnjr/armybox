@@ -392,10 +392,10 @@ fn mkdir_p(path: &[u8]) {
 
 /// Get parent directory of a path
 fn get_parent(path: &[u8]) -> Option<Vec<u8>> {
-    if let Some(pos) = path.iter().rposition(|&b| b == b'/') {
-        if pos > 0 {
-            return Some(path[..pos].to_vec());
-        }
+    if let Some(pos) = path.iter().rposition(|&b| b == b'/')
+        && pos > 0
+    {
+        return Some(path[..pos].to_vec());
     }
     None
 }

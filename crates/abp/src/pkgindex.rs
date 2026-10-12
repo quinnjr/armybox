@@ -365,10 +365,10 @@ impl<'a> PackageIndex<'a> {
                 &data[start..end]
             };
 
-            if let Some(prev) = prev_name {
-                if name < prev {
-                    return Err(IndexError::NotSorted);
-                }
+            if let Some(prev) = prev_name
+                && name < prev
+            {
+                return Err(IndexError::NotSorted);
             }
             prev_name = Some(name);
         }

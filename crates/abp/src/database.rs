@@ -518,10 +518,10 @@ impl Database {
 
         let text = core::str::from_utf8(&data).ok()?;
         for line in text.lines() {
-            if let Some((file_path, pkg_name)) = line.split_once('\t') {
-                if file_path == path {
-                    return Some(String::from(pkg_name));
-                }
+            if let Some((file_path, pkg_name)) = line.split_once('\t')
+                && file_path == path
+            {
+                return Some(String::from(pkg_name));
             }
         }
 
@@ -549,11 +549,11 @@ impl Database {
         // Rebuild without the package's entries
         let mut new_data = Vec::new();
         for line in text.lines() {
-            if let Some((_, pkg_name)) = line.split_once('\t') {
-                if pkg_name != package {
-                    new_data.extend_from_slice(line.as_bytes());
-                    new_data.push(b'\n');
-                }
+            if let Some((_, pkg_name)) = line.split_once('\t')
+                && pkg_name != package
+            {
+                new_data.extend_from_slice(line.as_bytes());
+                new_data.push(b'\n');
             }
         }
 
@@ -583,11 +583,11 @@ impl Database {
         // Rebuild without the file's entry
         let mut new_data = Vec::new();
         for line in text.lines() {
-            if let Some((path, _)) = line.split_once('\t') {
-                if path != file_path {
-                    new_data.extend_from_slice(line.as_bytes());
-                    new_data.push(b'\n');
-                }
+            if let Some((path, _)) = line.split_once('\t')
+                && path != file_path
+            {
+                new_data.extend_from_slice(line.as_bytes());
+                new_data.push(b'\n');
             }
         }
 

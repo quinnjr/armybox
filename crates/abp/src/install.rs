@@ -192,16 +192,16 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
 
             // Check file conflicts
             for entry in &pkg.manifest.entries {
-                if let Some(owner) = db.get_file_owner(&entry.path) {
-                    if owner != pkg.metadata.name {
-                        io::write_str(2, b"abp: file conflict: ");
-                        io::write_all(2, entry.path.as_bytes());
-                        io::write_str(2, b" is owned by ");
-                        io::write_all(2, owner.as_bytes());
-                        io::write_str(2, b"\n");
-                        io::write_str(2, b"abp: use --force to override\n");
-                        return 1;
-                    }
+                if let Some(owner) = db.get_file_owner(&entry.path)
+                    && owner != pkg.metadata.name
+                {
+                    io::write_str(2, b"abp: file conflict: ");
+                    io::write_all(2, entry.path.as_bytes());
+                    io::write_str(2, b" is owned by ");
+                    io::write_all(2, owner.as_bytes());
+                    io::write_str(2, b"\n");
+                    io::write_str(2, b"abp: use --force to override\n");
+                    return 1;
                 }
             }
         }
@@ -227,10 +227,10 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
     // dependencies that would be downloaded) are skipped here.
     let mut ordered: Vec<&AbpPackage> = Vec::new();
     for name in &install_order {
-        if let Some(pkg) = to_install.iter().find(|p| &p.metadata.name == name) {
-            if !ordered.iter().any(|p| p.metadata.name == pkg.metadata.name) {
-                ordered.push(pkg);
-            }
+        if let Some(pkg) = to_install.iter().find(|p| &p.metadata.name == name)
+            && !ordered.iter().any(|p| p.metadata.name == pkg.metadata.name)
+        {
+            ordered.push(pkg);
         }
     }
     // Safety net: append any loaded package not covered by the resolved order.

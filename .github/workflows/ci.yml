@@ -53,28 +53,16 @@ jobs:
           key: ${{ matrix.profile }}
       - run: cargo test --workspace --profile ${{ matrix.profile }}
 
-  # The declared rust-version of each crate. abp and zstd-nostd are published
-  # separately and support an older toolchain than armybox (MSRV covers what
-  # users compile, not dev-dependencies)
+  # The rust-version every crate declares; keep in sync with the Cargo.toml files
   msrv:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - toolchain: "1.88"
-            args: --workspace --all-targets
-          - toolchain: "1.85"
-            args: -p abp -p zstd-nostd --lib --bins
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.toolchain }}
+      - uses: dtolnay/rust-toolchain@1.94
       - uses: Swatinem/rust-cache@v2
         with:
-          key: msrv-${{ matrix.toolchain }}
-      - run: cargo check ${{ matrix.args }}
+          key: msrv
+      - run: cargo check --workspace --all-targets
 
   # Type widths differ across glibc, musl and Bionic (c_char, mode_t, off_t,
   # c_long, ...), so a change can build on x86_64 and break another target.

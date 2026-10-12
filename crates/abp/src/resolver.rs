@@ -74,10 +74,10 @@ fn resolve_package_local(
         let dep_parsed = Dependency::parse(&dep);
 
         // Already installed?
-        if let Some(installed) = db.get_package(&dep_parsed.name) {
-            if dep_parsed.satisfied_by(&installed.version) {
-                continue;
-            }
+        if let Some(installed) = db.get_package(&dep_parsed.name)
+            && dep_parsed.satisfied_by(&installed.version)
+        {
+            continue;
         }
 
         // Being installed locally?
@@ -87,11 +87,11 @@ fn resolve_package_local(
         }
 
         // Available in repo?
-        if let Some(available) = db.get_available(&dep_parsed.name) {
-            if dep_parsed.satisfied_by(&available.version) {
-                resolve_package_local(db, &dep_parsed.name, local_map, resolved, seen, stack)?;
-                continue;
-            }
+        if let Some(available) = db.get_available(&dep_parsed.name)
+            && dep_parsed.satisfied_by(&available.version)
+        {
+            resolve_package_local(db, &dep_parsed.name, local_map, resolved, seen, stack)?;
+            continue;
         }
 
         // Provided by another package?

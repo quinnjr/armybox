@@ -5,7 +5,7 @@
 # Stage 1: Build armybox static binary
 # =============================================================================
 # Track stable like the CI workflows; a pinned minor goes stale as the
-# MSRV moves (edition 2024 needs 1.85+)
+# MSRV (rust-version in Cargo.toml) moves
 FROM rust:1-bookworm AS builder
 
 # Install musl tools for static linking

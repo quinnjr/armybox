@@ -87,17 +87,17 @@ fn encode_frame(input: &[u8], _level: u32, output: &mut Vec<u8>) {
 /// Encode a single block
 fn encode_block(data: &[u8], is_last: bool, output: &mut Vec<u8>) {
     // Try compressed encoding
-    if let Some(compressed) = encode_compressed_block(data) {
-        if compressed.len() < data.len() {
-            let block_header = (is_last as u32)
-                | ((BlockType::Compressed as u32) << 1)
-                | ((compressed.len() as u32) << 3);
-            output.push(block_header as u8);
-            output.push((block_header >> 8) as u8);
-            output.push((block_header >> 16) as u8);
-            output.extend_from_slice(&compressed);
-            return;
-        }
+    if let Some(compressed) = encode_compressed_block(data)
+        && compressed.len() < data.len()
+    {
+        let block_header = (is_last as u32)
+            | ((BlockType::Compressed as u32) << 1)
+            | ((compressed.len() as u32) << 3);
+        output.push(block_header as u8);
+        output.push((block_header >> 8) as u8);
+        output.push((block_header >> 16) as u8);
+        output.extend_from_slice(&compressed);
+        return;
     }
 
     // Fall back to raw block
