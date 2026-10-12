@@ -250,13 +250,13 @@ check:
 	$(CARGO) check
 
 lint:
-	$(CARGO) clippy -- -D warnings
+	$(CARGO) clippy --workspace --all-targets -- -D warnings
 
 fmt:
-	$(CARGO) fmt
+	$(CARGO) fmt --all
 
 fmt-check:
-	$(CARGO) fmt -- --check
+	$(CARGO) fmt --all --check
 
 # Clean
 clean:
