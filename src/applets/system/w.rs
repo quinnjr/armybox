@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
-use alloc::string::String;
 use crate::io;
 use crate::sys;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// w - show who is logged in and what they are doing
 ///
@@ -53,7 +53,10 @@ pub fn w(argc: i32, argv: *const *const u8) -> i32 {
     if short_format {
         io::write_str(1, b"USER     TTY      IDLE WHAT\n");
     } else {
-        io::write_str(1, b"USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT\n");
+        io::write_str(
+            1,
+            b"USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT\n",
+        );
     }
 
     // Get logged-in users from utmp
@@ -90,21 +93,29 @@ fn print_header() {
     // Get current time
     let now = unsafe { libc::time(core::ptr::null_mut()) };
     let mut tm: libc::tm = unsafe { core::mem::zeroed() };
-    unsafe { libc::localtime_r(&now, &mut tm); }
+    unsafe {
+        libc::localtime_r(&now, &mut tm);
+    }
 
     // Format current time
     io::write_str(1, b" ");
     let mut buf = [0u8; 16];
     let hour = sys::format_u64(tm.tm_hour as u64, &mut buf);
-    if hour.len() < 2 { io::write_str(1, b"0"); }
+    if hour.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, hour);
     io::write_str(1, b":");
     let min = sys::format_u64(tm.tm_min as u64, &mut buf);
-    if min.len() < 2 { io::write_str(1, b"0"); }
+    if min.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, min);
     io::write_str(1, b":");
     let sec = sys::format_u64(tm.tm_sec as u64, &mut buf);
-    if sec.len() < 2 { io::write_str(1, b"0"); }
+    if sec.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sec);
 
     // Get uptime
@@ -152,7 +163,10 @@ fn get_uptime() -> u64 {
 
     // Parse first number (uptime in seconds)
     let content = &buf[..n as usize];
-    let end = content.iter().position(|&c| c == b' ' || c == b'.').unwrap_or(content.len());
+    let end = content
+        .iter()
+        .position(|&c| c == b' ' || c == b'.')
+        .unwrap_or(content.len());
     sys::parse_u64(&content[..end]).unwrap_or(0)
 }
 
@@ -175,11 +189,15 @@ fn format_uptime(seconds: u64) {
     }
 
     let h = sys::format_u64(hours, &mut buf);
-    if h.len() < 2 { io::write_str(1, b" "); }
+    if h.len() < 2 {
+        io::write_str(1, b" ");
+    }
     io::write_all(1, h);
     io::write_str(1, b":");
     let m = sys::format_u64(mins, &mut buf);
-    if m.len() < 2 { io::write_str(1, b"0"); }
+    if m.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, m);
 }
 
@@ -213,10 +231,7 @@ fn get_logged_in_users() -> Vec<UserSession> {
     let mut users = Vec::new();
 
     // Try to read utmp
-    let utmp_paths = [
-        b"/var/run/utmp" as &[u8],
-        b"/run/utmp",
-    ];
+    let utmp_paths = [b"/var/run/utmp" as &[u8], b"/run/utmp"];
 
     let mut fd = -1;
     for path in &utmp_paths {
@@ -253,12 +268,9 @@ fn get_logged_in_users() -> Vec<UserSession> {
         let name = extract_string(&entry[4..36]);
         let tty = extract_string(&entry[40..72]);
         let host = extract_string(&entry[76..332]);
-        let login_time = i32::from_ne_bytes([
-            entry[340], entry[341], entry[342], entry[343]
-        ]) as i64;
-        let pid = i32::from_ne_bytes([
-            entry[36], entry[37], entry[38], entry[39]
-        ]);
+        let login_time =
+            i32::from_ne_bytes([entry[340], entry[341], entry[342], entry[343]]) as i64;
+        let pid = i32::from_ne_bytes([entry[36], entry[37], entry[38], entry[39]]);
 
         if !name.is_empty() {
             users.push(UserSession {
@@ -355,7 +367,7 @@ fn get_current_tty() -> String {
         libc::readlink(
             b"/proc/self/fd/0\0".as_ptr() as *const libc::c_char,
             link_buf.as_mut_ptr() as *mut libc::c_char,
-            link_buf.len()
+            link_buf.len(),
         )
     };
 
@@ -397,7 +409,9 @@ fn format_idle(seconds: u64) -> Vec<u8> {
         }
         let s = sys::format_u64(seconds, &mut buf);
         let mut result = Vec::new();
-        for _ in 0..(5 - s.len()) { result.push(b' '); }
+        for _ in 0..(5 - s.len()) {
+            result.push(b' ');
+        }
         result.extend_from_slice(s);
         result.push(b's');
         return result;
@@ -409,11 +423,15 @@ fn format_idle(seconds: u64) -> Vec<u8> {
         let secs = seconds % 60;
         let mut result = Vec::new();
         let m = sys::format_u64(mins, &mut buf);
-        for _ in 0..(2 - m.len()) { result.push(b' '); }
+        for _ in 0..(2 - m.len()) {
+            result.push(b' ');
+        }
         result.extend_from_slice(m);
         result.push(b':');
         let s = sys::format_u64(secs, &mut buf);
-        if s.len() < 2 { result.push(b'0'); }
+        if s.len() < 2 {
+            result.push(b'0');
+        }
         result.extend_from_slice(s);
         return result;
     }
@@ -427,7 +445,9 @@ fn format_idle(seconds: u64) -> Vec<u8> {
         result.extend_from_slice(h);
         result.push(b':');
         let m = sys::format_u64(mins, &mut buf);
-        if m.len() < 2 { result.push(b'0'); }
+        if m.len() < 2 {
+            result.push(b'0');
+        }
         result.extend_from_slice(m);
         result.push(b'm');
         return result;
@@ -471,7 +491,11 @@ fn get_user_what(pid: i32) -> String {
     let cmd_str = &cmd[..end];
 
     // Extract just the command name (basename)
-    let start = cmd_str.iter().rposition(|&c| c == b'/').map(|p| p + 1).unwrap_or(0);
+    let start = cmd_str
+        .iter()
+        .rposition(|&c| c == b'/')
+        .map(|p| p + 1)
+        .unwrap_or(0);
     String::from_utf8_lossy(&cmd_str[start..]).into_owned()
 }
 
@@ -479,7 +503,9 @@ fn get_user_what(pid: i32) -> String {
 fn print_user_short(user: &UserSession) {
     // USER (8)
     io::write_all(1, user.name.as_bytes());
-    for _ in user.name.len()..9 { io::write_str(1, b" "); }
+    for _ in user.name.len()..9 {
+        io::write_str(1, b" ");
+    }
 
     // TTY (8)
     let tty_display = if user.tty.starts_with("pts/") {
@@ -488,7 +514,9 @@ fn print_user_short(user: &UserSession) {
         &user.tty
     };
     io::write_all(1, tty_display.as_bytes());
-    for _ in tty_display.len()..9 { io::write_str(1, b" "); }
+    for _ in tty_display.len()..9 {
+        io::write_str(1, b" ");
+    }
 
     // IDLE
     let idle = get_idle_time(&user.tty);
@@ -508,7 +536,9 @@ fn print_user_long(user: &UserSession) {
 
     // USER (8)
     io::write_all(1, user.name.as_bytes());
-    for _ in user.name.len()..9 { io::write_str(1, b" "); }
+    for _ in user.name.len()..9 {
+        io::write_str(1, b" ");
+    }
 
     // TTY (8)
     let tty_display = if user.tty.starts_with("pts/") {
@@ -517,24 +547,38 @@ fn print_user_long(user: &UserSession) {
         &user.tty
     };
     io::write_all(1, tty_display.as_bytes());
-    for _ in tty_display.len()..9 { io::write_str(1, b" "); }
+    for _ in tty_display.len()..9 {
+        io::write_str(1, b" ");
+    }
 
     // FROM (16)
-    let host = if user.host.is_empty() { "-" } else { &user.host };
+    let host = if user.host.is_empty() {
+        "-"
+    } else {
+        &user.host
+    };
     let host_display = if host.len() > 16 { &host[..16] } else { host };
     io::write_all(1, host_display.as_bytes());
-    for _ in host_display.len()..17 { io::write_str(1, b" "); }
+    for _ in host_display.len()..17 {
+        io::write_str(1, b" ");
+    }
 
     // LOGIN@ (8)
     let mut tm: libc::tm = unsafe { core::mem::zeroed() };
     let login_time = user.login_time as libc::time_t;
-    unsafe { libc::localtime_r(&login_time, &mut tm); }
+    unsafe {
+        libc::localtime_r(&login_time, &mut tm);
+    }
     let h = sys::format_u64(tm.tm_hour as u64, &mut buf);
-    if h.len() < 2 { io::write_str(1, b"0"); }
+    if h.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, h);
     io::write_str(1, b":");
     let m = sys::format_u64(tm.tm_min as u64, &mut buf);
-    if m.len() < 2 { io::write_str(1, b"0"); }
+    if m.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, m);
     io::write_str(1, b"    ");
 
@@ -556,30 +600,19 @@ fn print_user_long(user: &UserSession) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_w_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["w"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["w"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -587,12 +620,11 @@ mod tests {
     #[test]
     fn test_w_produces_output() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["w"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["w"]).output().unwrap();
 
         assert!(!output.stdout.is_empty());
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -603,12 +635,11 @@ mod tests {
     #[test]
     fn test_w_no_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["w", "-h"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["w", "-h"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

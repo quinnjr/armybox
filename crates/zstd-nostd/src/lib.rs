@@ -7,14 +7,14 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub mod common;
 pub mod bitstream;
+pub mod common;
+pub mod compress;
+pub mod decompress;
 pub mod fse;
 pub mod huff;
-pub mod decompress;
-pub mod compress;
 pub mod xxhash;
 
 pub use common::ZstdError;
-pub use decompress::{decompress, decompress_bounded};
 pub use compress::compress;
+pub use decompress::{decompress, decompress_bounded};

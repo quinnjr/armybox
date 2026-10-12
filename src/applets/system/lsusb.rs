@@ -19,7 +19,10 @@ use crate::io;
 pub fn lsusb(_argc: i32, _argv: *const *const u8) -> i32 {
     let dir = io::opendir(b"/sys/bus/usb/devices");
     if dir.is_null() {
-        io::write_str(1, b"Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub\n");
+        io::write_str(
+            1,
+            b"Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub\n",
+        );
         return 0;
     }
 
@@ -214,34 +217,31 @@ fn write_hex_padded(fd: i32, n: u32, width: usize) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_lsusb_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["lsusb"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["lsusb"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        // Should produce some output
-        let stdout = std::string::String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.is_empty());
+        // Output is expected only when the host has USB devices (names like
+        // 1-1); CI runners and containers often have none
+        let has_devices = std::fs::read_dir("/sys/bus/usb/devices")
+            .map(|d| {
+                d.flatten()
+                    .any(|e| e.file_name().to_string_lossy().contains('-'))
+            })
+            .unwrap_or(false);
+        if has_devices {
+            assert!(!output.stdout.is_empty());
+        }
     }
 }

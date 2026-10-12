@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/head.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// What to count when trimming output.
 enum Mode {
@@ -176,7 +176,10 @@ fn invalid_number(kind: &[u8], spec: &[u8]) -> i32 {
 
 fn print_usage() {
     io::write_str(1, b"Usage: head [-n number | -c number] [file...]\n");
-    io::write_str(1, b"  -n N  Print the first N lines instead of the first 10.\n");
+    io::write_str(
+        1,
+        b"  -n N  Print the first N lines instead of the first 10.\n",
+    );
     io::write_str(1, b"  -c N  Print the first N bytes instead of lines.\n");
     io::write_str(1, b"  --help  Display this help and exit.\n");
 }
@@ -354,8 +357,8 @@ fn head_bytes_all_but_last(_fd: i32, _n: u64) -> bool {
 /// last `n` of them.
 #[cfg(feature = "alloc")]
 fn head_lines_all_but_last(fd: i32, n: u64) -> bool {
-    use alloc::vec::Vec;
     use alloc::collections::VecDeque;
+    use alloc::vec::Vec;
 
     if n == 0 {
         // Nothing to hold back; print everything.
@@ -417,25 +420,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_head_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_head_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -448,11 +445,15 @@ mod tests {
     #[test]
     fn test_head_default() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
-        let content = (1..=20).map(|i| format!("line {}\n", i)).collect::<String>();
+        let content = (1..=20)
+            .map(|i| format!("line {}\n", i))
+            .collect::<String>();
         fs::write(&file, &content).unwrap();
 
         let output = Command::new(&armybox)
@@ -470,11 +471,15 @@ mod tests {
     #[test]
     fn test_head_n_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
-        let content = (1..=20).map(|i| format!("line {}\n", i)).collect::<String>();
+        let content = (1..=20)
+            .map(|i| format!("line {}\n", i))
+            .collect::<String>();
         fs::write(&file, &content).unwrap();
 
         let output = Command::new(&armybox)
@@ -491,7 +496,9 @@ mod tests {
     #[test]
     fn test_head_short_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
@@ -511,11 +518,15 @@ mod tests {
     #[test]
     fn test_head_numeric_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
-        let content = (1..=20).map(|i| format!("line {}\n", i)).collect::<String>();
+        let content = (1..=20)
+            .map(|i| format!("line {}\n", i))
+            .collect::<String>();
         fs::write(&file, &content).unwrap();
 
         let output = Command::new(&armybox)

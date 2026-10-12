@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec::Vec;
 // Shared password-verification primitives live in the login applet.
 // NOTE: this makes the `su` feature depend on the `login` module being
 // compiled in (add `su = ["login"]` in Cargo.toml).
@@ -114,7 +114,9 @@ pub fn su(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    let shell = shell_override.map(|s| s.to_vec()).unwrap_or(user_info.shell.clone());
+    let shell = shell_override
+        .map(|s| s.to_vec())
+        .unwrap_or(user_info.shell.clone());
 
     // Set group ID first (must be done before setuid)
     if unsafe { libc::setgid(user_info.gid) } != 0 {
@@ -127,7 +129,10 @@ pub fn su(argc: i32, argv: *const *const u8) -> i32 {
     let user_len = user.len().min(user_buf.len() - 1);
     user_buf[..user_len].copy_from_slice(&user[..user_len]);
     unsafe {
-        libc::initgroups(user_buf.as_ptr() as *const libc::c_char, user_info.gid as libc::gid_t);
+        libc::initgroups(
+            user_buf.as_ptr() as *const libc::c_char,
+            user_info.gid as libc::gid_t,
+        );
     }
 
     // Set user ID
@@ -203,12 +208,16 @@ pub fn su(argc: i32, argv: *const *const u8) -> i32 {
         ];
 
         unsafe {
-            libc::execv(shell_buf.as_ptr() as *const libc::c_char, argv_ptrs.as_ptr());
+            libc::execv(
+                shell_buf.as_ptr() as *const libc::c_char,
+                argv_ptrs.as_ptr(),
+            );
         }
     } else {
         // Build shell name for argv[0] (with or without leading -)
         let mut shell_name = [0u8; 256];
-        let shell_basename = shell.iter()
+        let shell_basename = shell
+            .iter()
             .rposition(|&c| c == b'/')
             .map(|p| &shell[p + 1..])
             .unwrap_or(&shell);
@@ -229,7 +238,10 @@ pub fn su(argc: i32, argv: *const *const u8) -> i32 {
         ];
 
         unsafe {
-            libc::execv(shell_buf.as_ptr() as *const libc::c_char, argv_ptrs.as_ptr());
+            libc::execv(
+                shell_buf.as_ptr() as *const libc::c_char,
+                argv_ptrs.as_ptr(),
+            );
         }
     }
 
@@ -243,7 +255,10 @@ fn print_help() {
     io::write_str(1, b"Options:\n");
     io::write_str(1, b"  -, -l, --login    Start a login shell\n");
     io::write_str(1, b"  -c COMMAND        Run COMMAND instead of shell\n");
-    io::write_str(1, b"  -s SHELL          Use SHELL instead of user's shell\n");
+    io::write_str(
+        1,
+        b"  -s SHELL          Use SHELL instead of user's shell\n",
+    );
     io::write_str(1, b"  -p                Preserve environment\n");
     io::write_str(1, b"  -h, --help        Show this help\n");
 }
@@ -277,13 +292,13 @@ fn lookup_user(username: &[u8]) -> Option<UserInfo> {
         // Parse uid and gid. Reject a malformed entry outright instead of
         // silently falling back to uid/gid 0 (root), which would be a
         // privilege-escalation fail-open.
-        let uid = match sys::parse_u64(fields[2]) {
-            Some(v) => v as u32,
-            None => return None,
+        let uid = {
+            let v = sys::parse_u64(fields[2])?;
+            v as u32
         };
-        let gid = match sys::parse_u64(fields[3]) {
-            Some(v) => v as u32,
-            None => return None,
+        let gid = {
+            let v = sys::parse_u64(fields[3])?;
+            v as u32
         };
         let home = fields[5].to_vec();
         let shell = if fields[6].is_empty() {
@@ -292,7 +307,12 @@ fn lookup_user(username: &[u8]) -> Option<UserInfo> {
             fields[6].to_vec()
         };
 
-        return Some(UserInfo { uid, gid, home, shell });
+        return Some(UserInfo {
+            uid,
+            gid,
+            home,
+            shell,
+        });
     }
 
     None
@@ -301,25 +321,17 @@ fn lookup_user(username: &[u8]) -> Option<UserInfo> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_su_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["su", "--help"])
@@ -334,7 +346,9 @@ mod tests {
     #[test]
     fn test_su_invalid_user() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["su", "nonexistent_user_12345"])

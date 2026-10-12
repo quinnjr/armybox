@@ -7,9 +7,9 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 use crate::common::ZstdError;
 
@@ -100,7 +100,11 @@ impl<'a> BitReader<'a> {
 
     /// Remaining bits in the stream
     pub fn remaining(&self) -> u32 {
-        if self.bit_pos < 0 { 0 } else { self.bit_pos as u32 }
+        if self.bit_pos < 0 {
+            0
+        } else {
+            self.bit_pos as u32
+        }
     }
 }
 
@@ -147,7 +151,7 @@ impl BitWriter {
 
         // Total bytes needed: ceil((total + 1) / 8) where +1 is for sentinel
         let total_with_sentinel = total + 1;
-        let num_bytes = (total_with_sentinel + 7) / 8;
+        let num_bytes = total_with_sentinel.div_ceil(8);
         let mut buf = vec![0u8; num_bytes];
 
         // The sentinel bit goes at position `total` (0-indexed from LSB of byte 0)
@@ -174,6 +178,12 @@ impl BitWriter {
         }
 
         buf
+    }
+}
+
+impl Default for BitWriter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

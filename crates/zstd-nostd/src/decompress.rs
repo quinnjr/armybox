@@ -5,12 +5,12 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
-use crate::common::*;
 use crate::bitstream::BitReader;
+use crate::common::*;
 use crate::fse::{FseTable, build_predefined_table};
 use crate::huff::{self, HuffTable};
 use crate::xxhash::xxhash64;
@@ -44,7 +44,7 @@ pub fn decompress_bounded(input: &[u8], max_output: usize) -> Result<Vec<u8>, Zs
         if magic == ZSTD_MAGIC {
             let consumed = decode_frame(input, pos, &mut output, max_output)?;
             pos += consumed;
-        } else if magic >= SKIPPABLE_MAGIC_LOW && magic <= SKIPPABLE_MAGIC_HIGH {
+        } else if (SKIPPABLE_MAGIC_LOW..=SKIPPABLE_MAGIC_HIGH).contains(&magic) {
             // Skippable frame
             if pos + 8 > input.len() {
                 return Err(ZstdError::CorruptData);
@@ -222,9 +222,8 @@ fn decode_frame(
         }
 
         // Block header: 3 bytes
-        let block_header = data[pos] as u32
-            | (data[pos + 1] as u32) << 8
-            | (data[pos + 2] as u32) << 16;
+        let block_header =
+            data[pos] as u32 | (data[pos + 1] as u32) << 8 | (data[pos + 2] as u32) << 16;
         pos += 3;
 
         let last_block = block_header & 1 != 0;
@@ -335,7 +334,10 @@ struct Sequence {
 }
 
 /// Decode the literals section of a compressed block
-fn decode_literals_section(data: &[u8], state: &mut BlockState) -> Result<(Vec<u8>, usize), ZstdError> {
+fn decode_literals_section(
+    data: &[u8],
+    state: &mut BlockState,
+) -> Result<(Vec<u8>, usize), ZstdError> {
     if data.is_empty() {
         return Err(ZstdError::CorruptData);
     }
@@ -353,12 +355,21 @@ fn decode_literals_section(data: &[u8], state: &mut BlockState) -> Result<(Vec<u
             let (regen_size, header_size) = match size_format {
                 0 | 2 => ((header_byte >> 3) as usize, 1),
                 1 => {
-                    if data.len() < 2 { return Err(ZstdError::CorruptData); }
+                    if data.len() < 2 {
+                        return Err(ZstdError::CorruptData);
+                    }
                     (((header_byte >> 4) as usize) | ((data[1] as usize) << 4), 2)
                 }
                 _ => {
-                    if data.len() < 3 { return Err(ZstdError::CorruptData); }
-                    (((header_byte >> 4) as usize) | ((data[1] as usize) << 4) | ((data[2] as usize) << 12), 3)
+                    if data.len() < 3 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    (
+                        ((header_byte >> 4) as usize)
+                            | ((data[1] as usize) << 4)
+                            | ((data[2] as usize) << 12),
+                        3,
+                    )
                 }
             };
 
@@ -373,12 +384,21 @@ fn decode_literals_section(data: &[u8], state: &mut BlockState) -> Result<(Vec<u
             let (regen_size, header_size) = match size_format {
                 0 | 2 => ((header_byte >> 3) as usize, 1),
                 1 => {
-                    if data.len() < 2 { return Err(ZstdError::CorruptData); }
+                    if data.len() < 2 {
+                        return Err(ZstdError::CorruptData);
+                    }
                     (((header_byte >> 4) as usize) | ((data[1] as usize) << 4), 2)
                 }
                 _ => {
-                    if data.len() < 3 { return Err(ZstdError::CorruptData); }
-                    (((header_byte >> 4) as usize) | ((data[1] as usize) << 4) | ((data[2] as usize) << 12), 3)
+                    if data.len() < 3 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    (
+                        ((header_byte >> 4) as usize)
+                            | ((data[1] as usize) << 4)
+                            | ((data[2] as usize) << 12),
+                        3,
+                    )
                 }
             };
 
@@ -395,32 +415,49 @@ fn decode_literals_section(data: &[u8], state: &mut BlockState) -> Result<(Vec<u
             let (regen_size, compressed_size, num_streams, header_size) = match size_format {
                 0 => {
                     // Both sizes use 10 bits, 1 stream
-                    if data.len() < 3 { return Err(ZstdError::CorruptData); }
-                    let combined = (data[0] as u32) | ((data[1] as u32) << 8) | ((data[2] as u32) << 16);
+                    if data.len() < 3 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    let combined =
+                        (data[0] as u32) | ((data[1] as u32) << 8) | ((data[2] as u32) << 16);
                     let regen = ((combined >> 4) & 0x3FF) as usize;
                     let comp = ((combined >> 14) & 0x3FF) as usize;
                     (regen, comp, 1, 3)
                 }
                 1 => {
                     // Both sizes use 10 bits, 4 streams
-                    if data.len() < 3 { return Err(ZstdError::CorruptData); }
-                    let combined = (data[0] as u32) | ((data[1] as u32) << 8) | ((data[2] as u32) << 16);
+                    if data.len() < 3 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    let combined =
+                        (data[0] as u32) | ((data[1] as u32) << 8) | ((data[2] as u32) << 16);
                     let regen = ((combined >> 4) & 0x3FF) as usize;
                     let comp = ((combined >> 14) & 0x3FF) as usize;
                     (regen, comp, 4, 3)
                 }
                 2 => {
                     // Both sizes use 14 bits, 4 streams
-                    if data.len() < 4 { return Err(ZstdError::CorruptData); }
-                    let combined = (data[0] as u32) | ((data[1] as u32) << 8) | ((data[2] as u32) << 16) | ((data[3] as u32) << 24);
+                    if data.len() < 4 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    let combined = (data[0] as u32)
+                        | ((data[1] as u32) << 8)
+                        | ((data[2] as u32) << 16)
+                        | ((data[3] as u32) << 24);
                     let regen = ((combined >> 4) & 0x3FFF) as usize;
                     let comp = ((combined >> 18) & 0x3FFF) as usize;
                     (regen, comp, 4, 4)
                 }
                 _ => {
                     // Both sizes use 18 bits, 4 streams
-                    if data.len() < 5 { return Err(ZstdError::CorruptData); }
-                    let combined = (data[0] as u64) | ((data[1] as u64) << 8) | ((data[2] as u64) << 16) | ((data[3] as u64) << 24) | ((data[4] as u64) << 32);
+                    if data.len() < 5 {
+                        return Err(ZstdError::CorruptData);
+                    }
+                    let combined = (data[0] as u64)
+                        | ((data[1] as u64) << 8)
+                        | ((data[2] as u64) << 16)
+                        | ((data[3] as u64) << 24)
+                        | ((data[4] as u64) << 32);
                     let regen = ((combined >> 4) & 0x3FFFF) as usize;
                     let comp = ((combined >> 22) & 0x3FFFF) as usize;
                     (regen, comp, 4, 5)
@@ -483,13 +520,17 @@ fn decode_sequences_section(
     } else if first < 128 {
         first
     } else if first < 255 {
-        if pos >= data.len() { return Err(ZstdError::CorruptData); }
+        if pos >= data.len() {
+            return Err(ZstdError::CorruptData);
+        }
         let second = data[pos] as usize;
         pos += 1;
         ((first - 128) << 8) + second
     } else {
         // first == 255
-        if pos + 1 >= data.len() { return Err(ZstdError::CorruptData); }
+        if pos + 1 >= data.len() {
+            return Err(ZstdError::CorruptData);
+        }
         let val = (data[pos] as usize) | ((data[pos + 1] as usize) << 8);
         pos += 2;
         val + 0x7F00
@@ -511,12 +552,36 @@ fn decode_sequences_section(
     let ml_mode = SeqMode::from_u8((modes_byte >> 2) & 3);
 
     // Build/reuse FSE tables for each symbol type
-    let ll_table = decode_seq_table(&data[pos..], ll_mode, &state.ll_table,
-        &LL_DEFAULT_DIST, LL_DEFAULT_AL, LL_MAX_SYMBOL, LL_MAX_AL, &mut pos)?;
-    let of_table = decode_seq_table(&data[pos..], of_mode, &state.of_table,
-        &OF_DEFAULT_DIST, OF_DEFAULT_AL, OF_MAX_SYMBOL, OF_MAX_AL, &mut pos)?;
-    let ml_table = decode_seq_table(&data[pos..], ml_mode, &state.ml_table,
-        &ML_DEFAULT_DIST, ML_DEFAULT_AL, ML_MAX_SYMBOL, ML_MAX_AL, &mut pos)?;
+    let ll_table = decode_seq_table(
+        &data[pos..],
+        ll_mode,
+        &state.ll_table,
+        &LL_DEFAULT_DIST,
+        LL_DEFAULT_AL,
+        LL_MAX_SYMBOL,
+        LL_MAX_AL,
+        &mut pos,
+    )?;
+    let of_table = decode_seq_table(
+        &data[pos..],
+        of_mode,
+        &state.of_table,
+        &OF_DEFAULT_DIST,
+        OF_DEFAULT_AL,
+        OF_MAX_SYMBOL,
+        OF_MAX_AL,
+        &mut pos,
+    )?;
+    let ml_table = decode_seq_table(
+        &data[pos..],
+        ml_mode,
+        &state.ml_table,
+        &ML_DEFAULT_DIST,
+        ML_DEFAULT_AL,
+        ML_MAX_SYMBOL,
+        ML_MAX_AL,
+        &mut pos,
+    )?;
 
     // Decode sequences from backward bitstream
     let bitstream_data = &data[pos..];
@@ -554,14 +619,17 @@ fn decode_sequences_section(
         let ll_extra = reader.read_bits(ll_extra_bits)?;
         let lit_len = LL_BASELINES[ll_code as usize] + ll_extra;
 
-        sequences.push(Sequence { lit_len, match_len, offset });
+        sequences.push(Sequence {
+            lit_len,
+            match_len,
+            offset,
+        });
 
         // Update states (not for the last sequence)
         if i < num_sequences - 1 {
             ll_table.decode(&mut ll_state, &mut reader)?;
             ml_table.decode(&mut ml_state, &mut reader)?;
             of_table.decode(&mut of_state, &mut reader)?;
-
         }
     }
 
@@ -574,6 +642,7 @@ fn decode_sequences_section(
 }
 
 /// Decode an FSE table for a specific sequence type
+#[allow(clippy::too_many_arguments)] // mirrors the per-type parameters in RFC 8878
 fn decode_seq_table(
     data: &[u8],
     mode: SeqMode,
@@ -585,9 +654,7 @@ fn decode_seq_table(
     pos: &mut usize,
 ) -> Result<FseTable, ZstdError> {
     match mode {
-        SeqMode::Predefined => {
-            build_predefined_table(default_probs, default_al)
-        }
+        SeqMode::Predefined => build_predefined_table(default_probs, default_al),
         SeqMode::Rle => {
             if data.is_empty() {
                 return Err(ZstdError::CorruptData);
@@ -695,10 +762,8 @@ fn resolve_offset(offset: u32, lit_len: u32, offsets: &mut [u32; 3]) -> Result<u
             }
             2 => {
                 // offset2: swap 1 and 2
-                let tmp = offsets[1];
-                offsets[1] = offsets[0];
-                offsets[0] = tmp;
-                tmp
+                offsets.swap(0, 1);
+                offsets[0]
             }
             3 => {
                 // offset3: rotate
@@ -715,10 +780,8 @@ fn resolve_offset(offset: u32, lit_len: u32, offsets: &mut [u32; 3]) -> Result<u
         match offset {
             1 => {
                 // offset2
-                let tmp = offsets[1];
-                offsets[1] = offsets[0];
-                offsets[0] = tmp;
-                tmp
+                offsets.swap(0, 1);
+                offsets[0]
             }
             2 => {
                 // offset3
@@ -798,7 +861,10 @@ mod tests {
         // Check some key entries
         eprintln!("LL table ({} entries):", table.entries.len());
         for (i, e) in table.entries.iter().enumerate() {
-            eprintln!("  state {}: sym={} nb={} baseline={}", i, e.symbol, e.num_bits, e.baseline);
+            eprintln!(
+                "  state {}: sym={} nb={} baseline={}",
+                i, e.symbol, e.num_bits, e.baseline
+            );
         }
         // State 24 should map to symbol 2
         assert_eq!(table.entries[24].symbol, 2);
@@ -843,7 +909,11 @@ mod tests {
 
     #[test]
     fn test_decompress_level19() {
-        let compressed: &[u8] = &[0x28, 0xb5, 0x2f, 0xfd, 0x64, 0xb6, 0x02, 0xd5, 0x00, 0x00, 0x98, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x21, 0x20, 0x54, 0x65, 0x73, 0x74, 0x2e, 0x20, 0x01, 0x00, 0x41, 0x5b, 0x35, 0xc3, 0xb6, 0x33, 0xe3, 0x0e];
+        let compressed: &[u8] = &[
+            0x28, 0xb5, 0x2f, 0xfd, 0x64, 0xb6, 0x02, 0xd5, 0x00, 0x00, 0x98, 0x48, 0x65, 0x6c,
+            0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x21, 0x20, 0x54, 0x65, 0x73, 0x74,
+            0x2e, 0x20, 0x01, 0x00, 0x41, 0x5b, 0x35, 0xc3, 0xb6, 0x33, 0xe3, 0x0e,
+        ];
         let result = crate::decompress(compressed);
         match &result {
             Ok(data) => {
@@ -859,15 +929,14 @@ mod tests {
     fn test_decompress_system_zstd_6000bytes() {
         // System zstd v1.5.7 output for A*2000 + B*2000 + A*2000
         let compressed: &[u8] = &[
-            0x28, 0xb5, 0x2f, 0xfd, 0x64, 0x70, 0x16, 0x7d,
-            0x00, 0x00, 0x20, 0x41, 0x41, 0x42, 0x41, 0x03,
-            0x14, 0x00, 0x2e, 0xcc, 0x0b, 0xf3, 0x77, 0x79,
-            0x2c, 0x8c, 0x4f, 0x3e, 0x6d,
+            0x28, 0xb5, 0x2f, 0xfd, 0x64, 0x70, 0x16, 0x7d, 0x00, 0x00, 0x20, 0x41, 0x41, 0x42,
+            0x41, 0x03, 0x14, 0x00, 0x2e, 0xcc, 0x0b, 0xf3, 0x77, 0x79, 0x2c, 0x8c, 0x4f, 0x3e,
+            0x6d,
         ];
         let mut expected = Vec::new();
-        for _ in 0..2000 { expected.push(b'A'); }
-        for _ in 0..2000 { expected.push(b'B'); }
-        for _ in 0..2000 { expected.push(b'A'); }
+        expected.resize(2000, b'A');
+        expected.resize(4000, b'B');
+        expected.resize(6000, b'A');
 
         let result = crate::decompress(compressed);
         match &result {
@@ -885,7 +954,18 @@ mod tests {
     fn test_decompress_system_zstd_text_177() {
         // System zstd v1.5.7, default level, compressing 177 bytes of text
         // This exercises Huffman-compressed literals with FSE-compressed weights
-        let compressed: &[u8] = &[0x28, 0xb5, 0x2f, 0xfd, 0x24, 0xb1, 0xc5, 0x03, 0x00, 0x22, 0x49, 0x1b, 0x1b, 0x70, 0xc5, 0x69, 0x03, 0xda, 0x2b, 0x57, 0x6d, 0x37, 0x9e, 0xb6, 0x11, 0x9b, 0xc8, 0x7e, 0x49, 0xbc, 0x3d, 0xf0, 0x3f, 0x80, 0x28, 0xde, 0x80, 0x2e, 0x9c, 0x17, 0x01, 0x24, 0x81, 0x38, 0x18, 0x0a, 0x84, 0x81, 0x0f, 0xa5, 0xbe, 0xcc, 0x48, 0x5c, 0x87, 0xa6, 0xfa, 0x64, 0x1a, 0x78, 0x9c, 0xa8, 0x58, 0x2f, 0xbf, 0x9b, 0x30, 0x7e, 0x80, 0xad, 0xed, 0x99, 0xa7, 0xd1, 0x7f, 0xfe, 0xc2, 0x47, 0x3a, 0x43, 0x78, 0xee, 0xfe, 0xb9, 0x37, 0x00, 0x57, 0xe7, 0x53, 0xb2, 0x5c, 0xe3, 0x7a, 0xef, 0x7b, 0x78, 0xbc, 0xa4, 0x06, 0xef, 0x5e, 0xd6, 0x96, 0xaf, 0x4c, 0xf1, 0xea, 0xd7, 0x89, 0xd5, 0xac, 0xb6, 0x28, 0x2c, 0x40, 0x2a, 0x71, 0x19, 0x95, 0x3a, 0x12, 0x02, 0x00, 0x59, 0x11, 0xfc, 0x66, 0x0d, 0x51, 0xbe, 0x14, 0xa1, 0xf3];
+        let compressed: &[u8] = &[
+            0x28, 0xb5, 0x2f, 0xfd, 0x24, 0xb1, 0xc5, 0x03, 0x00, 0x22, 0x49, 0x1b, 0x1b, 0x70,
+            0xc5, 0x69, 0x03, 0xda, 0x2b, 0x57, 0x6d, 0x37, 0x9e, 0xb6, 0x11, 0x9b, 0xc8, 0x7e,
+            0x49, 0xbc, 0x3d, 0xf0, 0x3f, 0x80, 0x28, 0xde, 0x80, 0x2e, 0x9c, 0x17, 0x01, 0x24,
+            0x81, 0x38, 0x18, 0x0a, 0x84, 0x81, 0x0f, 0xa5, 0xbe, 0xcc, 0x48, 0x5c, 0x87, 0xa6,
+            0xfa, 0x64, 0x1a, 0x78, 0x9c, 0xa8, 0x58, 0x2f, 0xbf, 0x9b, 0x30, 0x7e, 0x80, 0xad,
+            0xed, 0x99, 0xa7, 0xd1, 0x7f, 0xfe, 0xc2, 0x47, 0x3a, 0x43, 0x78, 0xee, 0xfe, 0xb9,
+            0x37, 0x00, 0x57, 0xe7, 0x53, 0xb2, 0x5c, 0xe3, 0x7a, 0xef, 0x7b, 0x78, 0xbc, 0xa4,
+            0x06, 0xef, 0x5e, 0xd6, 0x96, 0xaf, 0x4c, 0xf1, 0xea, 0xd7, 0x89, 0xd5, 0xac, 0xb6,
+            0x28, 0x2c, 0x40, 0x2a, 0x71, 0x19, 0x95, 0x3a, 0x12, 0x02, 0x00, 0x59, 0x11, 0xfc,
+            0x66, 0x0d, 0x51, 0xbe, 0x14, 0xa1, 0xf3,
+        ];
         let expected = b"Hello world! This is a test file with enough content to trigger sequence encoding. We need repetitive patterns for compression to work well. ABCDEFGH ABCDEFGH ABCDEFGH ABCDEFGH\n";
         let result = crate::decompress(compressed);
         match &result {
@@ -903,15 +983,13 @@ mod tests {
     fn test_decompress_system_zstd_150bytes() {
         // System zstd v1.5.7 output for A*50 + B*50 + A*50
         let compressed: &[u8] = &[
-            0x28, 0xb5, 0x2f, 0xfd, 0x24, 0x96, 0x65, 0x00,
-            0x00, 0x20, 0x41, 0x41, 0x42, 0x41, 0x03, 0x14,
-            0x00, 0x25, 0x8a, 0x37, 0x2c, 0x95, 0xce, 0x1f,
-            0xae,
+            0x28, 0xb5, 0x2f, 0xfd, 0x24, 0x96, 0x65, 0x00, 0x00, 0x20, 0x41, 0x41, 0x42, 0x41,
+            0x03, 0x14, 0x00, 0x25, 0x8a, 0x37, 0x2c, 0x95, 0xce, 0x1f, 0xae,
         ];
         let mut expected = Vec::new();
-        for _ in 0..50 { expected.push(b'A'); }
-        for _ in 0..50 { expected.push(b'B'); }
-        for _ in 0..50 { expected.push(b'A'); }
+        expected.resize(50, b'A');
+        expected.resize(100, b'B');
+        expected.resize(150, b'A');
 
         let result = crate::decompress(compressed);
         match &result {
@@ -928,7 +1006,18 @@ mod tests {
     #[test]
     fn test_ruzstd_comparison_177() {
         // Compare ruzstd (known-good) decompression with our weight decoding
-        let compressed: &[u8] = &[0x28, 0xb5, 0x2f, 0xfd, 0x24, 0xb1, 0xc5, 0x03, 0x00, 0x22, 0x49, 0x1b, 0x1b, 0x70, 0xc5, 0x69, 0x03, 0xda, 0x2b, 0x57, 0x6d, 0x37, 0x9e, 0xb6, 0x11, 0x9b, 0xc8, 0x7e, 0x49, 0xbc, 0x3d, 0xf0, 0x3f, 0x80, 0x28, 0xde, 0x80, 0x2e, 0x9c, 0x17, 0x01, 0x24, 0x81, 0x38, 0x18, 0x0a, 0x84, 0x81, 0x0f, 0xa5, 0xbe, 0xcc, 0x48, 0x5c, 0x87, 0xa6, 0xfa, 0x64, 0x1a, 0x78, 0x9c, 0xa8, 0x58, 0x2f, 0xbf, 0x9b, 0x30, 0x7e, 0x80, 0xad, 0xed, 0x99, 0xa7, 0xd1, 0x7f, 0xfe, 0xc2, 0x47, 0x3a, 0x43, 0x78, 0xee, 0xfe, 0xb9, 0x37, 0x00, 0x57, 0xe7, 0x53, 0xb2, 0x5c, 0xe3, 0x7a, 0xef, 0x7b, 0x78, 0xbc, 0xa4, 0x06, 0xef, 0x5e, 0xd6, 0x96, 0xaf, 0x4c, 0xf1, 0xea, 0xd7, 0x89, 0xd5, 0xac, 0xb6, 0x28, 0x2c, 0x40, 0x2a, 0x71, 0x19, 0x95, 0x3a, 0x12, 0x02, 0x00, 0x59, 0x11, 0xfc, 0x66, 0x0d, 0x51, 0xbe, 0x14, 0xa1, 0xf3];
+        let compressed: &[u8] = &[
+            0x28, 0xb5, 0x2f, 0xfd, 0x24, 0xb1, 0xc5, 0x03, 0x00, 0x22, 0x49, 0x1b, 0x1b, 0x70,
+            0xc5, 0x69, 0x03, 0xda, 0x2b, 0x57, 0x6d, 0x37, 0x9e, 0xb6, 0x11, 0x9b, 0xc8, 0x7e,
+            0x49, 0xbc, 0x3d, 0xf0, 0x3f, 0x80, 0x28, 0xde, 0x80, 0x2e, 0x9c, 0x17, 0x01, 0x24,
+            0x81, 0x38, 0x18, 0x0a, 0x84, 0x81, 0x0f, 0xa5, 0xbe, 0xcc, 0x48, 0x5c, 0x87, 0xa6,
+            0xfa, 0x64, 0x1a, 0x78, 0x9c, 0xa8, 0x58, 0x2f, 0xbf, 0x9b, 0x30, 0x7e, 0x80, 0xad,
+            0xed, 0x99, 0xa7, 0xd1, 0x7f, 0xfe, 0xc2, 0x47, 0x3a, 0x43, 0x78, 0xee, 0xfe, 0xb9,
+            0x37, 0x00, 0x57, 0xe7, 0x53, 0xb2, 0x5c, 0xe3, 0x7a, 0xef, 0x7b, 0x78, 0xbc, 0xa4,
+            0x06, 0xef, 0x5e, 0xd6, 0x96, 0xaf, 0x4c, 0xf1, 0xea, 0xd7, 0x89, 0xd5, 0xac, 0xb6,
+            0x28, 0x2c, 0x40, 0x2a, 0x71, 0x19, 0x95, 0x3a, 0x12, 0x02, 0x00, 0x59, 0x11, 0xfc,
+            0x66, 0x0d, 0x51, 0xbe, 0x14, 0xa1, 0xf3,
+        ];
         // ruzstd should decompress successfully
         use std::io::Read;
         let mut cursor = std::io::Cursor::new(compressed);

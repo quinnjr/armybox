@@ -72,9 +72,9 @@ mod which;
 #[cfg(feature = "ascii")]
 pub use ascii::ascii;
 #[cfg(feature = "base64")]
-pub use base64::{base64, base32};
+pub use base64::{base32, base64};
 #[cfg(feature = "boolean")]
-pub use boolean::{r#true, r#false, colon};
+pub use boolean::{colon, r#false, r#true};
 #[cfg(feature = "cmp")]
 pub use cmp::cmp;
 #[cfg(feature = "count")]
@@ -90,15 +90,15 @@ pub use getconf::getconf;
 #[cfg(feature = "getopt")]
 pub use getopt::getopt;
 #[cfg(feature = "hash")]
-pub use hash::{md5sum, sha1sum, sha256sum, sha224sum, sha384sum, sha512sum, sha3sum, cksum, crc32};
+pub use hash::{
+    cksum, crc32, md5sum, sha1sum, sha3sum, sha224sum, sha256sum, sha384sum, sha512sum,
+};
 #[cfg(feature = "help")]
 pub use help::help;
 #[cfg(feature = "hexdump")]
 pub use hexdump::{hexdump, od};
 #[cfg(feature = "iconv")]
 pub use iconv::iconv;
-#[cfg(feature = "mcookie")]
-pub use uuidgen::mcookie;
 #[cfg(feature = "memeater")]
 pub use memeater::memeater;
 #[cfg(feature = "mesg")]
@@ -116,7 +116,7 @@ pub use screen::screen;
 #[cfg(feature = "terminal")]
 pub use terminal::{clear, reset};
 #[cfg(feature = "test")]
-pub use test::{test, bracket};
+pub use test::{bracket, test};
 #[cfg(feature = "time")]
 pub use time::time;
 #[cfg(feature = "toybox")]
@@ -131,6 +131,8 @@ pub use unicode::unicode;
 pub use uuencode::uudecode;
 #[cfg(feature = "uuencode")]
 pub use uuencode::uuencode;
+#[cfg(feature = "mcookie")]
+pub use uuidgen::mcookie;
 #[cfg(feature = "uuidgen")]
 pub use uuidgen::uuidgen;
 #[cfg(feature = "which")]

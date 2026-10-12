@@ -5,9 +5,9 @@
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Patch hunk representing a single change
 #[cfg(feature = "alloc")]
@@ -64,7 +64,10 @@ pub fn patch(argc: i32, argv: *const *const u8) -> i32 {
     while i < argc as usize {
         let arg = match unsafe { get_arg(argv, i as i32) } {
             Some(a) => a,
-            None => { i += 1; continue; }
+            None => {
+                i += 1;
+                continue;
+            }
         };
 
         if arg == b"-i" || arg == b"--input" {
@@ -165,7 +168,11 @@ pub fn patch(argc: i32, argv: *const *const u8) -> i32 {
         // Apply hunks
         let mut offset: i64 = 0;
         for hunk in &hunks {
-            let hunk_to_apply = if reverse { reverse_hunk(hunk) } else { hunk.clone() };
+            let hunk_to_apply = if reverse {
+                reverse_hunk(hunk)
+            } else {
+                hunk.clone()
+            };
 
             match apply_hunk(&mut lines, &hunk_to_apply, offset) {
                 Ok(new_offset) => {
@@ -182,7 +189,11 @@ pub fn patch(argc: i32, argv: *const *const u8) -> i32 {
         if backup {
             let mut backup_name = actual_file.clone();
             backup_name.extend_from_slice(b".orig");
-            let fd = io::open(&backup_name, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+            let fd = io::open(
+                &backup_name,
+                libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+                0o644,
+            );
             if fd >= 0 {
                 io::write_all(fd, &original);
                 io::close(fd);
@@ -191,7 +202,11 @@ pub fn patch(argc: i32, argv: *const *const u8) -> i32 {
 
         // Write output
         let out_path = output_file.map(|p| p.to_vec()).unwrap_or(actual_file);
-        let fd = io::open(&out_path, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
+        let fd = io::open(
+            &out_path,
+            libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC,
+            0o644,
+        );
         if fd < 0 {
             io::write_str(2, b"patch: can't write ");
             io::write_all(2, &out_path);
@@ -226,7 +241,8 @@ fn parse_patch(content: &[u8]) -> Vec<(Vec<u8>, Vec<Hunk>)> {
 
     while i < lines.len() {
         // Look for unified diff header: --- file
-        if lines[i].starts_with(b"--- ") && i + 1 < lines.len() && lines[i + 1].starts_with(b"+++ ") {
+        if lines[i].starts_with(b"--- ") && i + 1 < lines.len() && lines[i + 1].starts_with(b"+++ ")
+        {
             let old_file = parse_filename(&lines[i][4..]);
             let new_file = parse_filename(&lines[i + 1][4..]);
 
@@ -374,7 +390,10 @@ fn parse_hunk_header(header: &[u8]) -> Option<(usize, usize, usize, usize)> {
     // Parse new_count (optional)
     let new_count = if pos < header.len() && header[pos] == b',' {
         pos += 1;
-        let new_count_end = header[pos..].iter().position(|&c| c == b' ' || c == b'@').unwrap_or(header.len() - pos);
+        let new_count_end = header[pos..]
+            .iter()
+            .position(|&c| c == b' ' || c == b'@')
+            .unwrap_or(header.len() - pos);
         let count = sys::parse_u64(&header[pos..pos + new_count_end]).unwrap_or(1) as usize;
         count
     } else {
@@ -410,11 +429,15 @@ fn reverse_hunk(hunk: &Hunk) -> Hunk {
         old_count: hunk.new_count,
         new_start: hunk.old_start,
         new_count: hunk.old_count,
-        lines: hunk.lines.iter().map(|l| match l {
-            HunkLine::Context(c) => HunkLine::Context(c.clone()),
-            HunkLine::Remove(r) => HunkLine::Add(r.clone()),
-            HunkLine::Add(a) => HunkLine::Remove(a.clone()),
-        }).collect(),
+        lines: hunk
+            .lines
+            .iter()
+            .map(|l| match l {
+                HunkLine::Context(c) => HunkLine::Context(c.clone()),
+                HunkLine::Remove(r) => HunkLine::Add(r.clone()),
+                HunkLine::Add(a) => HunkLine::Remove(a.clone()),
+            })
+            .collect(),
     }
 }
 
@@ -565,25 +588,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_patch_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_patch_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -596,14 +613,20 @@ mod tests {
     #[test]
     fn test_patch_unified() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("test.txt");
         let patch_file = dir.join("test.patch");
 
         fs::write(&file, "line1\nold line\nline3\n").unwrap();
-        fs::write(&patch_file, "--- test.txt\n+++ test.txt\n@@ -1,3 +1,3 @@\n line1\n-old line\n+new line\n line3\n").unwrap();
+        fs::write(
+            &patch_file,
+            "--- test.txt\n+++ test.txt\n@@ -1,3 +1,3 @@\n line1\n-old line\n+new line\n line3\n",
+        )
+        .unwrap();
 
         let output = Command::new(&armybox)
             .current_dir(&dir)
@@ -622,7 +645,9 @@ mod tests {
     #[test]
     fn test_patch_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["patch", "-i", "/nonexistent/file.patch"])

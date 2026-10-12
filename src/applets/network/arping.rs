@@ -2,9 +2,9 @@
 //!
 //! ARP-level ping utility for network discovery.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // ARP constants
 const ARPHRD_ETHER: u16 = 1;
@@ -78,7 +78,10 @@ pub fn arping(argc: i32, argv: *const *const u8) -> i32 {
             }
         },
         None => {
-            io::write_str(2, b"Usage: arping [-c COUNT] [-I IFACE] [-w TIMEOUT] HOST\n");
+            io::write_str(
+                2,
+                b"Usage: arping [-c COUNT] [-I IFACE] [-w TIMEOUT] HOST\n",
+            );
             return 1;
         }
     };
@@ -95,16 +98,13 @@ pub fn arping(argc: i32, argv: *const *const u8) -> i32 {
     };
 
     // Create raw socket for ARP
-    let sock = unsafe {
-        libc::socket(
-            libc::AF_PACKET,
-            libc::SOCK_RAW,
-            (ETH_P_ARP as i32).to_be(),
-        )
-    };
+    let sock = unsafe { libc::socket(libc::AF_PACKET, libc::SOCK_RAW, (ETH_P_ARP as i32).to_be()) };
 
     if sock < 0 {
-        io::write_str(2, b"arping: cannot create raw socket (need CAP_NET_RAW or root)\n");
+        io::write_str(
+            2,
+            b"arping: cannot create raw socket (need CAP_NET_RAW or root)\n",
+        );
         return 1;
     }
 
@@ -225,7 +225,8 @@ pub fn arping(argc: i32, argv: *const *const u8) -> i32 {
         // Wait for reply
         let mut recv_buf = [0u8; 60];
         let mut from: libc::sockaddr_ll = unsafe { core::mem::zeroed() };
-        let mut from_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_ll>() as libc::socklen_t;
+        let mut from_len: libc::socklen_t =
+            core::mem::size_of::<libc::sockaddr_ll>() as libc::socklen_t;
 
         let n = unsafe {
             libc::recvfrom(
@@ -245,17 +246,17 @@ pub fn arping(argc: i32, argv: *const *const u8) -> i32 {
             // Check if it's an ARP reply from our target
             let recv_arp = &recv_buf[14..];
             let op = ((recv_arp[6] as u16) << 8) | (recv_arp[7] as u16);
-            let sender_ip = ((recv_arp[14] as u32) << 24) |
-                           ((recv_arp[15] as u32) << 16) |
-                           ((recv_arp[16] as u32) << 8) |
-                           (recv_arp[17] as u32);
+            let sender_ip = ((recv_arp[14] as u32) << 24)
+                | ((recv_arp[15] as u32) << 16)
+                | ((recv_arp[16] as u32) << 8)
+                | (recv_arp[17] as u32);
 
             if op == ARPOP_REPLY && sender_ip == target_ip {
                 received += 1;
 
                 // Calculate RTT
-                let rtt_us = ((end_tv.tv_sec - start_tv.tv_sec) * 1_000_000 +
-                             (end_tv.tv_usec - start_tv.tv_usec)) as u64;
+                let rtt_us = ((end_tv.tv_sec - start_tv.tv_sec) * 1_000_000
+                    + (end_tv.tv_usec - start_tv.tv_usec)) as u64;
 
                 io::write_str(1, b"Unicast reply from ");
                 print_ip(sender_ip);
@@ -327,8 +328,12 @@ fn get_interface_info(name: &[u8]) -> Option<([u8; 6], u32, i32)> {
             return None;
         }
         let mut m = [0u8; 6];
-        m.copy_from_slice(&ifr.ifr_ifru.ifru_hwaddr.sa_data[0..6].iter()
-            .map(|&x| x as u8).collect::<alloc::vec::Vec<u8>>());
+        m.copy_from_slice(
+            &ifr.ifr_ifru.ifru_hwaddr.sa_data[0..6]
+                .iter()
+                .map(|&x| x as u8)
+                .collect::<alloc::vec::Vec<u8>>(),
+        );
         m
     };
 
@@ -379,10 +384,12 @@ fn parse_ipv4(s: &[u8]) -> Option<u32> {
     }
     parts[3] = current as u8;
 
-    Some(((parts[0] as u32) << 24) |
-         ((parts[1] as u32) << 16) |
-         ((parts[2] as u32) << 8) |
-         (parts[3] as u32))
+    Some(
+        ((parts[0] as u32) << 24)
+            | ((parts[1] as u32) << 16)
+            | ((parts[2] as u32) << 8)
+            | (parts[3] as u32),
+    )
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -415,30 +422,19 @@ fn print_mac(mac: &[u8]) {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_arping_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["arping"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["arping"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);

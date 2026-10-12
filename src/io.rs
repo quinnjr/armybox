@@ -139,9 +139,7 @@ pub fn write_signed(fd: i32, n: i64) -> isize {
 
 /// Read from file descriptor into buffer
 pub fn read(fd: i32, buf: &mut [u8]) -> isize {
-    unsafe {
-        libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len())
-    }
+    unsafe { libc::read(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len()) }
 }
 
 /// Read entire file into Vec
@@ -229,7 +227,12 @@ pub fn mkdir(path: &[u8], mode: u32) -> i32 {
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    unsafe { libc::mkdir(path_buf.as_ptr() as *const libc::c_char, mode as libc::mode_t) }
+    unsafe {
+        libc::mkdir(
+            path_buf.as_ptr() as *const libc::c_char,
+            mode as libc::mode_t,
+        )
+    }
 }
 
 /// Remove a directory
@@ -270,7 +273,12 @@ pub fn rename(old: &[u8], new: &[u8]) -> i32 {
     new_buf[..new.len()].copy_from_slice(new);
     new_buf[new.len()] = 0;
 
-    unsafe { libc::rename(old_buf.as_ptr() as *const libc::c_char, new_buf.as_ptr() as *const libc::c_char) }
+    unsafe {
+        libc::rename(
+            old_buf.as_ptr() as *const libc::c_char,
+            new_buf.as_ptr() as *const libc::c_char,
+        )
+    }
 }
 
 /// Create a symlink
@@ -287,7 +295,12 @@ pub fn symlink(target: &[u8], linkpath: &[u8]) -> i32 {
     link_buf[..linkpath.len()].copy_from_slice(linkpath);
     link_buf[linkpath.len()] = 0;
 
-    unsafe { libc::symlink(target_buf.as_ptr() as *const libc::c_char, link_buf.as_ptr() as *const libc::c_char) }
+    unsafe {
+        libc::symlink(
+            target_buf.as_ptr() as *const libc::c_char,
+            link_buf.as_ptr() as *const libc::c_char,
+        )
+    }
 }
 
 /// Create a hard link
@@ -304,7 +317,12 @@ pub fn link(old: &[u8], new: &[u8]) -> i32 {
     new_buf[..new.len()].copy_from_slice(new);
     new_buf[new.len()] = 0;
 
-    unsafe { libc::link(old_buf.as_ptr() as *const libc::c_char, new_buf.as_ptr() as *const libc::c_char) }
+    unsafe {
+        libc::link(
+            old_buf.as_ptr() as *const libc::c_char,
+            new_buf.as_ptr() as *const libc::c_char,
+        )
+    }
 }
 
 /// Change file permissions
@@ -316,7 +334,12 @@ pub fn chmod(path: &[u8], mode: u32) -> i32 {
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    unsafe { libc::chmod(path_buf.as_ptr() as *const libc::c_char, mode as libc::mode_t) }
+    unsafe {
+        libc::chmod(
+            path_buf.as_ptr() as *const libc::c_char,
+            mode as libc::mode_t,
+        )
+    }
 }
 
 /// Change working directory
@@ -355,21 +378,36 @@ pub fn getcwd(buf: &mut [u8]) -> bool {
 /// Read symbolic link
 pub fn readlink(path: &[u8], buf: &mut [u8]) -> isize {
     let mut path_buf = [0u8; 4096];
-    if path.len() >= path_buf.len() { return -1; }
+    if path.len() >= path_buf.len() {
+        return -1;
+    }
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    unsafe { libc::readlink(path_buf.as_ptr() as *const libc::c_char, buf.as_mut_ptr() as *mut libc::c_char, buf.len()) }
+    unsafe {
+        libc::readlink(
+            path_buf.as_ptr() as *const libc::c_char,
+            buf.as_mut_ptr() as *mut libc::c_char,
+            buf.len(),
+        )
+    }
 }
 
 /// Get canonical path
 pub fn realpath(path: &[u8], buf: &mut [u8]) -> isize {
     let mut path_buf = [0u8; 4096];
-    if path.len() >= path_buf.len() { return -1; }
+    if path.len() >= path_buf.len() {
+        return -1;
+    }
     path_buf[..path.len()].copy_from_slice(path);
     path_buf[path.len()] = 0;
 
-    let ret = unsafe { libc::realpath(path_buf.as_ptr() as *const libc::c_char, buf.as_mut_ptr() as *mut libc::c_char) };
+    let ret = unsafe {
+        libc::realpath(
+            path_buf.as_ptr() as *const libc::c_char,
+            buf.as_mut_ptr() as *mut libc::c_char,
+        )
+    };
     if ret.is_null() {
         -1
     } else {
@@ -459,12 +497,16 @@ pub fn gethostname() -> Option<Vec<u8>> {
 
 /// Sleep for seconds
 pub fn sleep(secs: u32) {
-    unsafe { libc::sleep(secs); }
+    unsafe {
+        libc::sleep(secs);
+    }
 }
 
 /// Sleep for microseconds
 pub fn usleep(usecs: u32) {
-    unsafe { libc::usleep(usecs); }
+    unsafe {
+        libc::usleep(usecs);
+    }
 }
 
 /// Duplicate file descriptor
@@ -478,18 +520,60 @@ pub fn dup2(old: i32, new: i32) -> i32 {
 }
 
 /// Seek in file
+///
+/// Bionic's `off_t` is 32-bit on 32-bit targets, so Android uses the `*64`
+/// calls to keep offsets past 2 GiB from wrapping. glibc (64-bit) and musl
+/// `off_t` are already 64-bit.
 pub fn lseek(fd: i32, offset: i64, whence: i32) -> i64 {
-    unsafe { libc::lseek(fd, offset as libc::off_t, whence) as i64 }
+    #[cfg(target_os = "android")]
+    unsafe {
+        libc::lseek64(fd, offset, whence)
+    }
+    #[cfg(not(target_os = "android"))]
+    unsafe {
+        libc::lseek(fd, offset as libc::off_t, whence) as i64
+    }
 }
 
 /// Truncate file
 pub fn ftruncate(fd: i32, length: i64) -> i32 {
-    unsafe { libc::ftruncate(fd, length as libc::off_t) }
+    #[cfg(target_os = "android")]
+    unsafe {
+        libc::ftruncate64(fd, length)
+    }
+    #[cfg(not(target_os = "android"))]
+    unsafe {
+        libc::ftruncate(fd, length as libc::off_t)
+    }
+}
+
+/// Truncate file by path
+pub fn truncate(path: &[u8], length: i64) -> i32 {
+    let mut path_buf = [0u8; 4096];
+    if path.len() >= path_buf.len() {
+        return -1;
+    }
+    path_buf[..path.len()].copy_from_slice(path);
+    path_buf[path.len()] = 0;
+
+    #[cfg(target_os = "android")]
+    unsafe {
+        libc::truncate64(path_buf.as_ptr() as *const libc::c_char, length)
+    }
+    #[cfg(not(target_os = "android"))]
+    unsafe {
+        libc::truncate(
+            path_buf.as_ptr() as *const libc::c_char,
+            length as libc::off_t,
+        )
+    }
 }
 
 /// Sync filesystem
 pub fn sync() {
-    unsafe { libc::sync(); }
+    unsafe {
+        libc::sync();
+    }
 }
 
 /// Check if fd is a tty
@@ -627,7 +711,11 @@ pub fn kill(pid: i32, sig: i32) -> i32 {
 
 /// Execute program
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub fn execve(path: &[u8], argv: *const *const libc::c_char, envp: *const *const libc::c_char) -> i32 {
+pub fn execve(
+    path: &[u8],
+    argv: *const *const libc::c_char,
+    envp: *const *const libc::c_char,
+) -> i32 {
     let mut path_buf = [0u8; 4096];
     if path.len() >= path_buf.len() {
         return -1;
@@ -662,7 +750,9 @@ pub fn uname(buf: &mut libc::utsname) -> i32 {
 
 /// Exit process
 pub fn exit(code: i32) -> ! {
-    unsafe { libc::_exit(code); }
+    unsafe {
+        libc::_exit(code);
+    }
 }
 
 // ============================================================================

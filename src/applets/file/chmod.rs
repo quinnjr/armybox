@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/chmod.html
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// chmod - change file mode bits
 ///
@@ -110,15 +110,19 @@ struct SymbolicOps {
 /// A single symbolic mode operation
 #[derive(Copy, Clone)]
 struct SymbolicOp {
-    who: u32,    // bitmask: 4=user, 2=group, 1=other, 7=all
-    action: u8,  // b'+', b'-', b'='
-    perms: u32,  // permission bits (rwxXst)
+    who: u32,   // bitmask: 4=user, 2=group, 1=other, 7=all
+    action: u8, // b'+', b'-', b'='
+    perms: u32, // permission bits (rwxXst)
 }
 
 /// Parse symbolic mode string like "u+x,go-w,a=rx"
 fn parse_symbolic_mode(s: &[u8]) -> Option<ModeSpec> {
     let mut ops = SymbolicOps {
-        ops: [SymbolicOp { who: 0, action: 0, perms: 0 }; 8],
+        ops: [SymbolicOp {
+            who: 0,
+            action: 0,
+            perms: 0,
+        }; 8],
         count: 0,
     };
 
@@ -179,7 +183,8 @@ fn parse_symbolic_clause(s: &[u8], ops: &mut SymbolicOps) -> bool {
         pos += 1;
 
         let mut perms: u32 = 0;
-        while pos < s.len() && s[pos] != b'+' && s[pos] != b'-' && s[pos] != b'=' && s[pos] != b',' {
+        while pos < s.len() && s[pos] != b'+' && s[pos] != b'-' && s[pos] != b'=' && s[pos] != b','
+        {
             match s[pos] {
                 b'r' => perms |= 4,
                 b'w' => perms |= 2,
@@ -217,23 +222,35 @@ fn apply_mode(current: u32, spec: &ModeSpec, is_dir: bool) -> u32 {
 
                 if op.who & 4 != 0 {
                     bits |= base_perms << 6;
-                    if op.perms & 0o20 != 0 { bits |= 0o4000; } // setuid
+                    if op.perms & 0o20 != 0 {
+                        bits |= 0o4000;
+                    } // setuid
                 }
                 if op.who & 2 != 0 {
                     bits |= base_perms << 3;
-                    if op.perms & 0o20 != 0 { bits |= 0o2000; } // setgid
+                    if op.perms & 0o20 != 0 {
+                        bits |= 0o2000;
+                    } // setgid
                 }
                 if op.who & 1 != 0 {
                     bits |= base_perms;
-                    if op.perms & 0o40 != 0 { bits |= 0o1000; } // sticky
+                    if op.perms & 0o40 != 0 {
+                        bits |= 0o1000;
+                    } // sticky
                 }
 
                 // Handle X (conditional execute)
                 if op.perms & 0o10 != 0 {
                     if is_dir || (current & 0o111) != 0 {
-                        if op.who & 4 != 0 { bits |= 0o100; }
-                        if op.who & 2 != 0 { bits |= 0o010; }
-                        if op.who & 1 != 0 { bits |= 0o001; }
+                        if op.who & 4 != 0 {
+                            bits |= 0o100;
+                        }
+                        if op.who & 2 != 0 {
+                            bits |= 0o010;
+                        }
+                        if op.who & 1 != 0 {
+                            bits |= 0o001;
+                        }
                     }
                 }
 
@@ -243,9 +260,15 @@ fn apply_mode(current: u32, spec: &ModeSpec, is_dir: bool) -> u32 {
                     b'=' => {
                         // Clear the who bits first, then set
                         let mut clear_mask: u32 = 0;
-                        if op.who & 4 != 0 { clear_mask |= 0o4700; }
-                        if op.who & 2 != 0 { clear_mask |= 0o2070; }
-                        if op.who & 1 != 0 { clear_mask |= 0o1007; }
+                        if op.who & 4 != 0 {
+                            clear_mask |= 0o4700;
+                        }
+                        if op.who & 2 != 0 {
+                            clear_mask |= 0o2070;
+                        }
+                        if op.who & 1 != 0 {
+                            clear_mask |= 0o1007;
+                        }
                         mode &= !clear_mask;
                         mode |= bits;
                     }
@@ -293,7 +316,9 @@ fn chmod_recursive(dir: &[u8], spec: &ModeSpec) -> i32 {
 
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let mut offset = 0;
         while offset < n as usize {
@@ -304,11 +329,20 @@ fn chmod_recursive(dir: &[u8], spec: &ModeSpec) -> i32 {
                 let mut full_path = [0u8; 4096];
                 let mut len = 0;
                 for &c in dir {
-                    if len < full_path.len() - 1 { full_path[len] = c; len += 1; }
+                    if len < full_path.len() - 1 {
+                        full_path[len] = c;
+                        len += 1;
+                    }
                 }
-                if len < full_path.len() - 1 { full_path[len] = b'/'; len += 1; }
+                if len < full_path.len() - 1 {
+                    full_path[len] = b'/';
+                    len += 1;
+                }
                 for &c in name {
-                    if len < full_path.len() - 1 { full_path[len] = c; len += 1; }
+                    if len < full_path.len() - 1 {
+                        full_path[len] = c;
+                        len += 1;
+                    }
                 }
 
                 if chmod_path(&full_path[..len], spec, true) != 0 {
@@ -330,23 +364,20 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
-    use std::path::PathBuf;
     use std::os::unix::fs::PermissionsExt;
+    use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_chmod_test_{}_{}", std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_chmod_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -359,7 +390,9 @@ mod tests {
     #[test]
     fn test_chmod_basic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -379,7 +412,9 @@ mod tests {
     #[test]
     fn test_chmod_restrictive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -399,7 +434,9 @@ mod tests {
     #[test]
     fn test_chmod_multiple_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file1 = dir.join("file1.txt");
@@ -408,25 +445,35 @@ mod tests {
         fs::write(&file2, "content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["chmod", "700", file1.to_str().unwrap(), file2.to_str().unwrap()])
+            .args([
+                "chmod",
+                "700",
+                file1.to_str().unwrap(),
+                file2.to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(fs::metadata(&file1).unwrap().permissions().mode() & 0o777, 0o700);
-        assert_eq!(fs::metadata(&file2).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(
+            fs::metadata(&file1).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+        assert_eq!(
+            fs::metadata(&file2).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
         cleanup(&dir);
     }
 
     #[test]
     fn test_chmod_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["chmod"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["chmod"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }
@@ -434,7 +481,9 @@ mod tests {
     #[test]
     fn test_chmod_nonexistent_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["chmod", "755", "/nonexistent/file"])
@@ -447,7 +496,9 @@ mod tests {
     #[test]
     fn test_chmod_symbolic_add_execute() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -468,7 +519,9 @@ mod tests {
     #[test]
     fn test_chmod_symbolic_remove_write() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -489,7 +542,9 @@ mod tests {
     #[test]
     fn test_chmod_symbolic_set_all() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -509,7 +564,9 @@ mod tests {
     #[test]
     fn test_chmod_symbolic_comma_separated() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let file = dir.join("file.txt");
@@ -530,7 +587,9 @@ mod tests {
     #[test]
     fn test_chmod_recursive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         let subdir = dir.join("subdir");
@@ -545,8 +604,14 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o755);
-        assert_eq!(fs::metadata(&subdir).unwrap().permissions().mode() & 0o777, 0o755);
+        assert_eq!(
+            fs::metadata(&file).unwrap().permissions().mode() & 0o777,
+            0o755
+        );
+        assert_eq!(
+            fs::metadata(&subdir).unwrap().permissions().mode() & 0o777,
+            0o755
+        );
         cleanup(&dir);
     }
 }

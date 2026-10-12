@@ -438,8 +438,9 @@ impl Top {
             self.total_pcpu = busy_jifs;
         }
         let mut pcpu_shift: i32 = 6;
-        let mut pcpu_scale: u32 =
-            100u32.wrapping_mul(64).wrapping_mul(busy_jifs as u16 as u32);
+        let mut pcpu_scale: u32 = 100u32
+            .wrapping_mul(64)
+            .wrapping_mul(busy_jifs as u16 as u32);
         if pcpu_scale == 0 {
             pcpu_scale = 1;
         }
@@ -920,7 +921,11 @@ fn pcpu_sort(p: &Entry, q: &Entry) -> i32 {
 }
 
 fn mem_sort(p: &Entry, q: &Entry) -> i32 {
-    if q.vsz < p.vsz { -1 } else { (q.vsz != p.vsz) as i32 }
+    if q.vsz < p.vsz {
+        -1
+    } else {
+        (q.vsz != p.vsz) as i32
+    }
 }
 
 fn time_sort(p: &Entry, q: &Entry) -> i32 {
@@ -1139,20 +1144,10 @@ extern "C" fn restore_and_reraise(sig: libc::c_int) {
 mod tests {
     extern crate std;
     use super::*;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_smart_ulltoa5_exact_format() {
@@ -1197,7 +1192,9 @@ mod tests {
     #[test]
     fn test_top_batch_frame_matches_busybox_layout() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["top", "-bn1"])
@@ -1209,8 +1206,15 @@ mod tests {
 
         assert!(lines[0].starts_with("Mem: "), "line0: {}", lines[0]);
         assert!(lines[1].starts_with("CPU:"), "line1: {}", lines[1]);
-        assert!(lines[2].starts_with("Load average: "), "line2: {}", lines[2]);
-        assert_eq!(lines[3], "  PID  PPID USER     STAT   VSZ %VSZ %CPU COMMAND");
+        assert!(
+            lines[2].starts_with("Load average: "),
+            "line2: {}",
+            lines[2]
+        );
+        assert_eq!(
+            lines[3],
+            "  PID  PPID USER     STAT   VSZ %VSZ %CPU COMMAND"
+        );
         // Batch mode shows the whole process list, so there is a data row.
         let row = lines[4];
         assert!(row.len() > 42, "row: {row}");
@@ -1221,7 +1225,9 @@ mod tests {
     #[test]
     fn test_top_row_columns_line_up_with_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["top", "-bn1"])
@@ -1265,7 +1271,9 @@ mod tests {
     #[test]
     fn test_top_help_and_version() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         for flag in ["--help", "--version"] {
             let output = Command::new(&armybox).args(["top", flag]).output().unwrap();
@@ -1277,12 +1285,11 @@ mod tests {
     #[test]
     fn test_top_invalid_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["top", "-Z"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["top", "-Z"]).output().unwrap();
         assert_eq!(output.status.code(), Some(1));
         assert!(output.stdout.is_empty());
     }

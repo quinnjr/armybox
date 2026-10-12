@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/rm.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// rm - remove files or directories
 ///
@@ -41,9 +41,15 @@ pub fn rm(argc: i32, argv: *const *const u8) -> i32 {
                     files_start = i + 1;
                     break;
                 }
-                if has_opt(arg, b'r') || has_opt(arg, b'R') { recursive = true; }
-                if has_opt(arg, b'f') { force = true; }
-                if has_opt(arg, b'i') { _interactive = true; }
+                if has_opt(arg, b'r') || has_opt(arg, b'R') {
+                    recursive = true;
+                }
+                if has_opt(arg, b'f') {
+                    force = true;
+                }
+                if has_opt(arg, b'i') {
+                    _interactive = true;
+                }
                 files_start = i + 1;
             } else {
                 has_files = true;
@@ -58,7 +64,7 @@ pub fn rm(argc: i32, argv: *const *const u8) -> i32 {
             io::write_str(2, b"rm: missing operand\n");
             return 1;
         }
-        return 0;  // -f with no files is OK
+        return 0; // -f with no files is OK
     }
 
     let mut exit_code = 0;
@@ -149,7 +155,9 @@ fn remove_recursive(path: &[u8], force: bool) -> i32 {
 
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let mut offset = 0;
         while offset < n as usize {
@@ -207,22 +215,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_rm_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_rm_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -235,7 +240,9 @@ mod tests {
     #[test]
     fn test_rm_single_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file.txt"), "content").unwrap();
@@ -253,16 +260,20 @@ mod tests {
     #[test]
     fn test_rm_multiple_files() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "content1").unwrap();
         fs::write(dir.join("file2.txt"), "content2").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["rm",
+            .args([
+                "rm",
                 dir.join("file1.txt").to_str().unwrap(),
-                dir.join("file2.txt").to_str().unwrap()])
+                dir.join("file2.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -275,7 +286,9 @@ mod tests {
     #[test]
     fn test_rm_nonexistent_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rm", "/nonexistent/file"])
@@ -288,7 +301,9 @@ mod tests {
     #[test]
     fn test_rm_force_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["rm", "-f", "/nonexistent/file"])
@@ -302,7 +317,9 @@ mod tests {
     #[test]
     fn test_rm_directory_without_recursive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("subdir")).unwrap();
@@ -321,7 +338,9 @@ mod tests {
     #[test]
     fn test_rm_recursive_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir_all(dir.join("subdir/nested")).unwrap();
@@ -341,7 +360,9 @@ mod tests {
     #[test]
     fn test_rm_recursive_uppercase() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("subdir")).unwrap();
@@ -360,12 +381,11 @@ mod tests {
     #[test]
     fn test_rm_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["rm"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["rm"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
         assert!(std::string::String::from_utf8_lossy(&output.stderr).contains("missing operand"));
@@ -374,12 +394,11 @@ mod tests {
     #[test]
     fn test_rm_force_no_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["rm", "-f"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["rm", "-f"]).output().unwrap();
 
         // -f with no operands should succeed silently
         assert_eq!(output.status.code(), Some(0));
@@ -388,16 +407,20 @@ mod tests {
     #[test]
     fn test_rm_symlink() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("target.txt"), "content").unwrap();
 
         // Create symlink
         Command::new("ln")
-            .args(["-s",
+            .args([
+                "-s",
                 dir.join("target.txt").to_str().unwrap(),
-                dir.join("link").to_str().unwrap()])
+                dir.join("link").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -416,7 +439,9 @@ mod tests {
     #[test]
     fn test_rm_combined_options() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("subdir")).unwrap();

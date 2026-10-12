@@ -4,12 +4,12 @@
 
 extern crate alloc;
 
+use crate::database::{Database, PackageRecord, current_time};
+use crate::format::AbpPackage;
+use crate::io;
+use crate::resolver::resolve_with_local;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::io;
-use crate::format::AbpPackage;
-use crate::database::{Database, PackageRecord, current_time};
-use crate::resolver::resolve_with_local;
 
 /// Install packages
 pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
@@ -61,7 +61,10 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
                 io::write_str(1, b"'\n");
 
                 // TODO: Download package from repository
-                io::write_str(2, b"abp: downloading from repositories not yet implemented\n");
+                io::write_str(
+                    2,
+                    b"abp: downloading from repositories not yet implemented\n",
+                );
                 io::write_str(2, b"abp: please specify a local .abp file\n");
                 return 1;
             } else {
@@ -82,9 +85,7 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
     let install_order = if no_deps {
         to_install.iter().map(|p| p.metadata.name.clone()).collect()
     } else {
-        let pkg_names: Vec<String> = to_install.iter()
-            .map(|p| p.metadata.name.clone())
-            .collect();
+        let pkg_names: Vec<String> = to_install.iter().map(|p| p.metadata.name.clone()).collect();
 
         // Build a map of local packages being installed (for the resolver)
         let mut local_deps: Vec<(String, Vec<String>)> = Vec::new();
@@ -110,9 +111,7 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
     // is itself part of this transaction is not force-removed here.
     for pkg in &to_install {
         for rep in &pkg.metadata.replaces {
-            if db.is_installed(rep)
-                && !to_install.iter().any(|p| &p.metadata.name == rep)
-            {
+            if db.is_installed(rep) && !to_install.iter().any(|p| &p.metadata.name == rep) {
                 io::write_str(1, b"Replacing '");
                 io::write_all(1, rep.as_bytes());
                 io::write_str(1, b"' (superseded by '");
@@ -193,16 +192,16 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
 
             // Check file conflicts
             for entry in &pkg.manifest.entries {
-                if let Some(owner) = db.get_file_owner(&entry.path) {
-                    if owner != pkg.metadata.name {
-                        io::write_str(2, b"abp: file conflict: ");
-                        io::write_all(2, entry.path.as_bytes());
-                        io::write_str(2, b" is owned by ");
-                        io::write_all(2, owner.as_bytes());
-                        io::write_str(2, b"\n");
-                        io::write_str(2, b"abp: use --force to override\n");
-                        return 1;
-                    }
+                if let Some(owner) = db.get_file_owner(&entry.path)
+                    && owner != pkg.metadata.name
+                {
+                    io::write_str(2, b"abp: file conflict: ");
+                    io::write_all(2, entry.path.as_bytes());
+                    io::write_str(2, b" is owned by ");
+                    io::write_all(2, owner.as_bytes());
+                    io::write_str(2, b"\n");
+                    io::write_str(2, b"abp: use --force to override\n");
+                    return 1;
                 }
             }
         }
@@ -228,10 +227,10 @@ pub fn install_packages(packages: &[&[u8]], force: bool, no_deps: bool) -> i32 {
     // dependencies that would be downloaded) are skipped here.
     let mut ordered: Vec<&AbpPackage> = Vec::new();
     for name in &install_order {
-        if let Some(pkg) = to_install.iter().find(|p| &p.metadata.name == name) {
-            if !ordered.iter().any(|p| p.metadata.name == pkg.metadata.name) {
-                ordered.push(pkg);
-            }
+        if let Some(pkg) = to_install.iter().find(|p| &p.metadata.name == name)
+            && !ordered.iter().any(|p| p.metadata.name == pkg.metadata.name)
+        {
+            ordered.push(pkg);
         }
     }
     // Safety net: append any loaded package not covered by the resolved order.
@@ -410,7 +409,10 @@ pub(crate) struct Rollback {
 
 impl Rollback {
     pub(crate) fn new() -> Self {
-        Rollback { files: Vec::new(), dirs: Vec::new() }
+        Rollback {
+            files: Vec::new(),
+            dirs: Vec::new(),
+        }
     }
 
     /// Undo everything recorded, best-effort (errors are ignored: the goal is
@@ -674,9 +676,12 @@ impl<'a> TarWalker<'a> {
                 }
                 _ => {
                     // A real member. Apply any pending overrides.
-                    let name = pending_name.take().unwrap_or_else(|| parse_tar_name(header));
-                    let linkname =
-                        pending_link.take().unwrap_or_else(|| parse_tar_name(&header[157..257]));
+                    let name = pending_name
+                        .take()
+                        .unwrap_or_else(|| parse_tar_name(header));
+                    let linkname = pending_link
+                        .take()
+                        .unwrap_or_else(|| parse_tar_name(&header[157..257]));
                     // A pax size= override replaces the header size and also
                     // determines how many data blocks the member occupies.
                     let size = pending_size.take().unwrap_or(hdr_size);
@@ -700,7 +705,7 @@ impl<'a> TarWalker<'a> {
 /// Number of bytes a member of `size` data occupies in the archive, rounded up
 /// to a whole 512-byte block.
 fn block_round(size: u64) -> usize {
-    ((size + 511) / 512 * 512) as usize
+    (size.div_ceil(512) * 512) as usize
 }
 
 /// Strip trailing NUL bytes from a long-name / pax path value.
@@ -815,7 +820,7 @@ pub(crate) fn parse_tar_size(field: &[u8]) -> u64 {
         if b == 0 || b == b' ' {
             break;
         }
-        if b >= b'0' && b <= b'7' {
+        if (b'0'..=b'7').contains(&b) {
             result = result * 8 + (b - b'0') as u64;
         }
     }
@@ -828,7 +833,7 @@ fn parse_tar_mode(field: &[u8]) -> u32 {
         if b == 0 || b == b' ' {
             break;
         }
-        if b >= b'0' && b <= b'7' {
+        if (b'0'..=b'7').contains(&b) {
             result = result * 8 + (b - b'0') as u32;
         }
     }
@@ -914,7 +919,10 @@ pub fn upgrade_all(dry_run: bool) -> i32 {
     }
 
     io::write_str(2, b"\nabp: upgrade from repositories not yet implemented\n");
-    io::write_str(2, b"abp: please use 'abp add <package.abp>' to upgrade manually\n");
+    io::write_str(
+        2,
+        b"abp: please use 'abp add <package.abp>' to upgrade manually\n",
+    );
     1
 }
 
@@ -943,12 +951,7 @@ mod tests {
     /// Build a 512-byte header + block-padded data for a member. `name` is
     /// written truncated into the 100-byte name field; `typeflag` selects the
     /// member type. For base-256 sizes, pass `base256_size = Some(n)`.
-    fn tar_block(
-        name: &[u8],
-        data: &[u8],
-        typeflag: u8,
-        base256_size: Option<u64>,
-    ) -> Vec<u8> {
+    fn tar_block(name: &[u8], data: &[u8], typeflag: u8, base256_size: Option<u64>) -> Vec<u8> {
         let mut block = vec![0u8; 512];
         let nlen = core::cmp::min(name.len(), 99);
         block[..nlen].copy_from_slice(&name[..nlen]);
@@ -980,7 +983,7 @@ mod tests {
         let mut out = block;
         out.extend_from_slice(data);
         let pad = (512 - (data.len() % 512)) % 512;
-        out.extend(core::iter::repeat(0u8).take(pad));
+        out.extend(std::iter::repeat_n(0u8, pad));
         out
     }
 
@@ -1099,14 +1102,13 @@ mod tests {
 
         let root = temp_root("longname");
         let mut rb = Rollback::new();
-        let manifest = super::super::format::Manifest { entries: Vec::new() };
+        let manifest = super::super::format::Manifest {
+            entries: Vec::new(),
+        };
         assert!(extract_payload(&payload, &root, &manifest, &mut rb));
         assert!(exists(&path_in(&root, long)));
         rb.undo();
-        std::fs::remove_dir_all(std::path::Path::new(
-            core::str::from_utf8(&root).unwrap(),
-        ))
-        .ok();
+        std::fs::remove_dir_all(std::path::Path::new(core::str::from_utf8(&root).unwrap())).ok();
     }
 
     // ------------------------------------------------------------------------
@@ -1125,7 +1127,9 @@ mod tests {
 
         let root = temp_root("rollback");
         let mut rb = Rollback::new();
-        let manifest = super::super::format::Manifest { entries: Vec::new() };
+        let manifest = super::super::format::Manifest {
+            entries: Vec::new(),
+        };
 
         let ok = extract_payload(&payload, &root, &manifest, &mut rb);
         assert!(!ok, "extraction must report failure on the bad member");
@@ -1140,10 +1144,7 @@ mod tests {
         // Directories created should be gone too.
         assert!(!exists(&path_in(&root, "good")));
 
-        std::fs::remove_dir_all(std::path::Path::new(
-            core::str::from_utf8(&root).unwrap(),
-        ))
-        .ok();
+        std::fs::remove_dir_all(std::path::Path::new(core::str::from_utf8(&root).unwrap())).ok();
     }
 
     // ------------------------------------------------------------------------

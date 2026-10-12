@@ -51,8 +51,10 @@ pub(super) fn is_keyword_boundary(script: &[u8], pos: usize) -> bool {
         return true;
     }
     let c = script[pos];
-    matches!(c, b' ' | b'\t' | b'\n' | b'\r' | b';' | b'|' | b'&'
-             | b'<' | b'>' | b'(' | b')' | b'#')
+    matches!(
+        c,
+        b' ' | b'\t' | b'\n' | b'\r' | b';' | b'|' | b'&' | b'<' | b'>' | b'(' | b')' | b'#'
+    )
 }
 
 /// Find a keyword at word boundary

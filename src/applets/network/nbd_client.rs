@@ -6,9 +6,9 @@
 #![allow(dead_code)]
 
 extern crate alloc;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // NBD protocol constants
 const NBD_MAGIC: u64 = 0x4e42444d41474943; // "NBDMAGIC"
@@ -213,7 +213,12 @@ pub fn nbd_client(argc: i32, argv: *const *const u8) -> i32 {
         }
 
         let size_blocks = size / block_size as u64;
-        if libc::ioctl(nbd_fd, NBD_SET_SIZE_BLOCKS, size_blocks as crate::io::IoctlReq) < 0 {
+        if libc::ioctl(
+            nbd_fd,
+            NBD_SET_SIZE_BLOCKS,
+            size_blocks as crate::io::IoctlReq,
+        ) < 0
+        {
             io::write_str(2, b"nbd-client: NBD_SET_SIZE_BLOCKS failed\n");
             io::close(nbd_fd);
             io::close(sock_fd);
@@ -293,8 +298,14 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
             return -1;
         }
 
-        if unsafe { libc::connect(fd, &addr as *const _ as *const libc::sockaddr,
-                                  core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+        if unsafe {
+            libc::connect(
+                fd,
+                &addr as *const _ as *const libc::sockaddr,
+                core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+            )
+        } < 0
+        {
             io::close(fd);
             return -1;
         }
@@ -312,7 +323,15 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
     hints.ai_socktype = libc::SOCK_STREAM;
 
     let mut res: *mut libc::addrinfo = core::ptr::null_mut();
-    if unsafe { libc::getaddrinfo(host_cstr.as_ptr() as *const libc::c_char, core::ptr::null(), &hints, &mut res) } != 0 {
+    if unsafe {
+        libc::getaddrinfo(
+            host_cstr.as_ptr() as *const libc::c_char,
+            core::ptr::null(),
+            &hints,
+            &mut res,
+        )
+    } != 0
+    {
         return -1;
     }
 
@@ -321,7 +340,9 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
     }
 
     let ai = unsafe { &*res };
-    if ai.ai_addr.is_null() || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as u32 {
+    if ai.ai_addr.is_null()
+        || ai.ai_addrlen < core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t
+    {
         unsafe { libc::freeaddrinfo(res) };
         return -1;
     }
@@ -336,8 +357,14 @@ fn connect_to_server(host: &[u8], port: u16) -> i32 {
         return -1;
     }
 
-    if unsafe { libc::connect(fd, &addr as *const _ as *const libc::sockaddr,
-                              core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+    if unsafe {
+        libc::connect(
+            fd,
+            &addr as *const _ as *const libc::sockaddr,
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+        )
+    } < 0
+    {
         io::close(fd);
         return -1;
     }
@@ -388,7 +415,9 @@ fn nbd_handshake(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
         return None;
     }
 
-    let magic = u64::from_be_bytes([buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]]);
+    let magic = u64::from_be_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]);
     if magic != NBD_MAGIC {
         return None;
     }
@@ -398,7 +427,9 @@ fn nbd_handshake(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
         return None;
     }
 
-    let second = u64::from_be_bytes([buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]]);
+    let second = u64::from_be_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]);
 
     if second == NBD_OPTS_MAGIC {
         // Newstyle negotiation
@@ -467,7 +498,9 @@ fn newstyle_handshake(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
     if read_exact(fd, &mut buf[..8]) != 8 {
         return None;
     }
-    let size = u64::from_be_bytes([buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]]);
+    let size = u64::from_be_bytes([
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+    ]);
 
     if read_exact(fd, &mut buf[..2]) != 2 {
         return None;
@@ -516,7 +549,9 @@ fn try_opt_go(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
             return None;
         }
 
-        let reply_magic = u64::from_be_bytes([buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]]);
+        let reply_magic = u64::from_be_bytes([
+            buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7],
+        ]);
         if reply_magic != 0x3e889045565a9 {
             // NBD_REP_MAGIC in BE
             return None;
@@ -557,7 +592,9 @@ fn try_opt_go(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
                 if info_type == 0 && reply_len >= 12 {
                     // NBD_INFO_EXPORT
                     flags = u16::from_be_bytes([buf[2], buf[3]]);
-                    size = u64::from_be_bytes([buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]]);
+                    size = u64::from_be_bytes([
+                        buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11],
+                    ]);
                 }
             }
         } else {
@@ -568,11 +605,7 @@ fn try_opt_go(fd: i32, export_name: &[u8]) -> Option<(u64, u16)> {
         }
     }
 
-    if size > 0 {
-        Some((size, flags))
-    } else {
-        None
-    }
+    if size > 0 { Some((size, flags)) } else { None }
 }
 
 fn read_exact(fd: i32, buf: &mut [u8]) -> isize {
@@ -627,25 +660,17 @@ pub fn nbd_client(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_nbd_client_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nbd-client", "-h"])
@@ -660,7 +685,9 @@ mod tests {
     #[test]
     fn test_nbd_client_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nbd-client"])

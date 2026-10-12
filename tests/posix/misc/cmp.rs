@@ -43,7 +43,12 @@ fn posix_cmp_verbose() {
     fs::write(&file1, "abc").unwrap();
     fs::write(&file2, "aXc").unwrap();
 
-    let result = run(&["cmp", "-l", file1.to_str().unwrap(), file2.to_str().unwrap()]);
+    let result = run(&[
+        "cmp",
+        "-l",
+        file1.to_str().unwrap(),
+        file2.to_str().unwrap(),
+    ]);
     assert_eq!(result.0, 1);
     // Should list byte positions
 }
@@ -57,7 +62,12 @@ fn posix_cmp_silent() {
     fs::write(&file1, "content A").unwrap();
     fs::write(&file2, "content B").unwrap();
 
-    let result = run(&["cmp", "-s", file1.to_str().unwrap(), file2.to_str().unwrap()]);
+    let result = run(&[
+        "cmp",
+        "-s",
+        file1.to_str().unwrap(),
+        file2.to_str().unwrap(),
+    ]);
     assert_eq!(result.0, 1);
     assert!(result.1.is_empty()); // No output in silent mode
 }

@@ -2,8 +2,8 @@
 //!
 //! A simplified implementation of GNU screen for terminal session management.
 
-use crate::io;
 use super::get_arg;
+use crate::io;
 
 /// Session directory for storing screen sessions
 const SESSION_DIR: &[u8] = b"/tmp/armybox-screen";
@@ -20,7 +20,10 @@ fn print_help() {
     io::write_str(1, b"  -r <session>  Reattach to a detached session\n");
     io::write_str(1, b"  -d <session>  Detach a running session\n");
     io::write_str(1, b"  -S <name>     Create a named session\n");
-    io::write_str(1, b"  -x <session>  Attach to an already attached session (multi-display)\n");
+    io::write_str(
+        1,
+        b"  -x <session>  Attach to an already attached session (multi-display)\n",
+    );
     io::write_str(1, b"  -h            Display this help message\n");
     io::write_str(1, b"\n");
     io::write_str(1, b"Commands while in screen:\n");
@@ -141,9 +144,7 @@ pub fn screen_detach(session_name: &[u8]) -> i32 {
     // Connect to socket and send detach command
     #[cfg(feature = "alloc")]
     {
-        let sock_fd = unsafe {
-            libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0)
-        };
+        let sock_fd = unsafe { libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0) };
 
         if sock_fd < 0 {
             io::write_str(2, b"screen: cannot create socket\n");
@@ -223,9 +224,7 @@ pub fn screen_reattach(session_name: &[u8]) -> i32 {
 
     #[cfg(feature = "alloc")]
     {
-        let sock_fd = unsafe {
-            libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0)
-        };
+        let sock_fd = unsafe { libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0) };
 
         if sock_fd < 0 {
             io::write_str(2, b"screen: cannot create socket\n");
@@ -339,8 +338,8 @@ pub fn screen_reattach(session_name: &[u8]) -> i32 {
 /// Create a new screen session with PTY
 #[cfg(feature = "alloc")]
 pub fn screen_new_session(session_name: Option<&[u8]>) -> i32 {
-    use alloc::vec::Vec;
     use alloc::ffi::CString;
+    use alloc::vec::Vec;
 
     if !ensure_session_dir() {
         io::write_str(2, b"screen: cannot create session directory\n");
@@ -419,9 +418,7 @@ pub fn screen_new_session(session_name: Option<&[u8]>) -> i32 {
     }
 
     // Create Unix socket for session
-    let listen_fd = unsafe {
-        libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0)
-    };
+    let listen_fd = unsafe { libc::socket(libc::AF_UNIX, libc::SOCK_STREAM, 0) };
 
     if listen_fd < 0 {
         io::write_str(2, b"screen: cannot create socket\n");
@@ -570,9 +567,8 @@ pub fn screen_new_session(session_name: Option<&[u8]>) -> i32 {
 
         // New client connection
         if fds[1].revents & libc::POLLIN != 0 {
-            let new_fd = unsafe {
-                libc::accept(listen_fd, core::ptr::null_mut(), core::ptr::null_mut())
-            };
+            let new_fd =
+                unsafe { libc::accept(listen_fd, core::ptr::null_mut(), core::ptr::null_mut()) };
             if new_fd >= 0 {
                 if client_fd >= 0 {
                     io::close(client_fd);
@@ -646,9 +642,7 @@ pub fn screen(argc: i32, argv: *const *const u8) -> i32 {
             print_help();
             0
         }
-        b"-ls" | b"-list" => {
-            screen_list_sessions()
-        }
+        b"-ls" | b"-list" => screen_list_sessions(),
         b"-d" | b"-D" => {
             // Detach session
             if argc < 3 {
@@ -703,25 +697,17 @@ pub fn screen(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_screen_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["screen", "-h"])
@@ -740,7 +726,9 @@ mod tests {
     #[test]
     fn test_screen_list_empty() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Clean up any existing sessions first
         let _ = std::fs::remove_dir_all("/tmp/armybox-screen");
@@ -753,13 +741,17 @@ mod tests {
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
         // Should either show "No Sockets found" or "There are screens on:"
-        assert!(stdout.contains("screen") || stdout.contains("Socket") || stdout.contains("There are"));
+        assert!(
+            stdout.contains("screen") || stdout.contains("Socket") || stdout.contains("There are")
+        );
     }
 
     #[test]
     fn test_screen_detach_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["screen", "-d", "nonexistent_session_12345"])
@@ -773,7 +765,9 @@ mod tests {
     #[test]
     fn test_screen_reattach_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["screen", "-r", "nonexistent_session_12345"])
@@ -787,7 +781,9 @@ mod tests {
     #[test]
     fn test_screen_missing_session_name() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // Test -r without session name
         let output = Command::new(&armybox)

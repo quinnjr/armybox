@@ -6,12 +6,12 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
-use crate::common::ZstdError;
 use crate::bitstream::{BitReader, BitWriter};
+use crate::common::ZstdError;
 
 // ============================================================================
 // Decoding
@@ -38,7 +38,14 @@ impl FseTable {
     /// gets exactly one cell and uses max bits).
     pub fn build(probs: &[i16], accuracy_log: u8) -> Result<Self, ZstdError> {
         let table_size = 1usize << accuracy_log;
-        let mut entries = vec![FseEntry { symbol: 0, num_bits: 0, baseline: 0 }; table_size];
+        let mut entries = vec![
+            FseEntry {
+                symbol: 0,
+                num_bits: 0,
+                baseline: 0
+            };
+            table_size
+        ];
 
         // Step 1: place "less than 1" symbols at the end
         let mut high_threshold = table_size - 1;
@@ -84,17 +91,20 @@ impl FseTable {
             }
         }
 
-        for i in 0..table_size {
-            let sym = entries[i].symbol as usize;
+        for entry in entries.iter_mut().take(table_size) {
+            let sym = entry.symbol as usize;
             let next_state = symbol_next[sym];
             symbol_next[sym] += 1;
 
             let nb = accuracy_log as u32 - (32 - (next_state as u32).leading_zeros() - 1);
-            entries[i].num_bits = nb as u8;
-            entries[i].baseline = ((next_state as u16) << nb as u16).wrapping_sub(table_size as u16);
+            entry.num_bits = nb as u8;
+            entry.baseline = ((next_state as u16) << nb as u16).wrapping_sub(table_size as u16);
         }
 
-        Ok(FseTable { entries, accuracy_log })
+        Ok(FseTable {
+            entries,
+            accuracy_log,
+        })
     }
 
     /// Decode one symbol using the current state, then update state
@@ -240,9 +250,7 @@ impl FseTable {
                     let repeat_bits = raw & 3;
                     bit_pos += 2;
 
-                    for _ in 0..repeat_bits {
-                        probs.push(0);
-                    }
+                    probs.resize(probs.len() + repeat_bits as usize, 0);
 
                     if repeat_bits < 3 {
                         break;
@@ -254,8 +262,8 @@ impl FseTable {
         // Truncate to max_symbol + 1
         probs.truncate(max_symbol + 1);
 
-        let bytes_consumed = (bit_pos + 7) / 8;
-        Ok((probs, accuracy_log as u8, bytes_consumed))
+        let bytes_consumed = bit_pos.div_ceil(8);
+        Ok((probs, accuracy_log, bytes_consumed))
     }
 }
 
@@ -305,7 +313,13 @@ impl FseEncTable {
         let mut symbol_table = Vec::with_capacity(num_symbols);
 
         for (sym, &prob) in probs.iter().enumerate() {
-            let count = if prob == -1 { 1 } else if prob > 0 { prob as usize } else { 0 };
+            let count = if prob == -1 {
+                1
+            } else if prob > 0 {
+                prob as usize
+            } else {
+                0
+            };
 
             let mut entries = Vec::with_capacity(count);
 
@@ -316,7 +330,8 @@ impl FseEncTable {
                 for (idx, &target_state) in states.iter().enumerate() {
                     // When encoding symbol `sym` from sub-state `idx`:
                     // We need to emit enough bits to make the transition deterministic
-                    let nb = accuracy_log as u32 - (32 - ((idx + count) as u32).leading_zeros() - 1);
+                    let nb =
+                        accuracy_log as u32 - (32 - ((idx + count) as u32).leading_zeros() - 1);
                     let new_state = target_state;
                     entries.push(FseEncEntry {
                         num_bits: nb as u8,
@@ -328,7 +343,10 @@ impl FseEncTable {
             symbol_table.push(entries);
         }
 
-        Ok(FseEncTable { symbol_table, accuracy_log })
+        Ok(FseEncTable {
+            symbol_table,
+            accuracy_log,
+        })
     }
 
     /// Encode a symbol: emit bits and return new state
@@ -368,11 +386,7 @@ impl FseEncTable {
 ///
 /// Returns normalized probabilities where -1 means "less than 1".
 #[cfg(feature = "alloc")]
-pub fn normalize_counts(
-    counts: &[u32],
-    max_symbol: usize,
-    table_log: u8,
-) -> Vec<i16> {
+pub fn normalize_counts(counts: &[u32], max_symbol: usize, table_log: u8) -> Vec<i16> {
     let table_size = 1u32 << table_log;
     let total: u32 = counts[..=max_symbol].iter().sum();
 
@@ -554,74 +568,105 @@ mod tests {
     fn test_normalize_counts() {
         let counts = [10u32, 20, 5, 1, 0, 0];
         let probs = normalize_counts(&counts, 3, 6);
-        let sum: i32 = probs.iter().map(|&p| if p == -1 { 1 } else { p as i32 }).sum();
+        let sum: i32 = probs
+            .iter()
+            .map(|&p| if p == -1 { 1 } else { p as i32 })
+            .sum();
         assert_eq!(sum, 64); // 2^6
     }
 }
 
-    #[test]
-    fn test_fse_table_description_roundtrip() {
-        // accuracy_log must be >= 5 for zstd (4 bits encode al-5)
-        // table_size = 2^6 = 64. Sum of probs (with -1 counting as 1) must equal 64
-        let probs_in = vec![10i16, 8, 6, 5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, -1, -1];
-        // sum: 10+8+6+5+5+4+4+3+3+3+2+2+2+2+1+1+1+1+1 = 64 ✓
-        let al = 6u8;
-        let serialized = write_table_description(&probs_in, al);
+#[test]
+fn test_fse_table_description_roundtrip() {
+    // accuracy_log must be >= 5 for zstd (4 bits encode al-5)
+    // table_size = 2^6 = 64. Sum of probs (with -1 counting as 1) must equal 64
+    let probs_in = vec![
+        10i16, 8, 6, 5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, -1, -1,
+    ];
+    // sum: 10+8+6+5+5+4+4+3+3+3+2+2+2+2+1+1+1+1+1 = 64 ✓
+    let al = 6u8;
+    let serialized = write_table_description(&probs_in, al);
 
-        let (probs_out, al_out, consumed) = FseTable::read_table_description(
-            &serialized, 20, 9
-        ).unwrap();
+    let (probs_out, al_out, consumed) =
+        FseTable::read_table_description(&serialized, 20, 9).unwrap();
 
-        assert_eq!(al_out, al, "accuracy log mismatch");
-        assert_eq!(consumed, serialized.len(), "bytes consumed must match serialized length");
-        for (i, &p) in probs_in.iter().enumerate() {
-            assert_eq!(probs_out.get(i).copied().unwrap_or(0), p,
-                "prob mismatch at index {}: expected {}, got {:?}",
-                i, p, probs_out.get(i));
-        }
+    assert_eq!(al_out, al, "accuracy log mismatch");
+    assert_eq!(
+        consumed,
+        serialized.len(),
+        "bytes consumed must match serialized length"
+    );
+    for (i, &p) in probs_in.iter().enumerate() {
+        assert_eq!(
+            probs_out.get(i).copied().unwrap_or(0),
+            p,
+            "prob mismatch at index {}: expected {}, got {:?}",
+            i,
+            p,
+            probs_out.get(i)
+        );
     }
+}
 
-    #[test]
-    fn test_fse_table_description_roundtrip_with_zeros() {
-        // Distribution with zeros (zero-repeat encoding)
-        // table_size = 2^5 = 32
-        let probs_in = vec![8i16, 4, 0, 0, 0, 3, 3, 2, 2, 2, 2, 1, 1, 1, -1, -1, -1];
-        // sum: 8+4+0+0+0+3+3+2+2+2+2+1+1+1+1+1+1 = 32 ✓
-        let al = 5u8;
-        let serialized = write_table_description(&probs_in, al);
+#[test]
+fn test_fse_table_description_roundtrip_with_zeros() {
+    // Distribution with zeros (zero-repeat encoding)
+    // table_size = 2^5 = 32
+    let probs_in = vec![8i16, 4, 0, 0, 0, 3, 3, 2, 2, 2, 2, 1, 1, 1, -1, -1, -1];
+    // sum: 8+4+0+0+0+3+3+2+2+2+2+1+1+1+1+1+1 = 32 ✓
+    let al = 5u8;
+    let serialized = write_table_description(&probs_in, al);
 
-        let (probs_out, al_out, consumed) = FseTable::read_table_description(
-            &serialized, 20, 9
-        ).unwrap();
+    let (probs_out, al_out, consumed) =
+        FseTable::read_table_description(&serialized, 20, 9).unwrap();
 
-        assert_eq!(al_out, al, "accuracy log mismatch");
-        assert_eq!(consumed, serialized.len(), "bytes consumed must match serialized length");
-        for (i, &p) in probs_in.iter().enumerate() {
-            assert_eq!(probs_out.get(i).copied().unwrap_or(0), p,
-                "prob mismatch at index {}: expected {}, got {:?}",
-                i, p, probs_out.get(i));
-        }
+    assert_eq!(al_out, al, "accuracy log mismatch");
+    assert_eq!(
+        consumed,
+        serialized.len(),
+        "bytes consumed must match serialized length"
+    );
+    for (i, &p) in probs_in.iter().enumerate() {
+        assert_eq!(
+            probs_out.get(i).copied().unwrap_or(0),
+            p,
+            "prob mismatch at index {}: expected {}, got {:?}",
+            i,
+            p,
+            probs_out.get(i)
+        );
     }
+}
 
-    #[test]
-    fn test_fse_table_description_roundtrip_sparse() {
-        // Sparse distribution with many zeros - exactly the ML table from the failing test
-        // table_size = 2^7 = 128
-        let probs_in = vec![1i16, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 123];
-        // sum: 1+1+1+1+1+123 = 128 ✓ (5 probs of value 1, one of 123, rest are 0)
-        let al = 7u8;
-        let serialized = write_table_description(&probs_in, al);
+#[test]
+fn test_fse_table_description_roundtrip_sparse() {
+    // Sparse distribution with many zeros - exactly the ML table from the failing test
+    // table_size = 2^7 = 128
+    let probs_in = vec![
+        1i16, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+        1, 0, 0, 0, 1, 123,
+    ];
+    // sum: 1+1+1+1+1+123 = 128 ✓ (5 probs of value 1, one of 123, rest are 0)
+    let al = 7u8;
+    let serialized = write_table_description(&probs_in, al);
 
-        let (probs_out, al_out, consumed) = FseTable::read_table_description(
-            &serialized, 52, 9
-        ).unwrap();
+    let (probs_out, al_out, consumed) =
+        FseTable::read_table_description(&serialized, 52, 9).unwrap();
 
-        assert_eq!(al_out, al, "accuracy log mismatch");
-        assert_eq!(consumed, serialized.len(), "bytes consumed must match serialized length");
-        for (i, &p) in probs_in.iter().enumerate() {
-            assert_eq!(probs_out.get(i).copied().unwrap_or(0), p,
-                "prob mismatch at index {}: expected {}, got {:?}",
-                i, p, probs_out.get(i));
-        }
+    assert_eq!(al_out, al, "accuracy log mismatch");
+    assert_eq!(
+        consumed,
+        serialized.len(),
+        "bytes consumed must match serialized length"
+    );
+    for (i, &p) in probs_in.iter().enumerate() {
+        assert_eq!(
+            probs_out.get(i).copied().unwrap_or(0),
+            p,
+            "prob mismatch at index {}: expected {}, got {:?}",
+            i,
+            p,
+            probs_out.get(i)
+        );
     }
+}

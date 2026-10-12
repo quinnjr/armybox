@@ -3,11 +3,11 @@
 //! Insert a loadable module into the kernel.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use alloc::vec;
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// insmod - insert a module into the Linux kernel
 ///
@@ -107,13 +107,27 @@ pub fn insmod(argc: i32, argv: *const *const u8) -> i32 {
 
         // Provide helpful error messages
         match errno {
-            libc::ENOEXEC => { io::write_str(2, b"Invalid module format\n"); }
-            libc::ENOENT => { io::write_str(2, b"Unknown symbol in module\n"); }
-            libc::EEXIST => { io::write_str(2, b"Module already loaded\n"); }
-            libc::EPERM => { io::write_str(2, b"Operation not permitted\n"); }
-            libc::ENOMEM => { io::write_str(2, b"Out of memory\n"); }
-            libc::EBUSY => { io::write_str(2, b"Module is busy\n"); }
-            libc::EOVERFLOW => { io::write_str(2, b"Module too large\n"); }
+            libc::ENOEXEC => {
+                io::write_str(2, b"Invalid module format\n");
+            }
+            libc::ENOENT => {
+                io::write_str(2, b"Unknown symbol in module\n");
+            }
+            libc::EEXIST => {
+                io::write_str(2, b"Module already loaded\n");
+            }
+            libc::EPERM => {
+                io::write_str(2, b"Operation not permitted\n");
+            }
+            libc::ENOMEM => {
+                io::write_str(2, b"Out of memory\n");
+            }
+            libc::EBUSY => {
+                io::write_str(2, b"Module is busy\n");
+            }
+            libc::EOVERFLOW => {
+                io::write_str(2, b"Module too large\n");
+            }
             _ => {
                 io::write_str(2, b"Error ");
                 io::write_num(2, errno as u64);
@@ -135,30 +149,19 @@ pub fn insmod(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_insmod_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["insmod"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["insmod"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }
@@ -166,7 +169,9 @@ mod tests {
     #[test]
     fn test_insmod_nonexistent() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["insmod", "/nonexistent.ko"])

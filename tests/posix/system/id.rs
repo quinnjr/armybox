@@ -37,7 +37,7 @@ fn posix_id_groups() {
     let result = run(&["id", "-G"]);
     assert_success(&result);
     // Should be space-separated list of GIDs
-    for gid_str in result.1.trim().split_whitespace() {
+    for gid_str in result.1.split_whitespace() {
         let _gid: u32 = gid_str.parse().expect("GID should be numeric");
     }
 }

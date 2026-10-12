@@ -7,7 +7,7 @@ use crate::posix::helpers::*;
 /// POSIX: "The tty utility shall write to standard output the name of the terminal"
 #[test]
 fn posix_tty_basic() {
-    let result = run(&["tty"]);
+    let _result = run(&["tty"]);
     // Will exit >0 if not on a tty
     // If successful, should output a path like /dev/pts/0
 }

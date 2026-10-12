@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/mv.html
 
+use crate::applets::{get_arg, has_opt};
 use crate::io;
 use crate::sys;
-use crate::applets::{get_arg, has_opt};
 
 /// mv - move (rename) files
 ///
@@ -35,8 +35,12 @@ pub fn mv(argc: i32, argv: *const *const u8) -> i32 {
     for i in 1..argc {
         if let Some(arg) = unsafe { get_arg(argv, i) } {
             if arg.len() > 0 && arg[0] == b'-' {
-                if has_opt(arg, b'f') { force = true; }
-                if has_opt(arg, b'i') { _interactive = true; }
+                if has_opt(arg, b'f') {
+                    force = true;
+                }
+                if has_opt(arg, b'i') {
+                    _interactive = true;
+                }
                 files_start = i + 1;
             } else {
                 break;
@@ -121,7 +125,11 @@ fn build_dest_path(dest_dir: &[u8], src: &[u8], buf: &mut [u8]) -> usize {
     }
 
     // Find basename of source
-    let basename_start = src.iter().rposition(|&c| c == b'/').map(|p| p + 1).unwrap_or(0);
+    let basename_start = src
+        .iter()
+        .rposition(|&c| c == b'/')
+        .map(|p| p + 1)
+        .unwrap_or(0);
 
     // Append basename
     for &c in &src[basename_start..] {
@@ -205,7 +213,9 @@ fn copy_file(src: &[u8], dest: &[u8]) -> i32 {
             copy_failed = true;
             break;
         }
-        if n == 0 { break; }
+        if n == 0 {
+            break;
+        }
         if io::write_all(dest_fd, &buf[..n as usize]) < 0 {
             sys::perror(dest);
             copy_failed = true;
@@ -255,7 +265,9 @@ fn copy_directory(src: &[u8], dest: &[u8]) -> i32 {
 
     loop {
         let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
 
         let mut offset = 0;
         while offset < n as usize {
@@ -265,15 +277,29 @@ fn copy_directory(src: &[u8], dest: &[u8]) -> i32 {
             if name != b"." && name != b".." {
                 let mut src_path = [0u8; 4096];
                 let mut src_len = 0;
-                for &c in src { src_path[src_len] = c; src_len += 1; }
-                src_path[src_len] = b'/'; src_len += 1;
-                for &c in name { src_path[src_len] = c; src_len += 1; }
+                for &c in src {
+                    src_path[src_len] = c;
+                    src_len += 1;
+                }
+                src_path[src_len] = b'/';
+                src_len += 1;
+                for &c in name {
+                    src_path[src_len] = c;
+                    src_len += 1;
+                }
 
                 let mut dest_path = [0u8; 4096];
                 let mut dest_len = 0;
-                for &c in dest { dest_path[dest_len] = c; dest_len += 1; }
-                dest_path[dest_len] = b'/'; dest_len += 1;
-                for &c in name { dest_path[dest_len] = c; dest_len += 1; }
+                for &c in dest {
+                    dest_path[dest_len] = c;
+                    dest_len += 1;
+                }
+                dest_path[dest_len] = b'/';
+                dest_len += 1;
+                for &c in name {
+                    dest_path[dest_len] = c;
+                    dest_len += 1;
+                }
 
                 let mut st: libc::stat = unsafe { core::mem::zeroed() };
                 if io::stat(&src_path[..src_len], &mut st) == 0 {
@@ -298,16 +324,22 @@ fn copy_directory(src: &[u8], dest: &[u8]) -> i32 {
 /// Remove a file or directory recursively
 fn remove_recursive(path: &[u8]) {
     let mut st: libc::stat = unsafe { core::mem::zeroed() };
-    if io::stat(path, &mut st) < 0 { return; }
+    if io::stat(path, &mut st) < 0 {
+        return;
+    }
 
     if (st.st_mode as u32 & libc::S_IFMT as u32) == libc::S_IFDIR as u32 {
         let fd = io::open(path, libc::O_RDONLY | libc::O_DIRECTORY, 0);
-        if fd < 0 { return; }
+        if fd < 0 {
+            return;
+        }
 
         let mut buf = [0u8; 4096];
         loop {
             let n = unsafe { libc::syscall(libc::SYS_getdents64, fd, buf.as_mut_ptr(), buf.len()) };
-            if n <= 0 { break; }
+            if n <= 0 {
+                break;
+            }
 
             let mut offset = 0;
             while offset < n as usize {
@@ -317,9 +349,16 @@ fn remove_recursive(path: &[u8]) {
                 if name != b"." && name != b".." {
                     let mut full_path = [0u8; 512];
                     let mut len = 0;
-                    for &c in path { full_path[len] = c; len += 1; }
-                    full_path[len] = b'/'; len += 1;
-                    for &c in name { full_path[len] = c; len += 1; }
+                    for &c in path {
+                        full_path[len] = c;
+                        len += 1;
+                    }
+                    full_path[len] = b'/';
+                    len += 1;
+                    for &c in name {
+                        full_path[len] = c;
+                        len += 1;
+                    }
                     remove_recursive(&full_path[..len]);
                 }
 
@@ -341,22 +380,19 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
     use std::fs;
     use std::path::PathBuf;
+    use std::process::Command;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     fn setup() -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("armybox_mv_test_{}_{}",  std::process::id(), counter));
+        let dir = std::env::temp_dir().join(format!(
+            "armybox_mv_test_{}_{}",
+            std::process::id(),
+            counter
+        ));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -369,15 +405,19 @@ mod tests {
     #[test]
     fn test_mv_rename_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("old.txt"), "content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv",
+            .args([
+                "mv",
                 dir.join("old.txt").to_str().unwrap(),
-                dir.join("new.txt").to_str().unwrap()])
+                dir.join("new.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -391,16 +431,20 @@ mod tests {
     #[test]
     fn test_mv_to_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file.txt"), "content").unwrap();
         fs::create_dir(dir.join("destdir")).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv",
+            .args([
+                "mv",
                 dir.join("file.txt").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -413,7 +457,9 @@ mod tests {
     #[test]
     fn test_mv_multiple_files_to_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("file1.txt"), "content1").unwrap();
@@ -421,10 +467,12 @@ mod tests {
         fs::create_dir(dir.join("destdir")).unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv",
+            .args([
+                "mv",
                 dir.join("file1.txt").to_str().unwrap(),
                 dir.join("file2.txt").to_str().unwrap(),
-                dir.join("destdir").to_str().unwrap()])
+                dir.join("destdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -439,12 +487,18 @@ mod tests {
     #[test]
     fn test_mv_nonexistent_source() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
 
         let output = Command::new(&armybox)
-            .args(["mv", "/nonexistent/file", dir.join("dest.txt").to_str().unwrap()])
+            .args([
+                "mv",
+                "/nonexistent/file",
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -455,12 +509,11 @@ mod tests {
     #[test]
     fn test_mv_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["mv"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["mv"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
         assert!(std::string::String::from_utf8_lossy(&output.stderr).contains("missing operand"));
@@ -469,16 +522,20 @@ mod tests {
     #[test]
     fn test_mv_rename_directory() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::create_dir(dir.join("olddir")).unwrap();
         fs::write(dir.join("olddir/file.txt"), "content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv",
+            .args([
+                "mv",
                 dir.join("olddir").to_str().unwrap(),
-                dir.join("newdir").to_str().unwrap()])
+                dir.join("newdir").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
@@ -492,38 +549,50 @@ mod tests {
     #[test]
     fn test_mv_overwrite_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("source.txt"), "new content").unwrap();
         fs::write(dir.join("dest.txt"), "old content").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv",
+            .args([
+                "mv",
                 dir.join("source.txt").to_str().unwrap(),
-                dir.join("dest.txt").to_str().unwrap()])
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         assert!(!dir.join("source.txt").exists());
-        assert_eq!(fs::read_to_string(dir.join("dest.txt")).unwrap(), "new content");
+        assert_eq!(
+            fs::read_to_string(dir.join("dest.txt")).unwrap(),
+            "new content"
+        );
         cleanup(&dir);
     }
 
     #[test]
     fn test_mv_force_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = setup();
         fs::write(dir.join("source.txt"), "content").unwrap();
         fs::write(dir.join("dest.txt"), "existing").unwrap();
 
         let output = Command::new(&armybox)
-            .args(["mv", "-f",
+            .args([
+                "mv",
+                "-f",
                 dir.join("source.txt").to_str().unwrap(),
-                dir.join("dest.txt").to_str().unwrap()])
+                dir.join("dest.txt").to_str().unwrap(),
+            ])
             .output()
             .unwrap();
 

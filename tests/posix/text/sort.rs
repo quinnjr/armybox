@@ -138,7 +138,10 @@ fn posix_sort_output() {
         input.to_str().unwrap(),
     ]);
     assert_success(&result);
-    assert_eq!(fs::read_to_string(&output).unwrap(), "apple\nbanana\ncherry\n");
+    assert_eq!(
+        fs::read_to_string(&output).unwrap(),
+        "apple\nbanana\ncherry\n"
+    );
 }
 
 /// POSIX: Exit status 0 on success

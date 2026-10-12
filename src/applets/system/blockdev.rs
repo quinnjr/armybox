@@ -2,25 +2,25 @@
 //!
 //! Get and set block device parameters.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 // Block device ioctls
-const BLKGETSIZE64: crate::io::IoctlReq = 0x80081272u32 as crate::io::IoctlReq;  // Get size in bytes
-const BLKGETSIZE: crate::io::IoctlReq = 0x1260u32 as crate::io::IoctlReq;        // Get size in 512-byte sectors
-const BLKFLSBUF: crate::io::IoctlReq = 0x1261u32 as crate::io::IoctlReq;         // Flush buffers
-const BLKRRPART: crate::io::IoctlReq = 0x125fu32 as crate::io::IoctlReq;         // Reread partition table
-const BLKROSET: crate::io::IoctlReq = 0x125du32 as crate::io::IoctlReq;          // Set read-only
-const BLKROGET: crate::io::IoctlReq = 0x125eu32 as crate::io::IoctlReq;          // Get read-only
-const BLKSSZGET: crate::io::IoctlReq = 0x1268u32 as crate::io::IoctlReq;         // Get logical sector size
-const BLKBSZGET: crate::io::IoctlReq = 0x80081270u32 as crate::io::IoctlReq;     // Get block size
-const BLKBSZSET: crate::io::IoctlReq = 0x40081271u32 as crate::io::IoctlReq;     // Set block size
-const BLKPBSZGET: crate::io::IoctlReq = 0x127bu32 as crate::io::IoctlReq;        // Get physical sector size
-const BLKIOMIN: crate::io::IoctlReq = 0x1278u32 as crate::io::IoctlReq;          // Get minimum I/O size
-const BLKIOOPT: crate::io::IoctlReq = 0x1279u32 as crate::io::IoctlReq;          // Get optimal I/O size
-const BLKALIGNOFF: crate::io::IoctlReq = 0x127au32 as crate::io::IoctlReq;       // Get alignment offset
-const BLKDISCARDZEROES: crate::io::IoctlReq = 0x127cu32 as crate::io::IoctlReq;  // Get discard zeroes data
+const BLKGETSIZE64: crate::io::IoctlReq = 0x80081272u32 as crate::io::IoctlReq; // Get size in bytes
+const BLKGETSIZE: crate::io::IoctlReq = 0x1260u32 as crate::io::IoctlReq; // Get size in 512-byte sectors
+const BLKFLSBUF: crate::io::IoctlReq = 0x1261u32 as crate::io::IoctlReq; // Flush buffers
+const BLKRRPART: crate::io::IoctlReq = 0x125fu32 as crate::io::IoctlReq; // Reread partition table
+const BLKROSET: crate::io::IoctlReq = 0x125du32 as crate::io::IoctlReq; // Set read-only
+const BLKROGET: crate::io::IoctlReq = 0x125eu32 as crate::io::IoctlReq; // Get read-only
+const BLKSSZGET: crate::io::IoctlReq = 0x1268u32 as crate::io::IoctlReq; // Get logical sector size
+const BLKBSZGET: crate::io::IoctlReq = 0x80081270u32 as crate::io::IoctlReq; // Get block size
+const BLKBSZSET: crate::io::IoctlReq = 0x40081271u32 as crate::io::IoctlReq; // Set block size
+const BLKPBSZGET: crate::io::IoctlReq = 0x127bu32 as crate::io::IoctlReq; // Get physical sector size
+const BLKIOMIN: crate::io::IoctlReq = 0x1278u32 as crate::io::IoctlReq; // Get minimum I/O size
+const BLKIOOPT: crate::io::IoctlReq = 0x1279u32 as crate::io::IoctlReq; // Get optimal I/O size
+const BLKALIGNOFF: crate::io::IoctlReq = 0x127au32 as crate::io::IoctlReq; // Get alignment offset
+const BLKDISCARDZEROES: crate::io::IoctlReq = 0x127cu32 as crate::io::IoctlReq; // Get discard zeroes data
 
 /// blockdev - call block device ioctls from the command line
 ///
@@ -95,7 +95,10 @@ pub fn blockdev(argc: i32, argv: *const *const u8) -> i32 {
         i = device_idx + 1;
 
         // Open device (read-write for set operations, read-only for get operations)
-        let flags = if option.starts_with(b"--set") || option == b"--flushbufs" || option == b"--rereadpt" {
+        let flags = if option.starts_with(b"--set")
+            || option == b"--flushbufs"
+            || option == b"--rereadpt"
+        {
             libc::O_RDWR
         } else {
             libc::O_RDONLY
@@ -248,7 +251,10 @@ fn print_usage() {
     io::write_str(1, b"Usage: blockdev [options] device\n\n");
     io::write_str(1, b"Options:\n");
     io::write_str(1, b"  --getsize64    Print device size in bytes\n");
-    io::write_str(1, b"  --getsz        Print device size in 512-byte sectors\n");
+    io::write_str(
+        1,
+        b"  --getsz        Print device size in 512-byte sectors\n",
+    );
     io::write_str(1, b"  --getss        Print logical sector size\n");
     io::write_str(1, b"  --getbsz       Print block size\n");
     io::write_str(1, b"  --setbsz N     Set block size\n");
@@ -266,30 +272,19 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_blockdev_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["blockdev"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["blockdev"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -299,7 +294,9 @@ mod tests {
     #[test]
     fn test_blockdev_unknown_option() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["blockdev", "--unknown", "/dev/null"])

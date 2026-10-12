@@ -2,9 +2,9 @@
 //!
 //! Preload file content into the page cache.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// readahead - initiate file readahead into page cache
 ///
@@ -55,34 +55,23 @@ pub fn readahead_cmd(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
-    use std::path::PathBuf;
     use std::fs;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_readahead_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["readahead"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["readahead"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }
@@ -90,7 +79,9 @@ mod tests {
     #[test]
     fn test_readahead_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let pid = std::process::id();
         let test_file = std::env::temp_dir().join(std::format!("armybox_readahead_test_{}", pid));

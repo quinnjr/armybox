@@ -5,10 +5,10 @@
 #![allow(dead_code)]
 
 extern crate alloc;
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 // sched_attr structure size
 const SCHED_ATTR_SIZE: u32 = 56;
@@ -190,7 +190,10 @@ pub fn uclampset(argc: i32, argv: *const *const u8) -> i32 {
 
         // Execute command
         unsafe {
-            libc::execvp(cmd_args[0] as *const libc::c_char, cmd_args.as_ptr() as *const *const libc::c_char);
+            libc::execvp(
+                cmd_args[0] as *const libc::c_char,
+                cmd_args.as_ptr() as *const *const libc::c_char,
+            );
         }
 
         sys::perror(b"exec");
@@ -202,7 +205,13 @@ pub fn uclampset(argc: i32, argv: *const *const u8) -> i32 {
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-fn set_uclamp(pid: i32, min: Option<u32>, max: Option<u32>, reset: bool, reset_on_fork: bool) -> i32 {
+fn set_uclamp(
+    pid: i32,
+    min: Option<u32>,
+    max: Option<u32>,
+    reset: bool,
+    reset_on_fork: bool,
+) -> i32 {
     let mut attr = SchedAttr::default();
 
     // Get current attributes first
@@ -268,14 +277,14 @@ fn show_uclamp(pid: i32) -> i32 {
 
 // Syscall wrappers
 #[cfg(any(target_os = "linux", target_os = "android"))]
-unsafe fn sched_getattr(pid: i32, attr: *mut SchedAttr, size: u32, flags: u32) -> i32 { unsafe {
-    libc::syscall(libc::SYS_sched_getattr, pid, attr, size, flags) as i32
-}}
+unsafe fn sched_getattr(pid: i32, attr: *mut SchedAttr, size: u32, flags: u32) -> i32 {
+    unsafe { libc::syscall(libc::SYS_sched_getattr, pid, attr, size, flags) as i32 }
+}
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-unsafe fn sched_setattr(pid: i32, attr: *const SchedAttr, flags: u32) -> i32 { unsafe {
-    libc::syscall(libc::SYS_sched_setattr, pid, attr, flags) as i32
-}}
+unsafe fn sched_setattr(pid: i32, attr: *const SchedAttr, flags: u32) -> i32 {
+    unsafe { libc::syscall(libc::SYS_sched_setattr, pid, attr, flags) as i32 }
+}
 
 fn print_usage() {
     io::write_str(1, b"Usage: uclampset [options] command [args]\n");
@@ -299,25 +308,17 @@ pub fn uclampset(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_uclampset_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["uclampset", "-h"])
@@ -332,12 +333,11 @@ mod tests {
     #[test]
     fn test_uclampset_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["uclampset"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["uclampset"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
     }

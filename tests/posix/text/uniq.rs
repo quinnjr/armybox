@@ -78,11 +78,7 @@ fn posix_uniq_output() {
     let output = dir.path().join("output");
     fs::write(&input, "apple\napple\nbanana").unwrap();
 
-    let result = run(&[
-        "uniq",
-        input.to_str().unwrap(),
-        output.to_str().unwrap(),
-    ]);
+    let result = run(&["uniq", input.to_str().unwrap(), output.to_str().unwrap()]);
     assert_success(&result);
     assert_eq!(fs::read_to_string(&output).unwrap(), "apple\nbanana\n");
 }

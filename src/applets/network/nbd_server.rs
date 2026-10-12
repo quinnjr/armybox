@@ -5,10 +5,10 @@
 #![allow(dead_code)]
 
 extern crate alloc;
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 // NBD protocol constants
 const NBD_MAGIC: u64 = 0x4e42444d41474943; // "NBDMAGIC"
@@ -173,9 +173,13 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     // Allow address reuse
     let optval: i32 = 1;
     unsafe {
-        libc::setsockopt(server_fd, libc::SOL_SOCKET, libc::SO_REUSEADDR,
-                        &optval as *const _ as *const libc::c_void,
-                        core::mem::size_of::<i32>() as u32);
+        libc::setsockopt(
+            server_fd,
+            libc::SOL_SOCKET,
+            libc::SO_REUSEADDR,
+            &optval as *const _ as *const libc::c_void,
+            core::mem::size_of::<i32>() as libc::socklen_t,
+        );
     }
 
     // Bind
@@ -184,8 +188,14 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     addr.sin_port = port.to_be();
     addr.sin_addr.s_addr = 0; // INADDR_ANY
 
-    if unsafe { libc::bind(server_fd, &addr as *const _ as *const libc::sockaddr,
-                          core::mem::size_of::<libc::sockaddr_in>() as u32) } < 0 {
+    if unsafe {
+        libc::bind(
+            server_fd,
+            &addr as *const _ as *const libc::sockaddr,
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+        )
+    } < 0
+    {
         io::write_str(2, b"nbd-server: bind failed\n");
         io::close(server_fd);
         return 1;
@@ -229,10 +239,15 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
     // Accept loop
     loop {
         let mut client_addr: libc::sockaddr_in = unsafe { core::mem::zeroed() };
-        let mut addr_len: libc::socklen_t = core::mem::size_of::<libc::sockaddr_in>() as u32;
+        let mut addr_len: libc::socklen_t =
+            core::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t;
 
         let client_fd = unsafe {
-            libc::accept(server_fd, &mut client_addr as *mut _ as *mut libc::sockaddr, &mut addr_len)
+            libc::accept(
+                server_fd,
+                &mut client_addr as *mut _ as *mut libc::sockaddr,
+                &mut addr_len,
+            )
         };
 
         if client_fd < 0 {
@@ -261,7 +276,15 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
         // Child - handle client
         io::close(server_fd);
 
-        let result = handle_client(client_fd, file, file_size, read_only, copy_on_write, export_name, debug);
+        let result = handle_client(
+            client_fd,
+            file,
+            file_size,
+            read_only,
+            copy_on_write,
+            export_name,
+            debug,
+        );
 
         io::close(client_fd);
         unsafe { libc::_exit(result) };
@@ -269,7 +292,15 @@ pub fn nbd_server(argc: i32, argv: *const *const u8) -> i32 {
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_write: bool, _export_name: &[u8], _debug: bool) -> i32 {
+fn handle_client(
+    fd: i32,
+    file: &[u8],
+    size: u64,
+    read_only: bool,
+    _copy_on_write: bool,
+    _export_name: &[u8],
+    _debug: bool,
+) -> i32 {
     // Send newstyle handshake
     // Magic (8 bytes) + opts magic (8 bytes) + handshake flags (2 bytes)
     let magic = NBD_MAGIC.to_be_bytes();
@@ -302,8 +333,9 @@ fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_writ
             return 1;
         }
 
-        let opt_magic = u64::from_be_bytes([header[0], header[1], header[2], header[3],
-                                            header[4], header[5], header[6], header[7]]);
+        let opt_magic = u64::from_be_bytes([
+            header[0], header[1], header[2], header[3], header[4], header[5], header[6], header[7],
+        ]);
         if opt_magic != NBD_OPTS_MAGIC {
             return 1;
         }
@@ -413,14 +445,22 @@ fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_writ
         let _flags = u16::from_be_bytes([req_buf[4], req_buf[5]]);
         let cmd_type = u16::from_be_bytes([req_buf[6], req_buf[7]]);
         let handle = &req_buf[8..16];
-        let offset = u64::from_be_bytes([req_buf[16], req_buf[17], req_buf[18], req_buf[19],
-                                         req_buf[20], req_buf[21], req_buf[22], req_buf[23]]);
+        let offset = u64::from_be_bytes([
+            req_buf[16],
+            req_buf[17],
+            req_buf[18],
+            req_buf[19],
+            req_buf[20],
+            req_buf[21],
+            req_buf[22],
+            req_buf[23],
+        ]);
         let length = u32::from_be_bytes([req_buf[24], req_buf[25], req_buf[26], req_buf[27]]);
 
         match cmd_type as u32 {
             NBD_CMD_READ => {
                 // Seek to offset
-                if unsafe { libc::lseek(file_fd, offset as i64, libc::SEEK_SET) } < 0 {
+                if io::lseek(file_fd, offset as i64, libc::SEEK_SET) < 0 {
                     send_reply(fd, NBD_EIO, handle, &[]);
                     continue;
                 }
@@ -462,7 +502,7 @@ fn handle_client(fd: i32, file: &[u8], size: u64, read_only: bool, _copy_on_writ
                 }
 
                 // Seek and write
-                if unsafe { libc::lseek(file_fd, offset as i64, libc::SEEK_SET) } < 0 {
+                if io::lseek(file_fd, offset as i64, libc::SEEK_SET) < 0 {
                     send_reply(fd, NBD_EIO, handle, &[]);
                     continue;
                 }
@@ -546,25 +586,17 @@ pub fn nbd_server(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_nbd_server_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nbd-server", "-h"])
@@ -579,7 +611,9 @@ mod tests {
     #[test]
     fn test_nbd_server_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nbd-server"])

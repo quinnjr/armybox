@@ -25,13 +25,16 @@ use crate::io;
 use crate::sys;
 
 #[cfg(feature = "alloc")]
-use super::state::Shell;
+use super::execute::{execute_command, execute_script};
 #[cfg(feature = "alloc")]
 use super::parser::Command;
 #[cfg(feature = "alloc")]
-use super::execute::{execute_script, execute_command};
+use super::state::Shell;
 #[cfg(feature = "alloc")]
-use super::util::{file_exists, is_regular_file, is_directory, is_readable, is_writable, is_executable, is_symlink, file_size};
+use super::util::{
+    file_exists, file_size, is_directory, is_executable, is_readable, is_regular_file, is_symlink,
+    is_writable,
+};
 
 /// Execute a built-in command if recognized
 ///
@@ -40,7 +43,9 @@ use super::util::{file_exists, is_regular_file, is_directory, is_readable, is_wr
 /// read, shift, return, break, continue, exec, eval, source, .
 #[cfg(feature = "alloc")]
 pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
-    if cmd.args.is_empty() { return true; }
+    if cmd.args.is_empty() {
+        return true;
+    }
 
     let name = &cmd.args[0];
 
@@ -130,11 +135,15 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
 
         let mut first = true;
         for arg in &cmd.args[start..] {
-            if !first { io::write_str(1, b" "); }
+            if !first {
+                io::write_str(1, b" ");
+            }
             io::write_all(1, arg);
             first = false;
         }
-        if newline { io::write_str(1, b"\n"); }
+        if newline {
+            io::write_str(1, b"\n");
+        }
         shell.last_status = 0;
         return true;
     }
@@ -183,7 +192,9 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
             let mut buf = [0u8; 1];
             loop {
                 let n = io::read(0, &mut buf);
-                if n <= 0 || buf[0] == b'\n' { break; }
+                if n <= 0 || buf[0] == b'\n' {
+                    break;
+                }
                 line.push(buf[0]);
             }
             shell.set_var(var_name, &line);
@@ -256,7 +267,9 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
             // Concatenate all args with spaces
             let mut line = Vec::new();
             for (i, arg) in cmd.args[1..].iter().enumerate() {
-                if i > 0 { line.push(b' '); }
+                if i > 0 {
+                    line.push(b' ');
+                }
                 line.extend_from_slice(arg);
             }
             execute_script(shell, &line);
@@ -278,7 +291,9 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
                 if let Some(eq_pos) = arg.iter().position(|&c| c == b'=') {
                     let alias_name = &arg[..eq_pos];
                     let alias_value = &arg[eq_pos + 1..];
-                    shell.aliases.insert(alias_name.to_vec(), alias_value.to_vec());
+                    shell
+                        .aliases
+                        .insert(alias_name.to_vec(), alias_value.to_vec());
                 } else {
                     // Print specific alias
                     if let Some(value) = shell.aliases.get(arg.as_slice()) {
@@ -319,9 +334,9 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
             let target = &cmd.args[1];
             // Check builtins
             let builtins: &[&[u8]] = &[
-                b"exit", b"cd", b"pwd", b"export", b"unset", b"echo", b"test",
-                b"[", b"true", b"false", b":", b"source", b".", b"read", b"exec",
-                b"set", b"shift", b"return", b"eval", b"alias", b"unalias", b"type",
+                b"exit", b"cd", b"pwd", b"export", b"unset", b"echo", b"test", b"[", b"true",
+                b"false", b":", b"source", b".", b"read", b"exec", b"set", b"shift", b"return",
+                b"eval", b"alias", b"unalias", b"type",
             ];
             if builtins.iter().any(|b| *b == target.as_slice()) {
                 io::write_all(1, target);
@@ -352,15 +367,20 @@ pub(super) fn execute_builtin(shell: &mut Shell, cmd: &Command) -> bool {
 /// Returns 0 for true, 1 for false.
 #[cfg(feature = "alloc")]
 pub(super) fn execute_test(args: &[Vec<u8>]) -> i32 {
-    if args.is_empty() { return 1; }
+    if args.is_empty() {
+        return 1;
+    }
 
     // Remove trailing ] if present
-    let args: Vec<&[u8]> = args.iter()
+    let args: Vec<&[u8]> = args
+        .iter()
         .map(|a| a.as_slice())
         .filter(|a| *a != b"]")
         .collect();
 
-    if args.is_empty() { return 1; }
+    if args.is_empty() {
+        return 1;
+    }
 
     // Single arg: true if non-empty
     if args.len() == 1 {
@@ -372,17 +392,39 @@ pub(super) fn execute_test(args: &[Vec<u8>]) -> i32 {
         let op = args[0];
         let arg = args[1];
 
-        if op == b"-n" { return if arg.is_empty() { 1 } else { 0 }; }
-        if op == b"-z" { return if arg.is_empty() { 0 } else { 1 }; }
-        if op == b"-e" || op == b"-a" { return if file_exists(arg) { 0 } else { 1 }; }
-        if op == b"-f" { return if is_regular_file(arg) { 0 } else { 1 }; }
-        if op == b"-d" { return if is_directory(arg) { 0 } else { 1 }; }
-        if op == b"-r" { return if is_readable(arg) { 0 } else { 1 }; }
-        if op == b"-w" { return if is_writable(arg) { 0 } else { 1 }; }
-        if op == b"-x" { return if is_executable(arg) { 0 } else { 1 }; }
-        if op == b"-s" { return if file_size(arg) > 0 { 0 } else { 1 }; }
-        if op == b"-L" || op == b"-h" { return if is_symlink(arg) { 0 } else { 1 }; }
-        if op == b"!" { return execute_test(&[arg.to_vec()]) ^ 1; }
+        if op == b"-n" {
+            return if arg.is_empty() { 1 } else { 0 };
+        }
+        if op == b"-z" {
+            return if arg.is_empty() { 0 } else { 1 };
+        }
+        if op == b"-e" || op == b"-a" {
+            return if file_exists(arg) { 0 } else { 1 };
+        }
+        if op == b"-f" {
+            return if is_regular_file(arg) { 0 } else { 1 };
+        }
+        if op == b"-d" {
+            return if is_directory(arg) { 0 } else { 1 };
+        }
+        if op == b"-r" {
+            return if is_readable(arg) { 0 } else { 1 };
+        }
+        if op == b"-w" {
+            return if is_writable(arg) { 0 } else { 1 };
+        }
+        if op == b"-x" {
+            return if is_executable(arg) { 0 } else { 1 };
+        }
+        if op == b"-s" {
+            return if file_size(arg) > 0 { 0 } else { 1 };
+        }
+        if op == b"-L" || op == b"-h" {
+            return if is_symlink(arg) { 0 } else { 1 };
+        }
+        if op == b"!" {
+            return execute_test(&[arg.to_vec()]) ^ 1;
+        }
     }
 
     // Three args: binary operators
@@ -391,19 +433,35 @@ pub(super) fn execute_test(args: &[Vec<u8>]) -> i32 {
         let op = args[1];
         let right = args[2];
 
-        if op == b"=" || op == b"==" { return if left == right { 0 } else { 1 }; }
-        if op == b"!=" { return if left != right { 0 } else { 1 }; }
+        if op == b"=" || op == b"==" {
+            return if left == right { 0 } else { 1 };
+        }
+        if op == b"!=" {
+            return if left != right { 0 } else { 1 };
+        }
 
         // Numeric comparisons
         let ln = sys::parse_i64(left).unwrap_or(0);
         let rn = sys::parse_i64(right).unwrap_or(0);
 
-        if op == b"-eq" { return if ln == rn { 0 } else { 1 }; }
-        if op == b"-ne" { return if ln != rn { 0 } else { 1 }; }
-        if op == b"-lt" { return if ln < rn { 0 } else { 1 }; }
-        if op == b"-le" { return if ln <= rn { 0 } else { 1 }; }
-        if op == b"-gt" { return if ln > rn { 0 } else { 1 }; }
-        if op == b"-ge" { return if ln >= rn { 0 } else { 1 }; }
+        if op == b"-eq" {
+            return if ln == rn { 0 } else { 1 };
+        }
+        if op == b"-ne" {
+            return if ln != rn { 0 } else { 1 };
+        }
+        if op == b"-lt" {
+            return if ln < rn { 0 } else { 1 };
+        }
+        if op == b"-le" {
+            return if ln <= rn { 0 } else { 1 };
+        }
+        if op == b"-gt" {
+            return if ln > rn { 0 } else { 1 };
+        }
+        if op == b"-ge" {
+            return if ln >= rn { 0 } else { 1 };
+        }
     }
 
     1

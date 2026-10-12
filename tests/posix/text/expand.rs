@@ -20,7 +20,11 @@ fn posix_expand_tabstop() {
     let result = run_with_stdin(&["expand", "-t", "4"], b"a\tb");
     assert_success(&result);
     // Tab expanded to reach next tabstop at 4
-    assert!(result.1.starts_with("a   b") || result.1.starts_with("a  b") || result.1.contains("a") && result.1.contains("b"));
+    assert!(
+        result.1.starts_with("a   b")
+            || result.1.starts_with("a  b")
+            || result.1.contains("a") && result.1.contains("b")
+    );
 }
 
 /// POSIX: expand multiple tabs

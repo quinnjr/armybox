@@ -2,9 +2,9 @@
 //!
 //! Interacts with ALSA/OSS audio mixer.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// mix - audio mixer interface
 ///
@@ -37,9 +37,7 @@ pub fn mix(argc: i32, argv: *const *const u8) -> i32 {
     if argc < 2 {
         // Show current volume
         let mut vol: i32 = 0;
-        let ret = unsafe {
-            libc::ioctl(fd, SOUND_MIXER_READ_VOLUME, &mut vol as *mut i32)
-        };
+        let ret = unsafe { libc::ioctl(fd, SOUND_MIXER_READ_VOLUME, &mut vol as *mut i32) };
         io::close(fd);
 
         if ret < 0 {
@@ -79,9 +77,7 @@ pub fn mix(argc: i32, argv: *const *const u8) -> i32 {
 
         let vol = volume | (volume << 8); // Same for left and right
 
-        let ret = unsafe {
-            libc::ioctl(fd, SOUND_MIXER_WRITE_VOLUME, &vol as *const i32)
-        };
+        let ret = unsafe { libc::ioctl(fd, SOUND_MIXER_WRITE_VOLUME, &vol as *const i32) };
         io::close(fd);
 
         if ret < 0 {

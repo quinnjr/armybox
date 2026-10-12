@@ -34,10 +34,7 @@ fn posix_env_ignore() {
 /// POSIX: env -u unset variable
 #[test]
 fn posix_env_unset() {
-    let result = run_with_env(
-        &["env", "-u", "TESTVAR", "env"],
-        &[("TESTVAR", "value")],
-    );
+    let result = run_with_env(&["env", "-u", "TESTVAR", "env"], &[("TESTVAR", "value")]);
     assert_success(&result);
     // TESTVAR should not appear
     assert!(!result.1.contains("TESTVAR="));

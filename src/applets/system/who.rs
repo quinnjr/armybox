@@ -3,9 +3,9 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/who.html
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // utmp entry types
 const EMPTY: i16 = 0;
@@ -142,37 +142,52 @@ pub fn who(argc: i32, argv: *const *const u8) -> i32 {
     }
 
     // Get my tty for "who am i"
-    let my_tty = if am_i {
-        get_my_tty()
-    } else {
-        None
-    };
+    let my_tty = if am_i { get_my_tty() } else { None };
 
     // Open utmp file
-    let fd = io::open(b"/var/run/utmp\0", libc::O_RDONLY, 0);
+    let mut fd = io::open(b"/var/run/utmp\0", libc::O_RDONLY, 0);
     if fd < 0 {
+        let first_errno = sys::errno();
         // Try alternate location
-        let fd2 = io::open(b"/run/utmp\0", libc::O_RDONLY, 0);
-        if fd2 < 0 {
+        fd = io::open(b"/run/utmp\0", libc::O_RDONLY, 0);
+        // No utmp at all just means no login records (as with getutxent);
+        // process_utmp's read on fd -1 fails and yields an empty listing.
+        // Any other failure, on either path, is a real error.
+        if fd < 0 && (first_errno != libc::ENOENT || sys::errno() != libc::ENOENT) {
             io::write_str(2, b"who: cannot open utmp\n");
             return 1;
         }
-        return process_utmp(fd2, show_header, show_boot, show_dead, show_login,
-                           show_runlevel, show_time_change, show_idle, show_mesg,
-                           quick_mode, my_tty);
     }
 
-    process_utmp(fd, show_header, show_boot, show_dead, show_login,
-                 show_runlevel, show_time_change, show_idle, show_mesg,
-                 quick_mode, my_tty)
+    process_utmp(
+        fd,
+        show_header,
+        show_boot,
+        show_dead,
+        show_login,
+        show_runlevel,
+        show_time_change,
+        show_idle,
+        show_mesg,
+        quick_mode,
+        my_tty,
+    )
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-fn process_utmp(fd: i32, show_header: bool, show_boot: bool, show_dead: bool,
-                show_login: bool, show_runlevel: bool, show_time_change: bool,
-                show_idle: bool, show_mesg: bool, quick_mode: bool,
-                my_tty: Option<[u8; 32]>) -> i32 {
-
+fn process_utmp(
+    fd: i32,
+    show_header: bool,
+    show_boot: bool,
+    show_dead: bool,
+    show_login: bool,
+    show_runlevel: bool,
+    show_time_change: bool,
+    show_idle: bool,
+    show_mesg: bool,
+    quick_mode: bool,
+    my_tty: Option<[u8; 32]>,
+) -> i32 {
     if show_header && !quick_mode {
         io::write_str(1, b"NAME     ");
         if show_mesg {
@@ -190,13 +205,15 @@ fn process_utmp(fd: i32, show_header: bool, show_boot: bool, show_dead: bool,
     let mut first_quick = true;
 
     loop {
+        // Compare as isize: a failed read (-1) must end the loop too
         let n = io::read(fd, &mut buf);
-        if (n as usize) < UTMP_SIZE {
+        if n < UTMP_SIZE as isize {
             break;
         }
 
-        // SAFETY: buf is properly sized and aligned for Utmp
-        let entry: &Utmp = unsafe { &*(buf.as_ptr() as *const Utmp) };
+        // SAFETY: buf holds UTMP_SIZE initialized bytes; the byte buffer has
+        // alignment 1, so copy the record out instead of referencing it
+        let entry: Utmp = unsafe { core::ptr::read_unaligned(buf.as_ptr() as *const Utmp) };
 
         // Filter by type
         let show = match entry.ut_type {
@@ -296,7 +313,9 @@ fn process_utmp(fd: i32, show_header: bool, show_boot: bool, show_dead: bool,
         count += 1;
     }
 
-    io::close(fd);
+    if fd >= 0 {
+        io::close(fd);
+    }
 
     if quick_mode {
         io::write_str(1, b"\n# users=");
@@ -355,7 +374,7 @@ fn get_mesg_status(line: &[u8]) -> u8 {
         return b'?';
     }
 
-    if stat.st_mode & libc::S_IWGRP != 0 {
+    if stat.st_mode as u32 & libc::S_IWGRP as u32 != 0 {
         b'+'
     } else {
         b'-'
@@ -451,15 +470,21 @@ fn format_idle(seconds: i64) {
         let mut buf = [0u8; 8];
         let h = hours % 24;
         let m = minutes % 60;
-        if h < 10 { io::write_str(1, b" "); }
+        if h < 10 {
+            io::write_str(1, b" ");
+        }
         io::write_all(1, sys::format_u64(h as u64, &mut buf));
         io::write_str(1, b":");
-        if m < 10 { io::write_str(1, b"0"); }
+        if m < 10 {
+            io::write_str(1, b"0");
+        }
         io::write_all(1, sys::format_u64(m as u64, &mut buf));
     } else {
         let mut buf = [0u8; 8];
         let m = minutes % 60;
-        if m < 10 { io::write_str(1, b" "); }
+        if m < 10 {
+            io::write_str(1, b" ");
+        }
         io::write_all(1, sys::format_u64(m as u64, &mut buf));
         io::write_str(1, b":00");
     }
@@ -474,30 +499,19 @@ pub fn who(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_who_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["who"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["who"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
     }
@@ -505,12 +519,11 @@ mod tests {
     #[test]
     fn test_who_header() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["who", "-H"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["who", "-H"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -520,12 +533,11 @@ mod tests {
     #[test]
     fn test_who_quick() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["who", "-q"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["who", "-q"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);

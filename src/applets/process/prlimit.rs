@@ -2,9 +2,19 @@
 //!
 //! Get and set resource limits for a process.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
+
+/// The kernel's `struct rlimit64`. `prlimit64` always writes 16 bytes, but
+/// `libc::rlimit` is only 8 where `rlim_t` is 32-bit (e.g. 32-bit Bionic).
+#[repr(C)]
+struct Rlimit64 {
+    rlim_cur: u64,
+    rlim_max: u64,
+}
+
+const RLIM64_INFINITY: u64 = !0;
 
 /// prlimit - get and set process resource limits
 ///
@@ -55,21 +65,20 @@ pub fn prlimit(argc: i32, argv: *const *const u8) -> i32 {
     io::write_str(1, b"RESOURCE   SOFT       HARD\n");
 
     for (resource, name) in resources.iter() {
-        let mut rlim: libc::rlimit = unsafe { core::mem::zeroed() };
+        let mut rlim = Rlimit64 {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
 
-        let result = if pid == 0 {
-            unsafe { libc::getrlimit((*resource) as _, &mut rlim) }
-        } else {
-            // prlimit syscall for other processes
-            unsafe {
-                libc::syscall(
-                    libc::SYS_prlimit64,
-                    pid,
-                    *resource,
-                    core::ptr::null::<libc::rlimit>(),
-                    &mut rlim,
-                ) as i32
-            }
+        // prlimit64 with pid 0 targets the calling process
+        let result = unsafe {
+            libc::syscall(
+                libc::SYS_prlimit64,
+                pid,
+                *resource,
+                core::ptr::null::<Rlimit64>(),
+                &mut rlim,
+            ) as i32
         };
 
         if result != 0 {
@@ -82,14 +91,14 @@ pub fn prlimit(argc: i32, argv: *const *const u8) -> i32 {
             io::write_str(1, b" ");
         }
 
-        if rlim.rlim_cur == libc::RLIM_INFINITY {
+        if rlim.rlim_cur == RLIM64_INFINITY {
             io::write_str(1, b"unlimited  ");
         } else {
             io::write_num(1, rlim.rlim_cur);
             io::write_str(1, b" ");
         }
 
-        if rlim.rlim_max == libc::RLIM_INFINITY {
+        if rlim.rlim_max == RLIM64_INFINITY {
             io::write_str(1, b"unlimited");
         } else {
             io::write_num(1, rlim.rlim_max);
@@ -104,33 +113,22 @@ pub fn prlimit(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_prlimit_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["prlimit"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["prlimit"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(0));
         let stdout = std::string::String::from_utf8_lossy(&output.stdout);
@@ -140,7 +138,9 @@ mod tests {
     #[test]
     fn test_prlimit_self() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let pid = std::process::id();
         let output = Command::new(&armybox)

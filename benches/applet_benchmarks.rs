@@ -1,15 +1,13 @@
 //! Benchmarks for core applet dispatch and argument parsing
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use std::hint::black_box;
-use std::process::{Command, Stdio};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::NamedTempFile;
 
 /// Path to the armybox binary
 fn armybox_path() -> String {
-    std::env::var("ARMYBOX_PATH")
-        .unwrap_or_else(|_| "./target/release/armybox".to_string())
+    std::env::var("ARMYBOX_PATH").unwrap_or_else(|_| "./target/release/armybox".to_string())
 }
 
 /// Benchmark applet dispatch overhead

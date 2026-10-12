@@ -14,11 +14,7 @@ fn posix_comm_basic() {
     fs::write(&file1, "apple\nbanana\ncherry\n").unwrap();
     fs::write(&file2, "banana\ndate\n").unwrap();
 
-    let result = run(&[
-        "comm",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["comm", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_success(&result);
     // Column 1: only in file1
     // Column 2: only in file2
@@ -113,10 +109,6 @@ fn posix_comm_exit_success() {
     fs::write(&file1, "a\n").unwrap();
     fs::write(&file2, "b\n").unwrap();
 
-    let result = run(&[
-        "comm",
-        file1.to_str().unwrap(),
-        file2.to_str().unwrap(),
-    ]);
+    let result = run(&["comm", file1.to_str().unwrap(), file2.to_str().unwrap()]);
     assert_eq!(result.0, 0);
 }

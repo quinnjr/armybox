@@ -2,12 +2,12 @@
 //!
 //! Access the hardware real-time clock.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // RTC ioctl commands
-const RTC_RD_TIME: crate::io::IoctlReq = 0x80247009u32 as crate::io::IoctlReq;  // Read RTC time
+const RTC_RD_TIME: crate::io::IoctlReq = 0x80247009u32 as crate::io::IoctlReq; // Read RTC time
 const RTC_SET_TIME: crate::io::IoctlReq = 0x4024700au32 as crate::io::IoctlReq; // Set RTC time
 
 /// RTC time structure (matches struct rtc_time)
@@ -128,21 +128,31 @@ fn show_rtc_time(fd: i32, utc: bool) -> i32 {
     // Print date
     io::write_all(1, sys::format_u64(year as u64, &mut buf));
     io::write_str(1, b"-");
-    if month < 10 { io::write_str(1, b"0"); }
+    if month < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sys::format_u64(month as u64, &mut buf));
     io::write_str(1, b"-");
-    if rtc_tm.tm_mday < 10 { io::write_str(1, b"0"); }
+    if rtc_tm.tm_mday < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sys::format_u64(rtc_tm.tm_mday as u64, &mut buf));
     io::write_str(1, b" ");
 
     // Print time
-    if rtc_tm.tm_hour < 10 { io::write_str(1, b"0"); }
+    if rtc_tm.tm_hour < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sys::format_u64(rtc_tm.tm_hour as u64, &mut buf));
     io::write_str(1, b":");
-    if rtc_tm.tm_min < 10 { io::write_str(1, b"0"); }
+    if rtc_tm.tm_min < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sys::format_u64(rtc_tm.tm_min as u64, &mut buf));
     io::write_str(1, b":");
-    if rtc_tm.tm_sec < 10 { io::write_str(1, b"0"); }
+    if rtc_tm.tm_sec < 10 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sys::format_u64(rtc_tm.tm_sec as u64, &mut buf));
 
     if utc {
@@ -256,9 +266,18 @@ fn print_usage() {
     io::write_str(1, b"Usage: hwclock [OPTIONS]\n\n");
     io::write_str(1, b"Query or set the hardware clock (RTC).\n\n");
     io::write_str(1, b"Options:\n");
-    io::write_str(1, b"  -r, --show      Read and print hardware clock (default)\n");
-    io::write_str(1, b"  -w, --systohc   Set hardware clock from system time\n");
-    io::write_str(1, b"  -s, --hctosys   Set system time from hardware clock\n");
+    io::write_str(
+        1,
+        b"  -r, --show      Read and print hardware clock (default)\n",
+    );
+    io::write_str(
+        1,
+        b"  -w, --systohc   Set hardware clock from system time\n",
+    );
+    io::write_str(
+        1,
+        b"  -s, --hctosys   Set system time from hardware clock\n",
+    );
     io::write_str(1, b"  -u, --utc       Hardware clock is in UTC (default)\n");
     io::write_str(1, b"  -l, --localtime Hardware clock is in local time\n");
     io::write_str(1, b"  -f, --rtc DEV   Use specified RTC device\n");
@@ -273,30 +292,19 @@ pub fn hwclock(_argc: i32, _argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_hwclock_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["hwclock"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["hwclock"]).output().unwrap();
 
         // hwclock requires root access to /dev/rtc
         // If we're not root, it will fail with permission denied

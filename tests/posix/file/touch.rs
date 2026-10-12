@@ -4,7 +4,6 @@
 
 use crate::posix::helpers::*;
 use std::fs;
-use std::time::SystemTime;
 
 /// POSIX: "The touch utility shall change the modification times of files"
 #[test]
@@ -22,7 +21,7 @@ fn posix_touch_existing() {
     assert_success(&result);
 
     let after = fs::metadata(&file).unwrap().modified().unwrap();
-    assert!(after > before || after == before); // Time should be updated
+    assert!(after >= before); // Time should be updated
 }
 
 /// POSIX: touch creates file if it does not exist

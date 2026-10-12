@@ -2,9 +2,9 @@
 //!
 //! Run a command immune to hangups, with output to a non-tty.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// nohup - run a command immune to hangups
 ///
@@ -34,7 +34,11 @@ pub fn nohup(argc: i32, argv: *const *const u8) -> i32 {
 
     // Redirect stdout to nohup.out if it's a tty (best-effort)
     if unsafe { libc::isatty(1) } != 0 {
-        let fd = io::open(b"nohup.out", libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND, 0o644);
+        let fd = io::open(
+            b"nohup.out",
+            libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
+            0o644,
+        );
         if fd >= 0 {
             io::dup2(fd, 1);
             io::close(fd);
@@ -55,40 +59,25 @@ pub fn nohup(argc: i32, argv: *const *const u8) -> i32 {
 
     let err = sys::errno();
     sys::perror(cmd);
-    if err == libc::ENOENT {
-        127
-    } else {
-        126
-    }
+    if err == libc::ENOENT { 127 } else { 126 }
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_nohup_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["nohup"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["nohup"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -98,7 +87,9 @@ mod tests {
     #[test]
     fn test_nohup_with_command() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["nohup", "/bin/true"])

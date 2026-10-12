@@ -2,10 +2,10 @@
 //!
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/cat.html
 
-use std::process::{Command, Stdio};
-use std::io::Write;
-use std::fs;
 use crate::posix::{get_armybox_path, setup_test_env};
+use std::fs;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 /// POSIX: "The cat utility shall read files in sequence..."
 #[test]
@@ -54,11 +54,7 @@ fn posix_cat_stdin_dash() {
     fs::write(dir.path().join("file"), "FILE").unwrap();
 
     let mut child = Command::new(get_armybox_path())
-        .args([
-            "cat",
-            dir.path().join("file").to_str().unwrap(),
-            "-",
-        ])
+        .args(["cat", dir.path().join("file").to_str().unwrap(), "-"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -80,10 +76,7 @@ fn posix_cat_unbuffered() {
     fs::write(dir.path().join("file"), "content").unwrap();
 
     let output = Command::new(get_armybox_path())
-        .args([
-            "cat", "-u",
-            dir.path().join("file").to_str().unwrap(),
-        ])
+        .args(["cat", "-u", dir.path().join("file").to_str().unwrap()])
         .output()
         .unwrap();
 

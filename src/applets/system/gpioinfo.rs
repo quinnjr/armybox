@@ -4,9 +4,9 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
 use crate::io;
 use crate::sys;
+use alloc::vec::Vec;
 
 // GPIO ioctl commands (from linux/gpio.h)
 const GPIO_GET_CHIPINFO_IOCTL: crate::io::IoctlReq = 0x8044B401u32 as crate::io::IoctlReq;
@@ -120,17 +120,31 @@ fn show_chip_info(chip_num: u8) -> bool {
     // Get chip info
     let mut chip_info: GpioChipInfo = unsafe { core::mem::zeroed() };
     let ret = unsafe {
-        libc::ioctl(fd, GPIO_GET_CHIPINFO_IOCTL, &mut chip_info as *mut GpioChipInfo)
+        libc::ioctl(
+            fd,
+            GPIO_GET_CHIPINFO_IOCTL,
+            &mut chip_info as *mut GpioChipInfo,
+        )
     };
 
     if ret < 0 {
-        unsafe { libc::close(fd); }
+        unsafe {
+            libc::close(fd);
+        }
         return false;
     }
 
     // Print chip header
-    let name_end = chip_info.name.iter().position(|&c| c == 0).unwrap_or(chip_info.name.len());
-    let label_end = chip_info.label.iter().position(|&c| c == 0).unwrap_or(chip_info.label.len());
+    let name_end = chip_info
+        .name
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(chip_info.name.len());
+    let label_end = chip_info
+        .label
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(chip_info.label.len());
 
     io::write_all(1, &chip_info.name[..name_end]);
     io::write_str(1, b" - ");
@@ -150,7 +164,11 @@ fn show_chip_info(chip_num: u8) -> bool {
         line_info.line_offset = line;
 
         let ret = unsafe {
-            libc::ioctl(fd, GPIO_GET_LINEINFO_IOCTL, &mut line_info as *mut GpioLineInfo)
+            libc::ioctl(
+                fd,
+                GPIO_GET_LINEINFO_IOCTL,
+                &mut line_info as *mut GpioLineInfo,
+            )
         };
 
         if ret < 0 {
@@ -170,7 +188,11 @@ fn show_chip_info(chip_num: u8) -> bool {
         io::write_str(1, b": ");
 
         // Line name
-        let name_end = line_info.name.iter().position(|&c| c == 0).unwrap_or(line_info.name.len());
+        let name_end = line_info
+            .name
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(line_info.name.len());
         if name_end > 0 && line_info.name[0] != 0 {
             io::write_str(1, b"\"");
             io::write_all(1, &line_info.name[..name_end]);
@@ -180,13 +202,21 @@ fn show_chip_info(chip_num: u8) -> bool {
         }
 
         // Pad to column
-        let name_len = if name_end > 0 && line_info.name[0] != 0 { name_end + 2 } else { 7 };
+        let name_len = if name_end > 0 && line_info.name[0] != 0 {
+            name_end + 2
+        } else {
+            7
+        };
         for _ in name_len..24 {
             io::write_str(1, b" ");
         }
 
         // Consumer
-        let consumer_end = line_info.consumer.iter().position(|&c| c == 0).unwrap_or(line_info.consumer.len());
+        let consumer_end = line_info
+            .consumer
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(line_info.consumer.len());
         if consumer_end > 0 && line_info.consumer[0] != 0 {
             io::write_str(1, b"\"");
             io::write_all(1, &line_info.consumer[..consumer_end]);
@@ -196,7 +226,11 @@ fn show_chip_info(chip_num: u8) -> bool {
         }
 
         // Pad to column
-        let consumer_len = if consumer_end > 0 && line_info.consumer[0] != 0 { consumer_end + 2 } else { 6 };
+        let consumer_len = if consumer_end > 0 && line_info.consumer[0] != 0 {
+            consumer_end + 2
+        } else {
+            6
+        };
         for _ in consumer_len..20 {
             io::write_str(1, b" ");
         }
@@ -227,37 +261,28 @@ fn show_chip_info(chip_num: u8) -> bool {
         io::write_str(1, b"\n");
     }
 
-    unsafe { libc::close(fd); }
+    unsafe {
+        libc::close(fd);
+    }
     true
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_gpioinfo_runs() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["gpioinfo"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["gpioinfo"]).output().unwrap();
 
         // Either shows info or reports no chips
         assert!(output.status.code() == Some(0) || output.status.code() == Some(1));
@@ -266,7 +291,9 @@ mod tests {
     #[test]
     fn test_gpioinfo_help() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["gpioinfo", "--help"])
@@ -281,7 +308,9 @@ mod tests {
     #[test]
     fn test_gpioinfo_specific_chip() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["gpioinfo", "gpiochip0"])

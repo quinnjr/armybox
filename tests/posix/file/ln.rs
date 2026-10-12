@@ -148,7 +148,12 @@ fn posix_ln_sf() {
     fs::write(&target, "new").unwrap();
     fs::write(&link, "old").unwrap();
 
-    let result = run(&["ln", "-sf", target.to_str().unwrap(), link.to_str().unwrap()]);
+    let result = run(&[
+        "ln",
+        "-sf",
+        target.to_str().unwrap(),
+        link.to_str().unwrap(),
+    ]);
     assert_success(&result);
     assert!(link.is_symlink());
 }
@@ -163,11 +168,7 @@ fn posix_ln_hard_link_to_directory() {
     fs::write(&target, "content").unwrap();
     fs::create_dir(&target_dir).unwrap();
 
-    let result = run(&[
-        "ln",
-        target.to_str().unwrap(),
-        target_dir.to_str().unwrap(),
-    ]);
+    let result = run(&["ln", target.to_str().unwrap(), target_dir.to_str().unwrap()]);
     assert_success(&result);
     let link = target_dir.join("target");
     assert!(link.exists());

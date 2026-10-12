@@ -2,9 +2,9 @@
 //!
 //! Discard the content of sectors on a device.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // BLKDISCARD ioctl
 const BLKDISCARD: crate::io::IoctlReq = 0x1277u32 as crate::io::IoctlReq;
@@ -31,7 +31,10 @@ const BLKGETSIZE64: crate::io::IoctlReq = 0x80081272u32 as crate::io::IoctlReq;
 /// - 1: Error
 pub fn blkdiscard(argc: i32, argv: *const *const u8) -> i32 {
     if argc < 2 {
-        io::write_str(2, b"blkdiscard: usage: blkdiscard [-o offset] [-l length] device\n");
+        io::write_str(
+            2,
+            b"blkdiscard: usage: blkdiscard [-o offset] [-l length] device\n",
+        );
         return 1;
     }
 
@@ -103,25 +106,17 @@ pub fn blkdiscard(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_blkdiscard_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["blkdiscard"])
@@ -136,7 +131,9 @@ mod tests {
     #[test]
     fn test_blkdiscard_nonexistent_device() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["blkdiscard", "/dev/nonexistent_device_xyz"])
@@ -149,7 +146,9 @@ mod tests {
     #[test]
     fn test_blkdiscard_with_offset() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // This will fail since we don't have a real block device,
         // but it tests argument parsing

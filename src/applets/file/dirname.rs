@@ -3,8 +3,8 @@
 //! POSIX.1-2017 compliant implementation.
 //! Reference: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/dirname.html
 
-use crate::io;
 use crate::applets::get_arg;
+use crate::io;
 
 /// dirname - strip last component from file name
 ///
@@ -86,22 +86,17 @@ pub fn dirname(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let release = PathBuf::from("target/release/armybox");
-        if release.exists() { return release; }
-        PathBuf::from("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_dirname_simple() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dirname", "/usr/bin/sort"])
@@ -109,13 +104,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "/usr/bin");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "/usr/bin"
+        );
     }
 
     #[test]
     fn test_dirname_no_slash() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dirname", "file.txt"])
@@ -123,13 +123,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), ".");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "."
+        );
     }
 
     #[test]
     fn test_dirname_root_file() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dirname", "/file"])
@@ -137,13 +142,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "/");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "/"
+        );
     }
 
     #[test]
     fn test_dirname_root() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dirname", "/"])
@@ -151,13 +161,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "/");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "/"
+        );
     }
 
     #[test]
     fn test_dirname_trailing_slash() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["dirname", "/path/to/dir/"])
@@ -165,18 +180,20 @@ mod tests {
             .unwrap();
 
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(std::string::String::from_utf8_lossy(&output.stdout).trim(), "/path/to");
+        assert_eq!(
+            std::string::String::from_utf8_lossy(&output.stdout).trim(),
+            "/path/to"
+        );
     }
 
     #[test]
     fn test_dirname_missing_operand() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["dirname"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["dirname"]).output().unwrap();
 
         assert_ne!(output.status.code(), Some(0));
     }

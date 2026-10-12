@@ -4,10 +4,10 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
+use alloc::vec::Vec;
 
 /// ts - timestamp input lines
 ///
@@ -78,17 +78,23 @@ pub fn ts(argc: i32, argv: *const *const u8) -> i32 {
             let mut num_buf = [0u8; 8];
 
             let h = sys::format_u64(hours, &mut num_buf);
-            if h.len() < 2 { io::write_str(1, b"0"); }
+            if h.len() < 2 {
+                io::write_str(1, b"0");
+            }
             io::write_all(1, h);
             io::write_str(1, b":");
 
             let m = sys::format_u64(mins, &mut num_buf);
-            if m.len() < 2 { io::write_str(1, b"0"); }
+            if m.len() < 2 {
+                io::write_str(1, b"0");
+            }
             io::write_all(1, m);
             io::write_str(1, b":");
 
             let s = sys::format_u64(secs, &mut num_buf);
-            if s.len() < 2 { io::write_str(1, b"0"); }
+            if s.len() < 2 {
+                io::write_str(1, b"0");
+            }
             io::write_all(1, s);
         } else {
             // Format wall clock time
@@ -119,57 +125,59 @@ fn format_timestamp(time: i64, _format: Option<&[u8]>) {
 
     // Month
     let month = sys::format_u64((tm.tm_mon + 1) as u64, &mut buf);
-    if month.len() < 2 { io::write_str(1, b"0"); }
+    if month.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, month);
     io::write_str(1, b"-");
 
     // Day
     let day = sys::format_u64(tm.tm_mday as u64, &mut buf);
-    if day.len() < 2 { io::write_str(1, b"0"); }
+    if day.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, day);
     io::write_str(1, b" ");
 
     // Hour
     let hour = sys::format_u64(tm.tm_hour as u64, &mut buf);
-    if hour.len() < 2 { io::write_str(1, b"0"); }
+    if hour.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, hour);
     io::write_str(1, b":");
 
     // Minute
     let min = sys::format_u64(tm.tm_min as u64, &mut buf);
-    if min.len() < 2 { io::write_str(1, b"0"); }
+    if min.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, min);
     io::write_str(1, b":");
 
     // Second
     let sec = sys::format_u64(tm.tm_sec as u64, &mut buf);
-    if sec.len() < 2 { io::write_str(1, b"0"); }
+    if sec.len() < 2 {
+        io::write_str(1, b"0");
+    }
     io::write_all(1, sec);
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
     use std::io::Write;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_ts() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let mut child = Command::new(&armybox)
             .args(["ts"])

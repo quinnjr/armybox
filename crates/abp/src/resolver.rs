@@ -4,11 +4,11 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use alloc::collections::BTreeSet;
 use crate::database::Database;
 use crate::format::Dependency;
+use alloc::collections::BTreeSet;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Resolve dependencies for a set of packages
 ///
@@ -32,7 +32,8 @@ pub fn resolve_with_local(
     let mut stack: BTreeSet<String> = BTreeSet::new();
 
     // Build a lookup for local packages
-    let mut local_map: alloc::collections::BTreeMap<String, Vec<String>> = alloc::collections::BTreeMap::new();
+    let mut local_map: alloc::collections::BTreeMap<String, Vec<String>> =
+        alloc::collections::BTreeMap::new();
     for (name, deps) in local_packages {
         local_map.insert(name.clone(), deps.clone());
     }
@@ -73,10 +74,10 @@ fn resolve_package_local(
         let dep_parsed = Dependency::parse(&dep);
 
         // Already installed?
-        if let Some(installed) = db.get_package(&dep_parsed.name) {
-            if dep_parsed.satisfied_by(&installed.version) {
-                continue;
-            }
+        if let Some(installed) = db.get_package(&dep_parsed.name)
+            && dep_parsed.satisfied_by(&installed.version)
+        {
+            continue;
         }
 
         // Being installed locally?
@@ -86,11 +87,11 @@ fn resolve_package_local(
         }
 
         // Available in repo?
-        if let Some(available) = db.get_available(&dep_parsed.name) {
-            if dep_parsed.satisfied_by(&available.version) {
-                resolve_package_local(db, &dep_parsed.name, local_map, resolved, seen, stack)?;
-                continue;
-            }
+        if let Some(available) = db.get_available(&dep_parsed.name)
+            && dep_parsed.satisfied_by(&available.version)
+        {
+            resolve_package_local(db, &dep_parsed.name, local_map, resolved, seen, stack)?;
+            continue;
         }
 
         // Provided by another package?
@@ -134,7 +135,11 @@ fn get_dependencies(db: &Database, name: &str) -> Result<Vec<String>, String> {
 fn find_provider(db: &Database, name: &str) -> Option<String> {
     // Check installed packages
     for pkg in db.list_packages() {
-        if pkg.provides.iter().any(|p| p == name || p.starts_with(&format_provider(name))) {
+        if pkg
+            .provides
+            .iter()
+            .any(|p| p == name || p.starts_with(&format_provider(name)))
+        {
             return Some(pkg.name);
         }
     }
@@ -186,7 +191,8 @@ pub fn topological_sort(packages: &[(String, Vec<String>)]) -> Result<Vec<String
     let mut temp_visited: BTreeSet<String> = BTreeSet::new();
 
     // Build name -> deps map
-    let mut dep_map: alloc::collections::BTreeMap<String, Vec<String>> = alloc::collections::BTreeMap::new();
+    let mut dep_map: alloc::collections::BTreeMap<String, Vec<String>> =
+        alloc::collections::BTreeMap::new();
     for (name, deps) in packages {
         dep_map.insert(name.clone(), deps.clone());
     }

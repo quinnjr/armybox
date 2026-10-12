@@ -2,10 +2,10 @@
 //!
 //! Copy-in-copy-out archive format.
 
-use alloc::vec::Vec;
-use alloc::vec;
+use super::{create_parent_dirs, get_arg, mode_string, open_read, open_write_create};
 use crate::io;
-use super::{get_arg, open_read, open_write_create, create_parent_dirs, mode_string};
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// Returns `true` if `name` is unsafe to use as an extraction path:
 /// an absolute path, or a path containing a `..` component.
@@ -191,7 +191,9 @@ fn cpio_extract(verbose: bool) -> i32 {
                 while remaining > 0 {
                     let to_read = remaining.min(4096);
                     let n = io::read(0, &mut buf[..to_read]);
-                    if n <= 0 { break; }
+                    if n <= 0 {
+                        break;
+                    }
                     io::write_all(fd, &buf[..n as usize]);
                     remaining -= n as usize;
                 }
@@ -245,11 +247,15 @@ fn cpio_create(verbose: bool) -> i32 {
                 }
                 break;
             }
-            if byte[0] == b'\n' { break; }
+            if byte[0] == b'\n' {
+                break;
+            }
             line.push(byte[0]);
         }
 
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
 
         // Stat the file
         let mut stat_buf: libc::stat = unsafe { core::mem::zeroed() };
@@ -261,8 +267,8 @@ fn cpio_create(verbose: bool) -> i32 {
         }
 
         ino += 1;
-        let mode = stat_buf.st_mode;
-        let is_file = (mode & libc::S_IFMT) == libc::S_IFREG;
+        let mode = stat_buf.st_mode as u32;
+        let is_file = (mode & libc::S_IFMT as u32) == libc::S_IFREG as u32;
 
         if is_file {
             // Read file content
@@ -272,14 +278,30 @@ fn cpio_create(verbose: bool) -> i32 {
                 let mut buf = [0u8; 4096];
                 loop {
                     let n = io::read(fd, &mut buf);
-                    if n <= 0 { break; }
+                    if n <= 0 {
+                        break;
+                    }
                     content.extend_from_slice(&buf[..n as usize]);
                 }
                 io::close(fd);
-                cpio_write_entry(&line, ino, mode as u32, stat_buf.st_mtime as u32, &content, verbose);
+                cpio_write_entry(
+                    &line,
+                    ino,
+                    mode as u32,
+                    stat_buf.st_mtime as u32,
+                    &content,
+                    verbose,
+                );
             }
         } else {
-            cpio_write_entry(&line, ino, mode as u32, stat_buf.st_mtime as u32, &[], verbose);
+            cpio_write_entry(
+                &line,
+                ino,
+                mode as u32,
+                stat_buf.st_mtime as u32,
+                &[],
+                verbose,
+            );
         }
     }
 }
@@ -426,30 +448,19 @@ fn cpio_list(verbose: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_cpio_no_mode() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["cpio"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["cpio"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -459,7 +470,9 @@ mod tests {
     #[test]
     fn test_cpio_bad_magic() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         use std::io::Write;
         use std::process::Stdio;

@@ -4,12 +4,12 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use crate::io;
-use crate::crypto::{sha256, key_id, PublicKey};
+use crate::crypto::{PublicKey, key_id, sha256};
 use crate::database::Database;
 use crate::format::{AbpPackage, ManifestEntry};
+use crate::io;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Verification result
 #[derive(Clone)]
@@ -86,10 +86,8 @@ fn verify_package_integrity(pkg: &AbpPackage) -> Result<(), String> {
     };
 
     // Track which manifest entries were seen in the payload.
-    let mut matched: Vec<bool> = Vec::with_capacity(pkg.manifest.entries.len());
-    for _ in 0..pkg.manifest.entries.len() {
-        matched.push(false);
-    }
+    let mut matched: Vec<bool> = Vec::new();
+    matched.resize(pkg.manifest.entries.len(), false);
 
     // Walk with the SAME strict iterator the installer uses, so GNU long names,
     // pax `path=`/`size=` overrides and base-256 sizes are interpreted
@@ -195,7 +193,8 @@ pub fn verify_installed(packages: &[&[u8]]) -> i32 {
         db.list_packages().iter().map(|p| p.name.clone()).collect()
     } else {
         // Verify specified packages
-        packages.iter()
+        packages
+            .iter()
             .filter_map(|p| core::str::from_utf8(p).ok())
             .map(String::from)
             .collect()
@@ -277,11 +276,7 @@ pub fn verify_installed(packages: &[&[u8]]) -> i32 {
         io::write_str(1, b"\n");
     }
 
-    if errors > 0 {
-        1
-    } else {
-        0
-    }
+    if errors > 0 { 1 } else { 0 }
 }
 
 /// Verify files of an installed package

@@ -2,10 +2,10 @@
 //!
 //! List and extract compressed files from ZIP archives.
 
-use alloc::vec::Vec;
-use crate::io;
-use super::{get_arg, open_read, open_write_create, create_parent_dirs};
 use super::gzip::inflate;
+use super::{create_parent_dirs, get_arg, open_read, open_write_create};
+use crate::io;
+use alloc::vec::Vec;
 
 /// Returns `true` if `name` is unsafe to use as an extraction path:
 /// an absolute path, or a path containing a `..` component.
@@ -77,7 +77,9 @@ pub fn unzip(argc: i32, argv: *const *const u8) -> i32 {
     let mut buf = [0u8; 4096];
     loop {
         let n = io::read(fd, &mut buf);
-        if n <= 0 { break; }
+        if n <= 0 {
+            break;
+        }
         data.extend_from_slice(&buf[..n as usize]);
     }
     io::close(fd);
@@ -95,10 +97,16 @@ pub fn unzip(argc: i32, argv: *const *const u8) -> i32 {
 
         let compression = u16::from_le_bytes([data[offset + 8], data[offset + 9]]);
         let compressed_size = u32::from_le_bytes([
-            data[offset + 18], data[offset + 19], data[offset + 20], data[offset + 21]
+            data[offset + 18],
+            data[offset + 19],
+            data[offset + 20],
+            data[offset + 21],
         ]) as usize;
         let uncompressed_size = u32::from_le_bytes([
-            data[offset + 22], data[offset + 23], data[offset + 24], data[offset + 25]
+            data[offset + 22],
+            data[offset + 23],
+            data[offset + 24],
+            data[offset + 25],
         ]) as usize;
         let filename_len = u16::from_le_bytes([data[offset + 26], data[offset + 27]]) as usize;
         let extra_len = u16::from_le_bytes([data[offset + 28], data[offset + 29]]) as usize;
@@ -181,30 +189,19 @@ pub fn unzip(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_unzip_no_archive() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["unzip"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["unzip"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -214,7 +211,9 @@ mod tests {
     #[test]
     fn test_unzip_cannot_open() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["unzip", "/nonexistent/file.zip"])

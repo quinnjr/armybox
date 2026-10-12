@@ -56,7 +56,7 @@ fn fmod(a: f64, b: f64) -> f64 {
     a - ftrunc(a / b) * b
 }
 
-const LN2: f64 = 0.6931471805599453;
+const LN2: f64 = core::f64::consts::LN_2;
 
 /// Natural log via mantissa/exponent split and an atanh series.
 fn fln(x: f64) -> f64 {
@@ -164,8 +164,8 @@ fn fsqrt(x: f64) -> f64 {
     g
 }
 
-const PI: f64 = 3.141592653589793;
-const TWO_PI: f64 = 6.283185307179586;
+const PI: f64 = core::f64::consts::PI;
+const TWO_PI: f64 = core::f64::consts::TAU;
 
 fn fsin(mut x: f64) -> f64 {
     if !x.is_finite() {
@@ -224,11 +224,7 @@ fn fatan(x: f64) -> f64 {
     if comp {
         r = PI / 2.0 - r;
     }
-    if neg {
-        -r
-    } else {
-        r
-    }
+    if neg { -r } else { r }
 }
 
 fn fatan2(y: f64, x: f64) -> f64 {
@@ -298,7 +294,11 @@ fn num_to_str(n: f64, fmt: &[u8]) -> Vec<u8> {
         return b"nan".to_vec();
     }
     if n.is_infinite() {
-        return if n < 0.0 { b"-inf".to_vec() } else { b"inf".to_vec() };
+        return if n < 0.0 {
+            b"-inf".to_vec()
+        } else {
+            b"inf".to_vec()
+        };
     }
     snp_double(fmt, n)
 }
@@ -352,9 +352,7 @@ fn str_to_num(s: &[u8]) -> f64 {
     }
     let mut buf = s[start..end].to_vec();
     buf.push(0);
-    unsafe {
-        libc::strtod(buf.as_ptr() as *const c_char, core::ptr::null_mut())
-    }
+    unsafe { libc::strtod(buf.as_ptr() as *const c_char, core::ptr::null_mut()) }
 }
 
 /// Does the whole (blank-trimmed) string look like a valid number?
@@ -381,7 +379,12 @@ fn snp_long(spec: &[u8], v: c_long) -> Vec<u8> {
             return Vec::new();
         }
         let mut buf = vec![0u8; n as usize + 1];
-        libc::snprintf(buf.as_mut_ptr() as *mut c_char, n as size_t + 1, f.as_ptr() as *const c_char, v);
+        libc::snprintf(
+            buf.as_mut_ptr() as *mut c_char,
+            n as size_t + 1,
+            f.as_ptr() as *const c_char,
+            v,
+        );
         buf.truncate(n as usize);
         buf
     }
@@ -396,7 +399,12 @@ fn snp_ulong(spec: &[u8], v: c_ulong) -> Vec<u8> {
             return Vec::new();
         }
         let mut buf = vec![0u8; n as usize + 1];
-        libc::snprintf(buf.as_mut_ptr() as *mut c_char, n as size_t + 1, f.as_ptr() as *const c_char, v);
+        libc::snprintf(
+            buf.as_mut_ptr() as *mut c_char,
+            n as size_t + 1,
+            f.as_ptr() as *const c_char,
+            v,
+        );
         buf.truncate(n as usize);
         buf
     }
@@ -411,7 +419,12 @@ fn snp_double(spec: &[u8], v: f64) -> Vec<u8> {
             return Vec::new();
         }
         let mut buf = vec![0u8; n as usize + 1];
-        libc::snprintf(buf.as_mut_ptr() as *mut c_char, n as size_t + 1, f.as_ptr() as *const c_char, v);
+        libc::snprintf(
+            buf.as_mut_ptr() as *mut c_char,
+            n as size_t + 1,
+            f.as_ptr() as *const c_char,
+            v,
+        );
         buf.truncate(n as usize);
         buf
     }
@@ -489,8 +502,14 @@ struct Regex {
 
 fn compile_regex(pat: &[u8]) -> Regex {
     match ReEngine::compile(pat, AWK_SYNTAX) {
-        Ok(r) => Regex { re: Some(Rc::new(r)), error: false },
-        Err(()) => Regex { re: None, error: true },
+        Ok(r) => Regex {
+            re: Some(Rc::new(r)),
+            error: false,
+        },
+        Err(()) => Regex {
+            re: None,
+            error: true,
+        },
     }
 }
 
@@ -660,7 +679,12 @@ enum Stmt {
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     While(Expr, Box<Stmt>),
     DoWhile(Box<Stmt>, Expr),
-    For(Option<Box<Stmt>>, Option<Expr>, Option<Box<Stmt>>, Box<Stmt>),
+    For(
+        Option<Box<Stmt>>,
+        Option<Expr>,
+        Option<Box<Stmt>>,
+        Box<Stmt>,
+    ),
     ForIn(Vec<u8>, Vec<u8>, Box<Stmt>),
     Next,
     Exit(Option<Expr>),
@@ -861,7 +885,10 @@ impl<'a> Lexer<'a> {
                         self.lex_regex();
                     }
                 }
-                _ if c.is_ascii_digit() || (c == b'.' && self.s.get(self.i + 1).map_or(false, |d| d.is_ascii_digit())) => {
+                _ if c.is_ascii_digit()
+                    || (c == b'.'
+                        && self.s.get(self.i + 1).is_some_and(|d| d.is_ascii_digit())) =>
+                {
                     self.lex_number()
                 }
                 _ if c == b'_' || c.is_ascii_alphabetic() => self.lex_ident(),
@@ -898,7 +925,10 @@ impl<'a> Lexer<'a> {
                     b'0'..=b'7' => {
                         let mut val = 0u32;
                         let mut n = 0;
-                        while n < 3 && self.i < self.s.len() && (b'0'..=b'7').contains(&self.s[self.i]) {
+                        while n < 3
+                            && self.i < self.s.len()
+                            && (b'0'..=b'7').contains(&self.s[self.i])
+                        {
                             val = val * 8 + (self.s[self.i] - b'0') as u32;
                             self.i += 1;
                             n += 1;
@@ -952,7 +982,10 @@ impl<'a> Lexer<'a> {
         let start = self.i;
         // hex
         if self.s[self.i] == b'0'
-            && self.s.get(self.i + 1).map_or(false, |&c| c == b'x' || c == b'X')
+            && self
+                .s
+                .get(self.i + 1)
+                .is_some_and(|&c| c == b'x' || c == b'X')
         {
             self.i += 2;
             while self.i < self.s.len() && self.s[self.i].is_ascii_hexdigit() {
@@ -993,7 +1026,9 @@ impl<'a> Lexer<'a> {
 
     fn lex_ident(&mut self) {
         let start = self.i;
-        while self.i < self.s.len() && (self.s[self.i] == b'_' || self.s[self.i].is_ascii_alphanumeric()) {
+        while self.i < self.s.len()
+            && (self.s[self.i] == b'_' || self.s[self.i].is_ascii_alphanumeric())
+        {
             self.i += 1;
         }
         let name = &self.s[start..self.i];
@@ -1288,12 +1323,20 @@ impl Parser {
             }
             Tok::Exit => {
                 self.bump();
-                let e = if self.stmt_ends() { None } else { Some(self.parse_expr()) };
+                let e = if self.stmt_ends() {
+                    None
+                } else {
+                    Some(self.parse_expr())
+                };
                 Stmt::Exit(e)
             }
             Tok::Return => {
                 self.bump();
-                let e = if self.stmt_ends() { None } else { Some(self.parse_expr()) };
+                let e = if self.stmt_ends() {
+                    None
+                } else {
+                    Some(self.parse_expr())
+                };
                 Stmt::Return(e)
             }
             Tok::Delete => {
@@ -1327,7 +1370,10 @@ impl Parser {
     }
 
     fn stmt_ends(&self) -> bool {
-        matches!(self.peek(), Tok::Semi | Tok::Newline | Tok::RBrace | Tok::Eof)
+        matches!(
+            self.peek(),
+            Tok::Semi | Tok::Newline | Tok::RBrace | Tok::Eof
+        )
     }
 
     fn parse_print(&mut self, is_printf: bool) -> Stmt {
@@ -1935,7 +1981,9 @@ impl Interp {
         !self.frames.is_empty()
     }
     fn is_param(&self, name: &[u8]) -> bool {
-        self.frames.last().map_or(false, |f| f.params.iter().any(|p| p == name))
+        self.frames
+            .last()
+            .is_some_and(|f| f.params.iter().any(|p| p == name))
     }
 
     // --- variable get/set ---
@@ -1975,7 +2023,11 @@ impl Interp {
             _ => {}
         }
         if self.in_func() && self.is_param(name) {
-            self.frames.last_mut().unwrap().vars.insert(name.to_vec(), val);
+            self.frames
+                .last_mut()
+                .unwrap()
+                .vars
+                .insert(name.to_vec(), val);
         } else {
             self.globals.insert(name.to_vec(), val);
         }
@@ -1996,7 +2048,9 @@ impl Interp {
     }
     fn is_array(&self, name: &[u8]) -> bool {
         if self.in_func() && self.is_param(name) {
-            self.frames.last().map_or(false, |f| f.arrays.contains_key(name))
+            self.frames
+                .last()
+                .is_some_and(|f| f.arrays.contains_key(name))
         } else {
             self.arrays.contains_key(name)
         }
@@ -2128,8 +2182,18 @@ impl Interp {
                     BinOp::Add => x + y,
                     BinOp::Sub => x - y,
                     BinOp::Mul => x * y,
-                    BinOp::Div => { if y == 0.0 { self.div_by_zero(); } x / y }
-                    BinOp::Mod => { if y == 0.0 { self.div_by_zero(); } fmod(x, y) }
+                    BinOp::Div => {
+                        if y == 0.0 {
+                            self.div_by_zero();
+                        }
+                        x / y
+                    }
+                    BinOp::Mod => {
+                        if y == 0.0 {
+                            self.div_by_zero();
+                        }
+                        fmod(x, y)
+                    }
                     BinOp::Pow => fpow(x, y),
                 })
             }
@@ -2195,11 +2259,11 @@ impl Interp {
             Expr::In(subs, arr) => {
                 let key = self.subscript(subs);
                 let present = if self.in_func() && self.is_param(arr) {
-                    self.frames.last().map_or(false, |f| {
-                        f.arrays.get(arr).map_or(false, |m| m.contains_key(&key))
-                    })
+                    self.frames
+                        .last()
+                        .is_some_and(|f| f.arrays.get(arr).is_some_and(|m| m.contains_key(&key)))
                 } else {
-                    self.arrays.get(arr).map_or(false, |m| m.contains_key(&key))
+                    self.arrays.get(arr).is_some_and(|m| m.contains_key(&key))
                 };
                 Value::Num(if present { 1.0 } else { 0.0 })
             }
@@ -2334,7 +2398,10 @@ impl Interp {
                 if let Expr::Var(name) = &args[0] {
                     if self.is_array(name) {
                         let n = if self.in_func() && self.is_param(name) {
-                            self.frames.last().and_then(|f| f.arrays.get(name)).map_or(0, |m| m.len())
+                            self.frames
+                                .last()
+                                .and_then(|f| f.arrays.get(name))
+                                .map_or(0, |m| m.len())
                         } else {
                             self.arrays.get(name).map_or(0, |m| m.len())
                         };
@@ -2411,7 +2478,8 @@ impl Interp {
                 let re = self.regex_from(&args[1]);
                 match re_find(&re, &s, 0) {
                     Some((start, end)) => {
-                        self.globals.insert(b"RSTART".to_vec(), Value::Num((start + 1) as f64));
+                        self.globals
+                            .insert(b"RSTART".to_vec(), Value::Num((start + 1) as f64));
                         self.globals
                             .insert(b"RLENGTH".to_vec(), Value::Num((end - start) as f64));
                         Value::Num((start + 1) as f64)
@@ -2589,7 +2657,9 @@ impl Interp {
                         .and_then(|f| f.arrays.get(arr))
                         .map_or(Vec::new(), |m| m.keys().cloned().collect())
                 } else {
-                    self.arrays.get(arr).map_or(Vec::new(), |m| m.keys().cloned().collect())
+                    self.arrays
+                        .get(arr)
+                        .map_or(Vec::new(), |m| m.keys().cloned().collect())
                 };
                 for k in keys {
                     self.set_var(var, mk_input_value(k));
@@ -2925,11 +2995,7 @@ fn awk_sprintf(fmt: &[u8], args: &[Value], conv: &[u8]) -> Vec<u8> {
                     Value::Num(n) => vec![*n as i64 as u8],
                     other => {
                         let s = other.to_str(conv);
-                        if s.is_empty() {
-                            Vec::new()
-                        } else {
-                            vec![s[0]]
-                        }
+                        if s.is_empty() { Vec::new() } else { vec![s[0]] }
                     }
                 };
                 spec.push(b's');
@@ -3045,7 +3111,7 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
     let mut fs: Option<Vec<u8>> = None;
     let mut assigns: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
     let mut prog_files: Vec<Vec<u8>> = Vec::new();
-    let mut program_text: Option<Vec<u8>> = None;
+    let program_text: Option<Vec<u8>> = None;
 
     // --- option parsing ---
     while i < argc {
@@ -3074,7 +3140,9 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
                         arg[2..].to_vec()
                     } else {
                         i += 1;
-                        unsafe { get_arg(argv, i) }.map(|v| v.to_vec()).unwrap_or_default()
+                        unsafe { get_arg(argv, i) }
+                            .map(|v| v.to_vec())
+                            .unwrap_or_default()
                     };
                     if let Some(eq) = val.iter().position(|&c| c == b'=') {
                         assigns.push((val[..eq].to_vec(), val[eq + 1..].to_vec()));
@@ -3085,7 +3153,9 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
                         arg[2..].to_vec()
                     } else {
                         i += 1;
-                        unsafe { get_arg(argv, i) }.map(|v| v.to_vec()).unwrap_or_default()
+                        unsafe { get_arg(argv, i) }
+                            .map(|v| v.to_vec())
+                            .unwrap_or_default()
                     };
                     prog_files.push(f);
                 }
@@ -3162,7 +3232,8 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
 
     // FS from -F
     if let Some(f) = fs {
-        it.globals.insert(b"FS".to_vec(), Value::Str(process_escapes(&f)));
+        it.globals
+            .insert(b"FS".to_vec(), Value::Str(process_escapes(&f)));
     }
     // -v assignments (before BEGIN)
     for (name, val) in &assigns {
@@ -3171,7 +3242,9 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    let has_end = rules.iter().any(|r| matches!(r.pattern, Some(Pattern::End)));
+    let has_end = rules
+        .iter()
+        .any(|r| matches!(r.pattern, Some(Pattern::End)));
     let has_main = rules
         .iter()
         .any(|r| !matches!(r.pattern, Some(Pattern::Begin) | Some(Pattern::End)));
@@ -3216,7 +3289,8 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
             for (n, v) in &pending {
                 it.set_var(n, mk_input_value(process_escapes(v)));
             }
-            it.globals.insert(b"FILENAME".to_vec(), Value::Str(Vec::new()));
+            it.globals
+                .insert(b"FILENAME".to_vec(), Value::Str(Vec::new()));
             let data = read_fd(0);
             // An exit here stops input, but END still runs below.
             process_input(&mut it, &rules, &data);
@@ -3243,7 +3317,8 @@ pub fn awk(argc: i32, argv: *const *const u8) -> i32 {
                         }
                     }
                 };
-                it.globals.insert(b"FILENAME".to_vec(), Value::Str(op.clone()));
+                it.globals
+                    .insert(b"FILENAME".to_vec(), Value::Str(op.clone()));
                 it.fnr = 0;
                 if process_input(&mut it, &rules, &data) {
                     // exit fired mid-input: stop reading files, but run END.
@@ -3300,11 +3375,7 @@ fn run_rules(it: &mut Interp, rules: &[Rule]) -> Flow {
                     }
                     true
                 } else if it.eval(a).is_true() {
-                    if it.eval(b).is_true() {
-                        it.range_active[idx] = false;
-                    } else {
-                        it.range_active[idx] = true;
-                    }
+                    it.range_active[idx] = !it.eval(b).is_true();
                     true
                 } else {
                     false
@@ -3379,22 +3450,10 @@ fn split_records(data: &[u8], rs: &[u8]) -> Vec<Vec<u8>> {
 mod tests {
     extern crate std;
     use std::io::Write;
-    use std::path::PathBuf;
+
     use std::process::{Command, Stdio};
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() {
-            return release;
-        }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_awk_print_all() {
@@ -3462,7 +3521,9 @@ mod tests {
 
         {
             let stdin = child.stdin.as_mut().unwrap();
-            stdin.write_all(b"alpha beta gamma\ndelta epsilon\n").unwrap();
+            stdin
+                .write_all(b"alpha beta gamma\ndelta epsilon\n")
+                .unwrap();
         }
 
         let output = child.wait_with_output().unwrap();

@@ -3,13 +3,15 @@
 //! Compress or decompress files using the Zstandard algorithm.
 
 extern crate alloc;
-use alloc::vec::Vec;
-use crate::io;
 use super::get_arg;
+use crate::io;
+use alloc::vec::Vec;
 
 fn read_file(path: &[u8]) -> Option<Vec<u8>> {
     let fd = io::open(path, libc::O_RDONLY, 0);
-    if fd < 0 { return None; }
+    if fd < 0 {
+        return None;
+    }
     let data = io::read_all(fd);
     io::close(fd);
     Some(data)
@@ -17,7 +19,9 @@ fn read_file(path: &[u8]) -> Option<Vec<u8>> {
 
 fn write_file(path: &[u8], data: &[u8]) -> bool {
     let fd = io::open(path, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o644);
-    if fd < 0 { return false; }
+    if fd < 0 {
+        return false;
+    }
     let written = io::write_all(fd, data);
     io::close(fd);
     written == data.len() as isize

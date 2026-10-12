@@ -6,9 +6,9 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 // Exit codes.
 const TRUE: i32 = 0;
@@ -142,17 +142,44 @@ fn four_args(args: &[&[u8]]) -> Result<bool, ()> {
 fn is_binary_op(op: &[u8]) -> bool {
     matches!(
         op,
-        b"=" | b"==" | b"!=" | b"-eq" | b"-ne" | b"-lt" | b"-le" | b"-gt" | b"-ge"
-            | b"-nt" | b"-ot" | b"-ef"
+        b"=" | b"=="
+            | b"!="
+            | b"-eq"
+            | b"-ne"
+            | b"-lt"
+            | b"-le"
+            | b"-gt"
+            | b"-ge"
+            | b"-nt"
+            | b"-ot"
+            | b"-ef"
     )
 }
 
 fn is_unary_op(op: &[u8]) -> bool {
     matches!(
         op,
-        b"-b" | b"-c" | b"-d" | b"-e" | b"-f" | b"-g" | b"-h" | b"-L" | b"-k" | b"-p"
-            | b"-r" | b"-s" | b"-S" | b"-t" | b"-u" | b"-w" | b"-x" | b"-O" | b"-G"
-            | b"-n" | b"-z"
+        b"-b"
+            | b"-c"
+            | b"-d"
+            | b"-e"
+            | b"-f"
+            | b"-g"
+            | b"-h"
+            | b"-L"
+            | b"-k"
+            | b"-p"
+            | b"-r"
+            | b"-s"
+            | b"-S"
+            | b"-t"
+            | b"-u"
+            | b"-w"
+            | b"-x"
+            | b"-O"
+            | b"-G"
+            | b"-n"
+            | b"-z"
     )
 }
 
@@ -190,21 +217,21 @@ fn unary(op: &[u8], arg: &[u8]) -> Result<bool, ()> {
         // Non-existent path: every remaining primary is false.
         return Ok(false);
     }
-    let mode = st.st_mode;
-    let ifmt = mode & libc::S_IFMT;
+    let mode = st.st_mode as u32;
+    let ifmt = mode & libc::S_IFMT as u32;
 
     let result = match op {
         b"-e" => true,
-        b"-f" => ifmt == libc::S_IFREG,
-        b"-d" => ifmt == libc::S_IFDIR,
-        b"-b" => ifmt == libc::S_IFBLK,
-        b"-c" => ifmt == libc::S_IFCHR,
-        b"-p" => ifmt == libc::S_IFIFO,
-        b"-S" => ifmt == libc::S_IFSOCK,
+        b"-f" => ifmt == libc::S_IFREG as u32,
+        b"-d" => ifmt == libc::S_IFDIR as u32,
+        b"-b" => ifmt == libc::S_IFBLK as u32,
+        b"-c" => ifmt == libc::S_IFCHR as u32,
+        b"-p" => ifmt == libc::S_IFIFO as u32,
+        b"-S" => ifmt == libc::S_IFSOCK as u32,
         b"-s" => st.st_size > 0,
-        b"-g" => (mode & libc::S_ISGID) != 0,
-        b"-u" => (mode & libc::S_ISUID) != 0,
-        b"-k" => (mode & libc::S_ISVTX) != 0,
+        b"-g" => (mode & libc::S_ISGID as u32) != 0,
+        b"-u" => (mode & libc::S_ISUID as u32) != 0,
+        b"-k" => (mode & libc::S_ISVTX as u32) != 0,
         b"-O" => st.st_uid == unsafe { libc::geteuid() },
         b"-G" => st.st_gid == unsafe { libc::getegid() },
         _ => return Err(()),
@@ -343,26 +370,18 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
     use std::fs;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_file_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let dir = std::env::temp_dir().join("armybox_test_test");
         let _ = fs::create_dir_all(&dir);
@@ -380,7 +399,9 @@ mod tests {
     #[test]
     fn test_file_not_exists() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "-e", "/nonexistent/path/file"])
@@ -393,7 +414,9 @@ mod tests {
     #[test]
     fn test_string_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "foo", "=", "foo"])
@@ -406,7 +429,9 @@ mod tests {
     #[test]
     fn test_string_not_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "foo", "!=", "bar"])
@@ -419,7 +444,9 @@ mod tests {
     #[test]
     fn test_numeric_equal() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "42", "-eq", "42"])
@@ -432,7 +459,9 @@ mod tests {
     #[test]
     fn test_numeric_less_than() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["test", "5", "-lt", "10"])

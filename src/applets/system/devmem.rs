@@ -2,9 +2,9 @@
 //!
 //! Read/write from physical address space via /dev/mem.
 
+use super::get_arg;
 use crate::io;
 use crate::sys;
-use super::get_arg;
 
 /// devmem - access physical memory
 ///
@@ -72,7 +72,20 @@ pub fn devmem(argc: i32, argv: *const *const u8) -> i32 {
     let map_base = addr & !page_mask;
     let map_offset = addr & page_mask;
 
-    // Map the memory
+    // Map the memory. Bionic's 32-bit off_t would turn physical addresses at
+    // or above 2 GiB negative, so Android goes through mmap64.
+    #[cfg(target_os = "android")]
+    let map = unsafe {
+        libc::mmap64(
+            core::ptr::null_mut(),
+            page_size,
+            libc::PROT_READ | libc::PROT_WRITE,
+            libc::MAP_SHARED,
+            fd,
+            map_base as libc::off64_t,
+        )
+    };
+    #[cfg(not(target_os = "android"))]
     let map = unsafe {
         libc::mmap(
             core::ptr::null_mut(),
@@ -150,30 +163,19 @@ fn parse_hex(s: &[u8]) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_devmem_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["devmem"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["devmem"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -183,7 +185,9 @@ mod tests {
     #[test]
     fn test_devmem_invalid_width() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let output = Command::new(&armybox)
             .args(["devmem", "0x1000", "12"])
@@ -198,7 +202,9 @@ mod tests {
     #[test]
     fn test_devmem_permission_denied() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         // This should fail without root
         let output = Command::new(&armybox)

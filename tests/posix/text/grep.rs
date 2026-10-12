@@ -259,10 +259,7 @@ fn posix_grep_whole_line() {
 /// POSIX: ERE interval bounds {n,m}
 #[test]
 fn posix_grep_interval_ere() {
-    let result = run_with_stdin(
-        &["grep", "-E", "a{2,3}"],
-        b"a\naa\naaa\naaaa\n",
-    );
+    let result = run_with_stdin(&["grep", "-E", "a{2,3}"], b"a\naa\naaa\naaaa\n");
     assert_success(&result);
     // {2,3} matches lines containing 2, 3, or (a run of) 4 a's; not a single 'a'.
     assert_eq!(result.1, "aa\naaa\naaaa\n");
@@ -271,10 +268,7 @@ fn posix_grep_interval_ere() {
 /// POSIX: BRE interval bounds \{n,m\}
 #[test]
 fn posix_grep_interval_bre() {
-    let result = run_with_stdin(
-        &["grep", "x\\{2,3\\}"],
-        b"x\nxx\nxxx\nxxxx\n",
-    );
+    let result = run_with_stdin(&["grep", "x\\{2,3\\}"], b"x\nxx\nxxx\nxxxx\n");
     assert_success(&result);
     assert_eq!(result.1, "xx\nxxx\nxxxx\n");
 }
@@ -290,10 +284,7 @@ fn posix_grep_interval_exact() {
 /// POSIX: bracket character class [[:digit:]]
 #[test]
 fn posix_grep_class_digit() {
-    let result = run_with_stdin(
-        &["grep", "[[:digit:]]"],
-        b"abc\nab3\nxyz\n42\n",
-    );
+    let result = run_with_stdin(&["grep", "[[:digit:]]"], b"abc\nab3\nxyz\n42\n");
     assert_success(&result);
     assert_eq!(result.1, "ab3\n42\n");
 }
@@ -301,10 +292,7 @@ fn posix_grep_class_digit() {
 /// POSIX: bracket range [a-c]
 #[test]
 fn posix_grep_class_range() {
-    let result = run_with_stdin(
-        &["grep", "[a-c]"],
-        b"dog\ncat\nzoo\nbee\n",
-    );
+    let result = run_with_stdin(&["grep", "[a-c]"], b"dog\ncat\nzoo\nbee\n");
     assert_success(&result);
     // "cat" has 'a'/'c', "bee" has 'b'; "dog"/"zoo" have none of a-c.
     assert_eq!(result.1, "cat\nbee\n");
@@ -313,10 +301,7 @@ fn posix_grep_class_range() {
 /// POSIX: negated bracket class [^...]
 #[test]
 fn posix_grep_class_negate() {
-    let result = run_with_stdin(
-        &["grep", "^[^abc]"],
-        b"apple\nbanana\ncherry\ndate\n",
-    );
+    let result = run_with_stdin(&["grep", "^[^abc]"], b"apple\nbanana\ncherry\ndate\n");
     assert_success(&result);
     // Only lines whose first char is not a, b, or c.
     assert_eq!(result.1, "date\n");
@@ -325,10 +310,7 @@ fn posix_grep_class_negate() {
 /// POSIX: BRE alternation \| and grouping \(...\)
 #[test]
 fn posix_grep_bre_alternation() {
-    let result = run_with_stdin(
-        &["grep", "^\\(cat\\|dog\\)$"],
-        b"cat\ndog\ncatdog\nbird\n",
-    );
+    let result = run_with_stdin(&["grep", "^\\(cat\\|dog\\)$"], b"cat\ndog\ncatdog\nbird\n");
     assert_success(&result);
     assert_eq!(result.1, "cat\ndog\n");
 }
@@ -336,10 +318,7 @@ fn posix_grep_bre_alternation() {
 /// POSIX: BRE grouping with a quantifier \(ab\)*
 #[test]
 fn posix_grep_bre_group_repeat() {
-    let result = run_with_stdin(
-        &["grep", "^\\(ab\\)\\{2\\}$"],
-        b"ab\nabab\nababab\n",
-    );
+    let result = run_with_stdin(&["grep", "^\\(ab\\)\\{2\\}$"], b"ab\nabab\nababab\n");
     assert_success(&result);
     assert_eq!(result.1, "abab\n");
 }

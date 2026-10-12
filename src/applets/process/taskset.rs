@@ -2,9 +2,9 @@
 //!
 //! Set or retrieve a process's CPU affinity.
 
+use crate::applets::get_arg;
 use crate::io;
 use crate::sys;
-use crate::applets::get_arg;
 
 /// Parse a hexadecimal string to u64
 fn parse_hex(s: &[u8]) -> Option<u64> {
@@ -84,7 +84,9 @@ pub fn taskset(argc: i32, argv: *const *const u8) -> i32 {
     // Get current affinity
     let mut mask: libc::cpu_set_t = unsafe { core::mem::zeroed() };
 
-    if unsafe { libc::sched_getaffinity(pid, core::mem::size_of::<libc::cpu_set_t>(), &mut mask) } != 0 {
+    if unsafe { libc::sched_getaffinity(pid, core::mem::size_of::<libc::cpu_set_t>(), &mut mask) }
+        != 0
+    {
         sys::perror(b"sched_getaffinity");
         return 1;
     }
@@ -122,7 +124,8 @@ pub fn taskset(argc: i32, argv: *const *const u8) -> i32 {
         }
     }
 
-    if unsafe { libc::sched_setaffinity(pid, core::mem::size_of::<libc::cpu_set_t>(), &mask) } != 0 {
+    if unsafe { libc::sched_setaffinity(pid, core::mem::size_of::<libc::cpu_set_t>(), &mask) } != 0
+    {
         sys::perror(b"sched_setaffinity");
         return 1;
     }
@@ -133,33 +136,22 @@ pub fn taskset(argc: i32, argv: *const *const u8) -> i32 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
 
     static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
-    use std::process::Command;
-    use std::path::PathBuf;
 
-    fn get_armybox_path() -> PathBuf {
-        if let Ok(path) = std::env::var("ARMYBOX_PATH") {
-            return PathBuf::from(path);
-        }
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| std::env::current_dir().unwrap());
-        let release = manifest_dir.join("target/release/armybox");
-        if release.exists() { return release; }
-        manifest_dir.join("target/debug/armybox")
-    }
+    use std::process::Command;
+
+    use crate::test_utils::test_helpers::get_armybox_path;
 
     #[test]
     fn test_taskset_no_args() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
-        let output = Command::new(&armybox)
-            .args(["taskset"])
-            .output()
-            .unwrap();
+        let output = Command::new(&armybox).args(["taskset"]).output().unwrap();
 
         assert_eq!(output.status.code(), Some(1));
         let stderr = std::string::String::from_utf8_lossy(&output.stderr);
@@ -169,7 +161,9 @@ mod tests {
     #[test]
     fn test_taskset_show_self() {
         let armybox = get_armybox_path();
-        if !armybox.exists() { return; }
+        if !armybox.exists() {
+            return;
+        }
 
         let pid = std::process::id();
         let output = Command::new(&armybox)
